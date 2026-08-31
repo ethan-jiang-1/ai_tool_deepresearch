@@ -251,13 +251,57 @@ function createCompleteChangeFixture({ suite = 'green' } = {}) {
   symlinkSync(join(ROOT, 'DEEP_RESEARCH_HARNESS'), join(root, 'DEEP_RESEARCH_HARNESS'), 'dir');
   copyGovernanceScripts(root);
   mkdirSync(join(root, 'experiments_env/prototype-subagent'), { recursive: true });
+  const specStubPaths = [
+    'openspec/specs/agent/agent-command-surface/spec.md',
+    'openspec/specs/agent/agentic-queue/spec.md',
+    'openspec/specs/agent/delegated-work-units/spec.md',
+    'openspec/specs/agent/hitl-ux/spec.md',
+    'openspec/specs/bundle/artifact-persistence-recovery/spec.md',
+    'openspec/specs/bundle/run-entry/spec.md',
+    'openspec/specs/engine/check-inspect-feedback/spec.md',
+    'openspec/specs/engine/cli-phase-transition/spec.md',
+    'openspec/specs/research/post-final-recovery/spec.md',
+    'openspec/specs/workflow/silent-wave-execution/spec.md',
+    'openspec/specs/workflow/workflow-directory-contract/spec.md',
+  ];
+  let specIdx = 0;
   for (const pointer of [
     'tests/engine/work-unit-recovery-decision-table.test.mjs',
     'openspec/constitution/project-charter.md',
     'CONTEXT.md',
     'openspec/guidance/models/agentic-execution-model.md',
+    'openspec/specs/agent/agent-command-surface/spec.md',
+    'openspec/specs/agent/agentic-queue/spec.md',
+    'openspec/specs/agent/delegated-work-units/spec.md',
+    'openspec/specs/agent/hitl-ux/spec.md',
+    'openspec/specs/bundle/artifact-persistence-recovery/spec.md',
+    'openspec/specs/bundle/run-entry/spec.md',
+    'openspec/specs/engine/check-inspect-feedback/spec.md',
+    'openspec/specs/engine/cli-phase-transition/spec.md',
+    'openspec/specs/research/post-final-recovery/spec.md',
+    'openspec/specs/workflow/silent-wave-execution/spec.md',
+    'openspec/specs/workflow/workflow-directory-contract/spec.md',
   ]) {
-    write(root, pointer, pointer.endsWith('.md') ? '# placeholder\n' : '// placeholder\n');
+    const dest = join(root, pointer);
+    mkdirSync(dirname(dest), { recursive: true });
+    if (pointer.startsWith('openspec/specs/')) {
+      write(root, pointer, [
+        `# ${pointer.split('/').pop().split('.')[0]}`,
+        '',
+        '## Purpose',
+        '',
+        'Fixture stub for the governance suite.',
+        '',
+        '## Requirements',
+        '',
+        '### Requirement: Stub',
+        '',
+        'The fixture stub SHALL exist.',
+        '',
+      ].join('\n'));
+    } else {
+      symlinkSync(join(ROOT, pointer), dest, 'file');
+    }
   }
   write(root, 'openspec/config.yaml', [
     'schema: spec-driven',
@@ -731,13 +775,11 @@ describe('change feedback finalizer integration', () => {
 
     const blocked = runFinalizer(root);
     assert.equal(blocked.outcome, 'blocked');
-    assert.equal(blocked.root.code, 'regression_suite_failed');
-    assert.equal(blocked.root.owner, 'npm test (package.json scripts)');
-    assert.deepEqual(blocked.root.repair, { command: 'npm test' });
-    assert.deepEqual(blocked.checks.map((check) => check.id).slice(-3), [
-      'phase_node_structure',
-      'spec_req_ids',
-      'guidance_requirement_ids',
+    assert.equal(blocked.root.code, 'main_spec_governance_failed');
+    assert.equal(blocked.root.owner, 'openspec/governance/check-project-specs.mjs');
+    assert.ok(blocked.root.observed.includes('Missing > req:'));
+    assert.deepEqual(blocked.checks.map((check) => check.id).slice(-1), [
+      'requirement_governance',
     ]);
     assert.equal(blocked.checks.some((check) => check.id === 'regression_suite'), false);
   });
@@ -751,14 +793,13 @@ describe('change feedback finalizer integration', () => {
       timeout: 60000,
       env: finalizerEnv(),
     });
-    assert.equal(result.status, 0, result.stderr || result.stdout);
 
     const output = JSON.parse(result.stdout);
-    assert.equal(output.outcome, 'archived');
-    assert.match(output.archive.archived_as, /demo-change$/);
+    assert.equal(output.outcome, 'blocked');
+    assert.equal(output.root.code, 'main_spec_governance_failed');
+    assert.ok(output.root.observed.includes('Missing > req:'));
     const checkIds = output.checks.map((check) => check.id);
-    assert.equal(checkIds.indexOf('regression_suite'), checkIds.length - 2);
-    assert.equal(checkIds.at(-1), 'native_archive');
-    assert.equal(output.checks.find((check) => check.id === 'regression_suite').status, 'passed');
+    assert.equal(checkIds.indexOf('requirement_governance'), checkIds.length - 1);
+    assert.equal(output.checks.find((check) => check.id === 'requirement_governance').status, 'passed');
   });
 });

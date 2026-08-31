@@ -1,0 +1,8 @@
+schema_version: semantic-closure/v1
+change: restructure-control-surface-prose-walls
+status: not_applicable
+reason: >-
+  本 change 只对 RUN.md/COMMANDS.md 的七个散文段落做语义保持的结构化重构
+  （原子规则表 + owner 指针），零 .mjs/schema/gate/枚举/CLI 改动；不消费、
+  不建立、不改变任何 cataloged deterministic semantic fact family，也无
+  verdict consumer 关系。语义权威仍在各 owner spec，本 change 不触碰它们。

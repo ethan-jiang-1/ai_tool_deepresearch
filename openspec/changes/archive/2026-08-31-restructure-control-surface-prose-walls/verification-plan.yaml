@@ -1,0 +1,71 @@
+schema_version: verification-routing/v1
+change: restructure-control-surface-prose-walls
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      work-unit recovery 决策表锁定测试证明 RUN.md L40/L55 相邻的 test-locked
+      表与派生契约零变化；drift-guard 与 gate-chain-prose checker 的真实树
+      green 断言证明新 owner 指针可解析、无手写 gate 链混入。
+  integration:
+    status: selected
+    rationale: >-
+      finalizer 隔离 fixture 链（change-feedback-loop-archive）证明文档改动
+      不破坏归档机检链；跨进程、真实文件树、无网络、无 Agent 执行。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: 无 lifecycle/gate/recovery 行为变化，不驱动端到端 bundle 链。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: 不声称任何真实 Agent 行为变化；纯 markdown 结构重构。
+claims:
+  - id: locked-decision-table-untouched
+    statement: >-
+      RUN.md L42–53 test-locked 决策表零改动；表行集仍从
+      WORK_UNIT_RECOVERY_ACTIONS 派生并被 node:test 锁定，L40/L55 重构不改变
+      其语义或行集。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-recovery-decision-table.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: guidance-surfaces-pass-drift-and-chain-guards
+    statement: >-
+      重构后的 RUN.md/COMMANDS.md 在真实树上通过 check-content-drift、
+      check-guidance-pointer-targets 与 check-gate-chain-prose：新 owner 指针
+      全部可解析、无手写 gate 枚举链、无路径漂移。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/governance/gate-chain-prose-guard.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: archive-mechanics-intact-after-doc-restructure
+    statement: >-
+      隔离 fixture 中 governed finalizer 完整检查序列（含 gate-chain-prose）
+      全绿并完成归档：文档结构重构不破坏归档机检链。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/governance/change-feedback-loop-archive.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

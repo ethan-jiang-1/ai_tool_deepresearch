@@ -8,13 +8,24 @@ Deep Research Harness 命令索引。
 
 这些命令是 Agent-facing operating surfaces：由 Phase Agent 或其他 Agent actor 在当前 run 的上下文中调用，不是要求人类/operator 在 autonomous pipeline 中途共同运行命令。
 
-Ordinary authorized command execution and reversible mechanical repair are Agent-owned。Recorded goal、current host permission、accepted contract 和 legal command path 已经决定下一步时，Agent 直接执行；repairable blocker 有现有合法路径时，Agent 说明最小 blocker、完成 repair，并 rerun 同一 checkpoint。没有合法路径时，Agent 报告 missing contract，不手写 authority 或创建 Engine-invisible parallel path。
+| 触发/主题 | 规则 | Owner(canonical home) |
+|---|---|---|
+| 执行所有权 | Ordinary authorized command execution and reversible mechanical repair are Agent-owned。Recorded goal、current host permission、accepted contract 和 legal command path 已经决定下一步时，Agent 直接执行 | `../openspec/specs/agent/agent-command-surface/spec.md` |
+| 可逆修复路径 | repairable blocker 有现有合法路径时，Agent 说明最小 blocker、完成 repair，并 rerun 同一 checkpoint | `../openspec/specs/agent/agent-command-surface/spec.md` |
+| 无合法路径 | 没有合法路径时，Agent 报告 missing contract，不手写 authority 或创建 Engine-invisible parallel path | `../openspec/specs/engine/check-inspect-feedback/spec.md` |
 
 Human-directed identifies the decision source；它不转移 ordinary command-runner role，也不凭一句用户请求创造 host permission、覆盖 Engine verdict 或补出缺失的 Engine capability。用户作出 contract-required decision 后，剩余合法机械步骤回到 Agent；host policy 若要求一个不可代理动作，只把那一个动作交给用户。
 
 Autonomous execution、HITL1/HITL2 内的 human-directed decision、out-of-band maintenance/debug collaboration，以及 accepted mutation/reentry capability 是四个不同概念。Out-of-band collaboration 不是第三个 lifecycle checkpoint、Final-owned repair loop 或任意 state movement authority。
 
-HITL1 和 HITL2 是唯一的 interactive in-run checkpoints：两者都由 Agent 基于当前事实先给一个可修正的推荐，分别完成研究对齐与研究审阅。一次性 pre-pipeline trigger/entry selection 只负责选择 DEEP_RESEARCH_HARNESS 入口并把控制权交给 Agent；进入 lifecycle 后，非终端 `stop: no` phase 自主静默运行，框架不主动提问、确认、汇报或等待 acknowledgement。用户主动消息若已是当前 conversation turn，Agent 正常回答事实或最小边界，但回答不创建 checkpoint、permission、route、mutation/reentry authority 或 durable intent，也不改变原有 next action。Final 是 terminal lifecycle delivery：entry admission 后先同步 Readiness status，再由 `publish-final-report` 立即写 current lineage 缺失的 base/next global version；该报告可在同一 Final node 因 clear presentation feedback 追加 immutable revision。它不是第三个交互 checkpoint、Gate、confirmation loop、profile rewrite 或 satisfaction state。满意不写 runtime fact。只有 evidence/research expansion 通过 `post_final_rerun` recovery operation 记录既有 HITL2 `rerun` semantics并进入现有 rerun node；request metadata不是verified identity、permission token、`--human-directed`、`--override` 或 `--force`。用户决定scope/risk后，request preparation、apply/recover、entry、status sync、audit与rerun pipeline全部回到Agent执行。
+| 触发/主题 | 规则 | Owner(canonical home) |
+|---|---|---|
+| Interactive checkpoints | HITL1 和 HITL2 是唯一的 interactive in-run checkpoints：两者都由 Agent 基于当前事实先给一个可修正的推荐，分别完成研究对齐与研究审阅 | `../openspec/specs/agent/hitl-ux/spec.md` |
+| Entry selection | 一次性 pre-pipeline trigger/entry selection 只负责选择 DEEP_RESEARCH_HARNESS 入口并把控制权交给 Agent；进入 lifecycle 后，非终端 `stop: no` phase 自主静默运行，框架不主动提问、确认、汇报或等待 acknowledgement | `../openspec/specs/bundle/run-entry/spec.md` |
+| 用户主动消息 | 用户主动消息若已是当前 conversation turn，Agent 正常回答事实或最小边界，但回答不创建 checkpoint、permission、route、mutation/reentry authority 或 durable intent，也不改变原有 next action | `../openspec/specs/workflow/silent-wave-execution/spec.md` |
+| Final 交付 | Final 是 terminal lifecycle delivery：entry admission 后先同步 Readiness status，再由 `publish-final-report` 立即写 current lineage 缺失的 base/next global version；该报告可在同一 Final node 因 clear presentation feedback 追加 immutable revision；它不是第三个交互 checkpoint、Gate、confirmation loop、profile rewrite 或 satisfaction state；满意不写 runtime fact | `../openspec/specs/bundle/artifact-persistence-recovery/spec.md` |
+| Post-final rerun | 只有 evidence/research expansion 通过 `post_final_rerun` recovery operation 记录既有 HITL2 `rerun` semantics 并进入现有 rerun node；request metadata不是verified identity、permission token、`--human-directed`、`--override` 或 `--force` | `../openspec/specs/research/post-final-recovery/spec.md` |
+| 收归 Agent 边界 | 用户决定 scope/risk 后，request preparation、apply/recover、entry、status sync、audit 与 rerun pipeline 全部回到 Agent 执行 | `../openspec/specs/agent/agent-command-surface/spec.md` |
 
 Post-final feedback 不自动创造能力：presentation-only feedback 留在 Final，由 Agent 准备 retained staging 后调用 publisher；supported evidence-expanding rerun 才走上述 audited operation；unsupported repair/state-seed仍报告missing capability，不手写authority。
 
@@ -30,7 +41,12 @@ Short operating note only; deeper terminology canon lives in `../openspec/guidan
 
 `enter-phase` / `load_complete` prove target-node entry/loading, not target-phase work completion. `advance-status` synchronizes the just-passed source gate; it does not enter, load, or execute the next phase. `current_node` is a resume coordinate, not gate pass evidence.
 
-`continuation` cues are Agent-facing decision-point projections. Gate and lifecycle outputs use `interaction: do_not_initiate|required|terminal_delivery`; successful claim output is action-only because claim does not own lifecycle placement. `enter-phase` presents its `DPT_CONTINUATION_CUE` first, followed by the exact existing source-gate `advance-status` command, the target action core, and a target-excluding shared-file manifest. A cue tells the Agent the one immediate next action already implied by direct Engine facts. It is not permission, not a new status field, not routing authority, not completion proof, and not an entry/status/submit witness.
+| 触发/主题 | 规则 | Owner(canonical home) |
+|---|---|---|
+| Cue 本质 | `continuation` cues 是 Agent-facing decision-point projections：告诉 Agent 由 direct Engine facts 已蕴含的那一个 immediate next action | `../openspec/specs/engine/cli-phase-transition/spec.md` |
+| interaction 词汇 | Gate 与 lifecycle outputs 使用 `interaction: do_not_initiate|required|terminal_delivery`；successful claim output 是 action-only，因为 claim 不拥有 lifecycle placement | `../openspec/specs/engine/cli-phase-transition/spec.md` |
+| 呈现顺序 | `enter-phase` 先呈现其 `DPT_CONTINUATION_CUE`，随后是 exact existing source-gate `advance-status` command、target action core 与 target-excluding shared-file manifest | `../openspec/specs/engine/cli-phase-transition/spec.md` |
+| 非权威边界 | Cue 不是 permission、不是新 status field、不是 routing authority、不是 completion proof，也不是 entry/status/submit witness | `../openspec/specs/engine/cli-phase-transition/spec.md` |
 
 ## CLI Exit-Code Convention
 

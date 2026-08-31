@@ -136,6 +136,6 @@
 
 - [x] C4：`tests/suspended/` 移除 + `.gitignore` 去重（2026-08-31）
 - [x] C1：change propose → apply → archive（含 guard 红样本验证）（✓ 2026-08-31 `2026-08-31-pointerize-gate-chain-prose-add-guard`，finalizer 19/19 全绿）
-- [ ] C2：change propose → apply → archive（八段结构化 + 行数预算验收）
+- [x] C2：change propose → apply → archive（八段结构化 + 行数预算验收）（✓ 2026-08-31 `2026-08-31-restructure-control-surface-prose-walls`，finalizer 19/19 全绿；行差 +39 按设计披露口径呈报，token 全保留 46/46）
 - [ ] C3：测量报告 → 每刀独立 change → archive
 - [ ] 全部完成后按流程关闭本 plan
