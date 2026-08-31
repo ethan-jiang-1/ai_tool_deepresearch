@@ -156,7 +156,7 @@ Logical `actor_execution` plus exact `work_id` and `receipt_nonce` guides which 
 | enter-phase.mjs | cli/enter-phase.mjs | 消费 gate CLI 返回的 `check.next`，调用 workflow loader 渲染下一 node Markdown，写入 route-bound `load_complete` handoff witness 和 `rb_status.json.current_node`；默认输出 cue-first 的 source-gate sync、target action core 与 target-excluding manifest，`--full` 才附加 complete closure；不证明 target phase work completion |
 | advance-status.mjs | cli/advance-status.mjs | 在 `enter-phase` witness 存在后同步 just-passed source gate；covered handoff 使用真实 `gate_attempt.next` 和 `current_node` 输出 continuation cue；does not enter, load, or execute the next phase |
 
-> Gate CLIs 要求 `--current-node <file-ref>` 为必带参数（指向 phase Markdown node）。六大生命周期 gate 的 `check.next` 推进链：`wave0-complete` → `wave1-complete` → `wave2-complete` → `hitl1-recorded` → `hitl2-recorded` → `readiness-passed`。完整 gate 集与序由 `workflows/manifest.json` 单一真相源定义。
+> Gate CLIs 要求 `--current-node <file-ref>` 为必带参数（指向 phase Markdown node）。gate 全集与推进序的单一真相源是 `workflows/manifest.json` + `workflows/transitions.chain.json`；`engine/ask-next.mjs` 的 `resolveNodeTransitionDetailed()` 提供详细查询。
 
 ## Post-Final Rerun Recovery
 

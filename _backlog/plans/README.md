@@ -1,6 +1,6 @@
 # Active Plans — 活跃 plan/分析文档列表
 
-> 最后更新: 2026-08-30（活跃列表已清空：spec-semantic-drift-remediation 于 2026-08-31 完成关闭（CLS-079），8 个滞后行已对账至 _closed_plans 补登记节） | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
+> 最后更新: 2026-08-31（`dsh-harness-idea-transfer-roadmap` 判定有误，已删除；其吸收的处置决策回到 `control-surface-drift-density-and-module-boundaries`，该文件恢复为活跃 plan。此前活跃列表曾清空：spec-semantic-drift-remediation 于 2026-08-31 完成关闭（CLS-079）） | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
 >
 > **plan 没有编号，文件名即标识。完成后文件名不变，位置即状态。**
 
@@ -17,6 +17,7 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
+| `control-surface-drift-density-and-module-boundaries` | 五 finding 按处置表执行：C1 gate 链序 pointer 化 + 防再发 guard（1 个 change）、C2 散文墙结构化（1 个 change，C1 guard 合入后执行）、C3 measure-first 测量报告（非 change）后每刀独立 change（候选 3 刀）、C4 直接 housekeeping（无 change）、C5 accepted 不动。执行顺序 C4 → C1 → C2 → C3。 | active |
 
 ### 参照资料（非 plan，供后续 change 引用）
 

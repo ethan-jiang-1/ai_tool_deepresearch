@@ -47,6 +47,7 @@ const RootCodeSchema = z.enum([
   'verification_routing_failed',
   'semantic_closure_failed',
   'content_drift_failed',
+  'gate_chain_prose_failed',
   'guidance_pointer_targets_failed',
   'surface_inventory_failed',
   'phase_node_structure_failed',
@@ -83,6 +84,7 @@ const CheckSchema = z.object({
     'verification_routing',
     'semantic_closure',
     'content_drift',
+    'gate_chain_prose',
     'guidance_pointer_targets',
     'surface_inventory',
     'phase_node_structure',
@@ -427,6 +429,7 @@ export async function finalizeChangeArchive({
     addCheck(checks, 'content_drift');
 
     const driftGuardCheckers = [
+      ['check-gate-chain-prose.mjs', 'gate_chain_prose_failed'],
       ['check-guidance-pointer-targets.mjs', 'guidance_pointer_targets_failed'],
       ['check-surface-inventory.mjs', 'surface_inventory_failed'],
       ['check-phase-node-structure.mjs', 'phase_node_structure_failed'],

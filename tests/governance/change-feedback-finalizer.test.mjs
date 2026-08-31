@@ -94,6 +94,7 @@ function runner({ failAt, nativeOutput, statusOutput } = {}) {
         return failAt === 'content-drift' ? { status: 1, stdout: '', stderr: 'content drift failure' } : { status: 0, stdout: 'clean', stderr: '' };
       }
       for (const [script, key] of [
+        ['check-gate-chain-prose.mjs', 'gate-chain-prose'],
         ['check-guidance-pointer-targets.mjs', 'guidance-pointers'],
         ['check-surface-inventory.mjs', 'surface-inventory'],
         ['check-phase-node-structure.mjs', 'phase-structure'],
@@ -390,10 +391,11 @@ describe('change feedback archive finalizer', () => {
     assert.equal(result.outcome, 'archived');
     assert.equal(result.archive.path, ARCHIVE_PATH);
     assert.equal(result.archive.specs_updated, false);
-    assert.deepEqual(result.checks.map((check) => check.id).slice(-10), [
+    assert.deepEqual(result.checks.map((check) => check.id).slice(-11), [
       'verification_routing',
       'semantic_closure',
       'content_drift',
+      'gate_chain_prose',
       'guidance_pointer_targets',
       'surface_inventory',
       'phase_node_structure',

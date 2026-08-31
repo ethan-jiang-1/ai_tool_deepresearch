@@ -211,6 +211,7 @@ coordinate.
 - **THEN** it SHALL stop before target edit or archive transition
 - **AND** it SHALL report the instruction lookup boundary without fabricating review completion or a fallback
   archive path
+
 ### Requirement: Governed archive finalization SHALL establish one mechanical closeout verdict
 
 The repository SHALL provide one deterministic finalization interface for a
@@ -220,8 +221,17 @@ exactly one completed plan-review marker and one completed closeout-review
 marker with no other incomplete task, run strict OpenSpec validation, and then
 run requirement-traceability, main-spec, capability-taxonomy,
 capability-discovery, verification-routing asset, semantic-closure asset,
-content-drift, guidance-pointer-target, surface-inventory, phase-node-structure,
-and spec-requirement-id checks in that order.
+content-drift, gate-chain-prose, guidance-pointer-target, surface-inventory,
+phase-node-structure, and spec-requirement-id checks in that order.
+
+The gate-chain-prose check SHALL scan the Harness guidance Markdown surfaces
+(`DEEP_RESEARCH_HARNESS/**/*.md`) and fail any line that enumerates a gate
+progression as an ordered arrow sequence: one line containing two or more
+distinct gate enum values connected by `→` or `->` arrows SHALL fail with the
+file, line number, and matched sequence. The gate enum set SHALL be read at
+check time from the `workflows/manifest.json` gate keys; the checker SHALL NOT
+maintain its own enum inventory. A pointer that names the single-source files
+without enumerating a progression SHALL pass.
 
 After those structural checks pass, and before invoking the native archive
 transition, the finalizer SHALL establish the canonical regression-suite fact
@@ -260,10 +270,25 @@ plan-stage reservation into a selected-change archive failure.
 
 - **WHEN** strict validation, requirement traceability, main-spec structure,
   taxonomy, discovery record, verification-routing assets, semantic-closure
-  assets, content drift, guidance pointer targets, surface inventory, phase
-  node structure, or spec requirement IDs fail
+  assets, content drift, gate chain prose, guidance pointer targets, surface
+  inventory, phase node structure, or spec requirement IDs fail
 - **THEN** finalization SHALL report the earliest failing direct check before the regression suite and native archive
 - **AND** it SHALL not perform a directory move, write main specs, or infer test success
+
+#### Scenario: handwritten gate chain in guidance prose blocks finalization
+
+- **WHEN** a Harness guidance Markdown line enumerates a gate progression as an arrow sequence, such as a
+  mis-ordered `wave0-complete → wave1-complete → hitl1-recorded` chain
+- **THEN** the gate-chain-prose check SHALL fail and name the file, line, and matched sequence
+- **AND** finalization SHALL block before native archive until the prose is replaced by a pointer to the
+  single-source files
+
+#### Scenario: pointer naming the single source passes the gate-chain-prose check
+
+- **WHEN** a guidance line names `workflows/manifest.json` and `workflows/transitions.chain.json` as the
+  single source for the gate set and progression order without enumerating any gate values
+- **THEN** the gate-chain-prose check SHALL pass for that line
+- **AND** the check SHALL NOT require the pointer to embed an ordered gate list
 
 #### Scenario: red regression suite blocks before native archive
 

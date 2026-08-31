@@ -1,0 +1,9 @@
+schema_version: semantic-closure/v1
+change: pointerize-gate-chain-prose-add-guard
+status: not_applicable
+reason: >-
+  本 change 只把 COMMANDS.md 一行手写 gate 推进链替换为指向单一真相源的
+  pointer，并新增一个只读 governance 扫描 checker（enum 运行时派生自
+  workflows/manifest.json）；不消费、不建立、不改变任何 cataloged
+  deterministic semantic fact family——无 runtime state、receipt、
+  queue/work-unit/wave 事实读写，也无 verdict consumer 关系。

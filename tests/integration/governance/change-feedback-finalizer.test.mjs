@@ -89,6 +89,7 @@ function copyGovernanceScripts(root) {
     'check-semantic-closure.mjs',
     'semantic-fact-closure-contract.mjs',
     'check-content-drift.mjs',
+    'check-gate-chain-prose.mjs',
     'check-guidance-pointer-targets.mjs',
     'check-surface-inventory.mjs',
     'check-phase-node-structure.mjs',

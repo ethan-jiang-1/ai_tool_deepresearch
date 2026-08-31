@@ -1,0 +1,76 @@
+schema_version: verification-routing/v1
+change: pointerize-gate-chain-prose-add-guard
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      checker 对错序链/pointer 句的 red/green fixture 裁决、gate enum 集合
+      运行时派生自 manifest 的断言、真实树 green 断言，均为 in-process
+      确定性契约，由 tests/governance/ 下 node:test 锁定。
+  integration:
+    status: selected
+    rationale: >-
+      finalizer 新检查序列在隔离 fixture 中走完真实 archive 链
+      （change-feedback-loop-archive.test.mjs 的 fixture 拷贝清单与
+      FINALIZER_CHECKS 期望同步），跨进程、真实文件树、无网络、无 Agent 执行。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      无 lifecycle/gate/recovery 行为变化：workflows 真相源与 gate 判定语义
+      不变，不驱动端到端 bundle 链。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      不声称任何真实 Agent 行为变化；prose pointer 化与 checker 均为确定性契约。
+claims:
+  - id: gate-chain-prose-checker-verdicts
+    statement: >-
+      check-gate-chain-prose.mjs 对单行错序 gate 链 fixture 给出 fail 且报告
+      file/line/匹配序列；对 pointer 句与无链行给出 pass；gate enum 集合运行时
+      派生自 workflows/manifest.json（checker 内无手写枚举清单）；manifest
+      缺失/不可解析时 fail-closed exit 1。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/governance/gate-chain-prose-guard.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: harness-guidance-free-of-handwritten-gate-chains
+    statement: >-
+      真实 DEEP_RESEARCH_HARNESS/**/*.md 树上 checker exit 0：Harness guidance
+      prose 不含手写 gate 推进链；COMMANDS.md L159 为 pointer 句而非枚举链。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/governance/gate-chain-prose-guard.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: finalizer-gate-chain-prose-chain-in-isolated-fixture
+    statement: >-
+      隔离 fixture 中 finalizer 检查序列含 gate-chain-prose（content-drift
+      之后、guidance-pointer-target 之前），FINALIZER_CHECKS 期望与实现一致，
+      synchronized change 归档退出码 0。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/governance/change-feedback-loop-archive.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
