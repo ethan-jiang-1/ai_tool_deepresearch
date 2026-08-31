@@ -1,0 +1,70 @@
+schema_version: verification-routing/v1
+change: repair-gate-feedback-carrier-glossary
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      work-unit recovery 决策表与词汇表两个既有 unit 锁零改动保持绿，证明
+      work-unit 侧 recovery_action 契约不受本 change 影响。
+  integration:
+    status: selected
+    rationale: >-
+      md 锁测试从 GATE_REPAIR_KINDS 派生并单点持有 negative lock；跨文件、
+      真实文件树、无网络、无 Agent 执行。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: 无 lifecycle/gate/recovery 行为变化，不驱动端到端 bundle 链。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: 不声称任何真实 Agent 行为变化；纯 guidance 投影与测试锁修正。
+claims:
+  - id: context-gate-carrier-restored
+    statement: >-
+      CONTEXT.md gate/phase 罗塞塔行与术语行的载体字段是 repair_kind
+      （hints[] / finding repair.kind），GATE_REPAIR_KINDS 五值逐项出现在该行，
+      且退役词 `resolution_owner` 在 CONTEXT.md 全文不存在（negative lock 单点
+      拥有于本测试）。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/repair-directive-lock.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: terminology-distinction-lock-updated
+    statement: >-
+      F-03 三面区分锁断言 repair_kind / recovery_action / repair_directive
+      三个载体名并存于 CONTEXT.md。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/guidance-terminology-pointer-consistency.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: work-unit-side-unchanged
+    statement: >-
+      work-unit recovery_action 决策表与词汇表锁定测试零改动保持绿；
+      本 change 不触碰 DEEP_RESEARCH_HARNESS/ 与 RUN.md。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-recovery-decision-table.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

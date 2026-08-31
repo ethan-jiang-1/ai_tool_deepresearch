@@ -55,8 +55,8 @@ describe('CONTEXT: Gate pointer, 五反馈面 distinction, Lifecycle concepts, r
     assert.ok(context.includes('按 owner spec 用法归纳'), 'induction note missing');
   });
 
-  it('distinguishes resolution_owner, recovery_action, and repair_directive (F-03 term row)', () => {
-    assert.ok(context.includes('resolution_owner'), 'resolution_owner term missing');
+  it('distinguishes repair_kind, recovery_action, and repair_directive (F-03 term row)', () => {
+    assert.ok(context.includes('repair_kind'), 'gate/phase repair_kind term missing');
     assert.ok(context.includes('recovery_action'), 'recovery_action term missing');
     assert.ok(context.includes('repair_directive'), 'repair_directive term missing');
   });

@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { GATE_REPAIR_KINDS } from '../../../DEEP_RESEARCH_HARNESS/schema/contracts/gate-definition.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, '..', '..', '..');
@@ -42,10 +43,20 @@ describe('repair-directive and CONTEXT locks (FIO-008, F-03, F-23)', () => {
   it('CONTEXT.md disambiguates the three repair vocabularies', () => {
     const context = read('CONTEXT.md');
     assert.ok(context.includes('`repair_directive`（file-observability 面）'), 'repair_directive glossary row missing');
-    assert.ok(context.includes('`resolution_owner`（gate/phase 門禁面）') || context.includes('`resolution_owner`（gate/phase 门禁面）'), 'gate/phase resolution_owner row missing');
+    assert.ok(context.includes('`repair_kind`（gate/phase 门禁面）'), 'gate/phase repair_kind row missing');
     assert.ok(context.includes('`recovery_action`（work-unit 恢复面）') || context.includes('`recovery_action`（work-unit 復面）'), 'work-unit recovery_action row missing');
     assert.ok(context.includes('work-unit-repair-vocabulary.mjs'), 'vocabulary pointer missing');
     assert.ok(context.includes('ResearchConfigLock（研究风格锁定契约）') && context.includes('ReopenResearchPass（终态重开通行证）'), 'Lifecycle concept rows missing');
+  });
+
+  it('gate/phase Rosetta carrier derives from GATE_REPAIR_KINDS with no phantom resolution_owner', () => {
+    const context = read('CONTEXT.md');
+    const rosettaRow = context.split('\n').find((line) => line.includes('**Gate / Phase 门禁面**'));
+    assert.ok(rosettaRow, 'gate/phase Rosetta row missing');
+    for (const value of GATE_REPAIR_KINDS) {
+      assert.ok(rosettaRow.includes(`\`${value}\``), `enum value ${value} missing from gate/phase Rosetta row`);
+    }
+    assert.ok(!context.includes('resolution_owner'), 'retired resolution_owner term must not return to the canonical glossary');
   });
 
   it('work-unit and gate/phase repair_kind enumerations are unchanged', () => {

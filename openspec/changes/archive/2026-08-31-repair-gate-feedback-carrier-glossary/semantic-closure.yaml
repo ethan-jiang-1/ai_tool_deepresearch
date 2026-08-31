@@ -1,0 +1,10 @@
+schema_version: semantic-closure/v1
+change: repair-gate-feedback-carrier-glossary
+status: not_applicable
+reason: >-
+  本 change 只修正 CONTEXT.md 词汇投影中一个不存在于任何 contract 的字段名
+  （resolution_owner → repair_kind），并把两个 md 锁测试从 presence-string 锁
+  升级为从既有 engine/schema 导出派生；零 .mjs/schema/gate/枚举/CLI 行为改动，
+  不消费、不建立、不改变任何 cataloged deterministic semantic fact family，
+  也无 verdict consumer 关系。三个反馈面的语义权威（check-inspect-feedback、
+  delegated-work-units、file-observability 各自 owner）均不被触碰。
