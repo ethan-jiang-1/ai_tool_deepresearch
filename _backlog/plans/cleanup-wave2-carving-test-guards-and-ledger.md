@@ -204,12 +204,16 @@ M0 审计回填 ──✅──▶ M1 用户确认 ──✅──▶ W1 测试�
 
 - [x] M0 审计回填（AUD-1/2/3/4）
 - [x] M1 用户确认
-- [ ] W1 测试守护网（propose → polish → apply → archive → commit → 快照）
+- [x] W1 测试守护网 ✅（finalizer 19/19；全量 ×2 绿 @concurrency=4；三缺陷修复 + 基线 4/4）
 - [ ] W2 canonical-topic-state 切缝
 - [ ] W3 gate-helpers-core + wave-depth-contracts 切缝
 - [ ] W4 第二轮死代码清除
 - [ ] W5 spec 引用与 prose 清扫
 - [ ] W6 R3 退休 + DE-EXPORT
 - [ ] M-终局 统计表 + plan 关闭
+
+#### Post-W1 快照（2026-08-31）
+
+全量 0 fail ×2 @`--test-concurrency=4`（217s/221s）；测试 305→306 文件；spec/production 指标持平（纯测试守护，预期）；W2 准入达成。
 
 > 快照节奏：每级 archive 后跑 `drift-resync-metrics-snapshot.mjs`，增量记入本节。终局统计表沿用 CLS-082 §10.8 三列格式。
