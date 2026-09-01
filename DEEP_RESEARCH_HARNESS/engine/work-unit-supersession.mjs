@@ -41,7 +41,7 @@ import {
   validateSubmitRuntimeReceipt,
   assertCompleteCurrentWorkUnitProfile,
 } from './work-unit-validation.mjs';
-import { inspectWorkUnitDeclarationRecovery } from './work-unit-submit.mjs';
+import { inspectWorkUnitDeclarationRecovery } from './work-unit-submit-declaration-recovery.mjs';
 import { inspectWorkUnitTransaction } from './work-unit-transaction.mjs';
 import { enqueue, loadQueue, loadQueueReadOnly, saveQueue } from './queue-manager-lifecycle.mjs';
 import { queueItemSnapshotHash } from './queue-manager-core.mjs';

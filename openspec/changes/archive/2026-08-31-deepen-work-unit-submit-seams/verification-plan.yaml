@@ -1,0 +1,76 @@
+schema_version: verification-routing/v1
+change: 2026-08-31-deepen-work-unit-submit-seams
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      S3-S12（边界故障注入递归回滚断言、幂等回放、suspect 不可恢复、orphan
+      wrapper 次序、哈希绑定、拒绝路径零副作用）为 in-process node:test。
+  integration:
+    status: selected
+    rationale: >-
+      S1/S2/S8 真 kill -9 崩溃注入经子进程执行 work-unit 导出（temp bundle +
+      spawn + SIGKILL），为跨进程 durable-state 断言。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      既有 work-unit attempt-recovery e2e 链是 T2-T5 的回归网，由全量
+      npm test 重跑覆盖；本 change 不新增端到端场景（纯内部搬动，
+      S1-S12 已在 unit/integration 层锁定 durable 语义）。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      不声称任何真实 Agent 行为变化；纯内部结构搬动，外部接口零变化。
+claims:
+  - id: submit-crash-invariants-green
+    statement: >-
+      S1/S2/S8 三个子进程 kill -9 崩溃注入场景对未改 engine 全绿且连续 3 次
+      稳定，覆盖 queue-save 后/commit 前崩溃窗口（submit、late-submit）与
+      declaration recovery 崩溃窗口的 durable-state 断言。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/work-unit-submit-crash-invariants.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: submit-invariants-green
+    statement: >-
+      S3-S12 九个 in-process 不变量场景对未改 engine 全绿且连续 3 次稳定；
+      覆盖 5 边界逐点回滚、postcondition 失败回滚、suspect 不可恢复、幂等
+      回放零新 journal、orphan wrapper 次序、busy 争用零副作用、
+      trace↔ledger↔journal 哈希绑定、拒绝路径不建 journal。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-submit-invariants.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: seams-move-only-public-surface-unchanged
+    statement: >-
+      T2-T5 后：work-unit-core/work-unit-index/timeout-preflight/supersession
+      的导入面 grep 不变；submit.mjs ≤~1100 行、transaction 主文件 ≤~450 行；
+      4 个新模块存在且 S 网与全量 npm test 全绿；git diff 显示纯搬动。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-submit-invariants.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

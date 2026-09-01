@@ -1,6 +1,7 @@
 // @impl DEW-023, CHI-004
 // Global work-unit mutation transaction, contention projection, and proof-bounded recovery.
 
+
 import {
   existsSync,
   lstatSync,
@@ -13,7 +14,6 @@ import {
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { z } from 'zod';
-
 import { WORK_UNITS, WORK_UNIT_OUTPUT_LEDGER } from './work-unit-constants.mjs';
 import { logToRun } from './logger.mjs';
 import {
@@ -32,6 +32,36 @@ import {
   WorkUnitTransactionV2JournalSchema,
 } from '../schema/contracts/work-unit-transaction.mjs';
 import { WORK_UNIT_REPAIR_KIND } from './work-unit-repair-vocabulary.mjs';
+import {
+  rootPath,
+  lockPath,
+  transactionLockOwnerPath,
+  transactionRoot,
+  journalPath,
+  journalRef,
+  captureMutationTargets,
+  mutationManifestFor,
+  restoreMutationTargets,
+  listBundleFiles,
+  changedFiles,
+  belongsToOtherWorkUnit,
+  currentTargetsMatchManifest,
+} from './work-unit-transaction-primitives.mjs';
+import {
+  recoverTransactionRerun,
+  suspectProjection,
+  readHeldTransactionProjection,
+  unresolvedOrphanJournals,
+  firstRecoverableOrphan,
+  inspectWorkUnitTransaction,
+  transactionBlockedResult,
+} from './work-unit-transaction-projection.mjs';
+const LOCK_OWNER_BASENAME = 'owner.json';
+const LEGACY_TRANSACTION_V1_SCHEMA_VERSION = 'work-unit.transaction.v1';
+
+// Compat re-exports: importers of work-unit-transaction.mjs keep their surfaces.
+export { inspectWorkUnitTransaction, transactionBlockedResult } from './work-unit-transaction-projection.mjs';
+export { transactionLockOwnerPath } from './work-unit-transaction-primitives.mjs';
 
 export const WORK_UNIT_TRANSACTION_TRANSITIONS = Object.freeze({
   started: Object.freeze(['committed', 'rolled_back', 'suspect']),
@@ -39,447 +69,6 @@ export const WORK_UNIT_TRANSACTION_TRANSITIONS = Object.freeze({
   committed: Object.freeze([]),
   rolled_back: Object.freeze([]),
 });
-
-const LOCK_OWNER_BASENAME = 'owner.json';
-const LEGACY_TRANSACTION_V1_SCHEMA_VERSION = 'work-unit.transaction.v1';
-
-function rootPath(bundleDir) {
-  return path.resolve(bundleDir);
-}
-
-function lockPath(bundleDir) {
-  return path.join(rootPath(bundleDir), WORK_UNITS.LOCK);
-}
-
-export function transactionLockOwnerPath(bundleDir) {
-  return path.join(lockPath(bundleDir), LOCK_OWNER_BASENAME);
-}
-
-function transactionRoot(bundleDir) {
-  return path.join(rootPath(bundleDir), WORK_UNITS.TRANSACTIONS);
-}
-
-function journalPath(bundleDir, txId) {
-  return path.join(transactionRoot(bundleDir), `${txId}.json`);
-}
-
-function journalRef(txId) {
-  return `${WORK_UNITS.TRANSACTIONS}/${txId}.json`;
-}
-
-function sha256Bytes(bytes) {
-  return createHash('sha256').update(bytes).digest('hex');
-}
-
-function canonicalTargetPath(bundleDir, target) {
-  const parsed = WorkUnitTransactionMutationManifestSchema.parse({
-    targets: [{ path: target, before_exists: false }],
-  }).targets[0].path;
-  const absolute = path.resolve(rootPath(bundleDir), parsed);
-  const root = rootPath(bundleDir);
-  if (absolute !== root && !absolute.startsWith(`${root}${path.sep}`)) {
-    throw new Error(`transaction target escapes bundle root: ${target}`);
-  }
-  return { relative: parsed, absolute };
-}
-
-function captureMutationTargets(bundleDir, targetPaths) {
-  const snapshots = [];
-  for (const targetPath of targetPaths) {
-    const target = canonicalTargetPath(bundleDir, targetPath);
-    if (!existsSync(target.absolute)) {
-      snapshots.push({ ...target, before_exists: false, bytes: null });
-      continue;
-    }
-    const stats = lstatSync(target.absolute);
-    if (!stats.isFile() || stats.isSymbolicLink()) {
-      throw new Error(`transaction target must be one exact regular file: ${target.relative}`);
-    }
-    const bytes = readFileSync(target.absolute);
-    snapshots.push({
-      ...target,
-      before_exists: true,
-      before_sha256: sha256Bytes(bytes),
-      bytes,
-    });
-  }
-  return snapshots;
-}
-
-function mutationManifestFor(snapshots) {
-  return WorkUnitTransactionMutationManifestSchema.parse({
-    targets: snapshots.map((snapshot) => ({
-      path: snapshot.relative,
-      before_exists: snapshot.before_exists,
-      ...(snapshot.before_exists ? { before_sha256: snapshot.before_sha256 } : {}),
-    })),
-  });
-}
-
-function targetMatchesBeforeImage(snapshot) {
-  if (!snapshot.before_exists) return !existsSync(snapshot.absolute);
-  if (!existsSync(snapshot.absolute)) return false;
-  const stats = lstatSync(snapshot.absolute);
-  return stats.isFile() && !stats.isSymbolicLink()
-    && sha256Bytes(readFileSync(snapshot.absolute)) === snapshot.before_sha256;
-}
-
-function restoreMutationTargets(snapshots) {
-  const failures = [];
-  for (const snapshot of [...snapshots].reverse()) {
-    try {
-      if (!snapshot.before_exists) {
-        rmSync(snapshot.absolute, { recursive: true, force: true });
-      } else {
-        if (existsSync(snapshot.absolute) && !lstatSync(snapshot.absolute).isFile()) {
-          rmSync(snapshot.absolute, { recursive: true, force: true });
-        }
-        mkdirSync(path.dirname(snapshot.absolute), { recursive: true });
-        writeFileSync(snapshot.absolute, snapshot.bytes);
-      }
-    } catch (error) {
-      failures.push(`${snapshot.relative}: ${error.message || String(error)}`);
-    }
-  }
-  for (const snapshot of snapshots) {
-    try {
-      if (!targetMatchesBeforeImage(snapshot)) failures.push(`${snapshot.relative}: before-image mismatch`);
-    } catch (error) {
-      failures.push(`${snapshot.relative}: ${error.message || String(error)}`);
-    }
-  }
-  return { ok: failures.length === 0, failures };
-}
-
-// The undeclared-mutation comparison snapshots the work-unit authority
-// surface: the work-unit root (excluding the global lock and the current
-// transaction's own journal) plus the root output declaration ledger.
-// Attribution of a changed file to this transaction is narrower: only the
-// transaction's own target work-unit directories and the root output
-// declaration ledger are attributed. Concurrent writes to other bundle paths
-// (delegated cache, run-scoped scripts, diagnostics, reference, artifacts) and
-// to other work units' own directories are owned by other processes/actors and
-// are not attributed to this transaction.
-function listBundleFiles(bundleDir, currentJournalRef = null) {
-  const root = rootPath(bundleDir);
-  const files = new Map();
-  if (!existsSync(root)) return files;
-  const record = (absolute, relative) => {
-    if (relative === currentJournalRef) return;
-    files.set(relative, sha256Bytes(readFileSync(absolute)));
-  };
-  const visit = (dir) => {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const absolute = path.join(dir, entry.name);
-      const relative = path.relative(root, absolute).split(path.sep).join('/');
-      if (relative === WORK_UNITS.LOCK || relative.startsWith(`${WORK_UNITS.LOCK}/`)) continue;
-      if (entry.isDirectory()) {
-        visit(absolute);
-        continue;
-      }
-      if (!entry.isFile()) continue;
-      record(absolute, relative);
-    }
-  };
-  const workUnitsRoot = path.join(root, WORK_UNITS.ROOT);
-  if (existsSync(workUnitsRoot)) visit(workUnitsRoot);
-  const ledgerAbsolute = path.join(root, WORK_UNIT_OUTPUT_LEDGER);
-  if (existsSync(ledgerAbsolute) && lstatSync(ledgerAbsolute).isFile()) {
-    record(ledgerAbsolute, WORK_UNIT_OUTPUT_LEDGER);
-  }
-  return files;
-}
-
-function changedFiles(before, after) {
-  const all = new Set([...before.keys(), ...after.keys()]);
-  return [...all].filter((entry) => before.get(entry) !== after.get(entry)).sort();
-}
-
-// Attribution boundary: a changed file under another work unit's own directory
-// (_work_units/<wave>/<work-id>/...) belongs to that work unit's concurrent
-// actor lifecycle, not to this transaction. Concurrent claimed actors append
-// their own runtime receipts and write their own result/status files outside
-// any transaction; those writes must not make this transaction suspect and are
-// never rolled back by it. The transaction's own target work-unit directories
-// and the root-level authority files (for example _work_units/_index.json)
-// remain fully attributed.
-function belongsToOtherWorkUnit(relativePath, targetWorkIds) {
-  const segments = relativePath.split('/');
-  if (segments.length < 3 || segments[0] !== WORK_UNITS.ROOT) return false;
-  return !targetWorkIds.includes(segments[2]);
-}
-
-function callerFor(operation, { targetWorkIds = [], targetQueueItemIds = [] } = {}) {
-  return {
-    operation,
-    work_id: targetWorkIds[0] || null,
-    queue_item_id: targetQueueItemIds[0] || null,
-  };
-}
-
-function defaultRerun(operation, bundleDir, { targetWorkIds = [] } = {}) {
-  const workArg = targetWorkIds[0] ? ` --work-id ${JSON.stringify(targetWorkIds[0])}` : '';
-  return `rerun ${operation} for ${JSON.stringify(rootPath(bundleDir))}${workArg}`;
-}
-
-function rawSuspectHolder(owner = null, journal = null) {
-  const rawDisposition = journal?.schema_version === LEGACY_TRANSACTION_V1_SCHEMA_VERSION && journal?.status === 'failed'
-    ? 'legacy_failed'
-    : ['started', 'committed', 'rolled_back', 'suspect'].includes(journal?.status)
-      ? journal.status
-      : 'unknown';
-  return {
-    tx_id: typeof owner?.tx_id === 'string' ? owner.tx_id : typeof journal?.tx_id === 'string' ? journal.tx_id : null,
-    operation: typeof owner?.operation === 'string' ? owner.operation : typeof journal?.operation === 'string' ? journal.operation : null,
-    journal_ref: typeof owner?.journal_ref === 'string' ? owner.journal_ref : typeof journal?.journal_ref === 'string' ? journal.journal_ref : null,
-    target_work_ids: Array.isArray(owner?.target_work_ids) ? owner.target_work_ids : Array.isArray(journal?.target_work_ids) ? journal.target_work_ids : [],
-    target_queue_item_ids: Array.isArray(owner?.target_queue_item_ids) ? owner.target_queue_item_ids : Array.isArray(journal?.target_queue_item_ids) ? journal.target_queue_item_ids : [],
-    journal_disposition: rawDisposition,
-  };
-}
-
-function isCompleteCommittedV1Diagnostic(raw) {
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return false;
-  const expectedFields = [
-    'schema_version',
-    'tx_id',
-    'operation',
-    'status',
-    'started_at',
-    'committed_at',
-  ];
-  if (Object.keys(raw).length !== expectedFields.length
-    || !expectedFields.every((field) => Object.hasOwn(raw, field))) return false;
-  return raw.schema_version === LEGACY_TRANSACTION_V1_SCHEMA_VERSION
-    && typeof raw.tx_id === 'string'
-    && raw.tx_id.trim().length > 0
-    && typeof raw.operation === 'string'
-    && raw.operation.trim().length > 0
-    && raw.status === 'committed'
-    && isExactIsoTimestamp(raw.started_at)
-    && isExactIsoTimestamp(raw.committed_at);
-}
-
-function isExactIsoTimestamp(value) {
-  return z.string().datetime().safeParse(value).success;
-}
-
-function currentTargetsMatchManifest(bundleDir, journal) {
-  try {
-    const snapshots = journal.mutation_manifest.targets.map((target) => {
-      const resolved = canonicalTargetPath(bundleDir, target.path);
-      return { ...resolved, ...target };
-    });
-    return snapshots.every(targetMatchesBeforeImage);
-  } catch {
-    return false;
-  }
-}
-
-function recoverTransactionRerun(bundleDir, txId) {
-  return `node DEEP_RESEARCH_HARNESS/cli/operate-work-unit.mjs recover-transaction ${JSON.stringify(rootPath(bundleDir))} --tx-id ${JSON.stringify(txId || '<tx-id>')}`;
-}
-
-function suspectProjection(bundleDir, operation, options, {
-  owner = null,
-  journal = null,
-  reason,
-  unlocked = false,
-} = {}) {
-  const holder = owner || journal ? rawSuspectHolder(owner, journal) : null;
-  const recoverable = unlocked
-    && journal?.schema_version === WORK_UNIT_TRANSACTION_V2_SCHEMA_VERSION
-    && ['started', 'suspect'].includes(journal.status)
-    && currentTargetsMatchManifest(bundleDir, journal);
-  return WorkUnitTransactionProjectionSchema.parse({
-    disposition: 'suspect_transaction',
-    caller: callerFor(operation, options),
-    holder,
-    targets_same_attempt: holder && options.targetWorkIds?.[0]
-      ? holder.target_work_ids.includes(options.targetWorkIds[0])
-      : null,
-    repair_kind: recoverable ? WORK_UNIT_REPAIR_KIND.recoverTransaction : WORK_UNIT_REPAIR_KIND.missingContract,
-    missing_fact: reason,
-    write_to: recoverable ? journal.journal_ref : null,
-    rerun: recoverable
-      ? recoverTransactionRerun(bundleDir, journal.tx_id)
-      : (options.rerun || defaultRerun(operation, bundleDir, options)),
-    next: {
-      repair_kind: recoverable ? WORK_UNIT_REPAIR_KIND.recoverTransaction : WORK_UNIT_REPAIR_KIND.missingContract,
-      missing_fact: reason,
-      write_to: recoverable ? journal.journal_ref : null,
-      rerun: recoverable
-        ? recoverTransactionRerun(bundleDir, journal.tx_id)
-        : (options.rerun || defaultRerun(operation, bundleDir, options)),
-    },
-  });
-}
-
-function readHeldTransactionProjection(bundleDir, operation, options) {
-  const ownerFile = transactionLockOwnerPath(bundleDir);
-  let rawOwner = null;
-  let rawJournal = null;
-  try {
-    rawOwner = readJson(ownerFile);
-    const owner = WorkUnitTransactionLockOwnerSchema.parse(rawOwner);
-    const journalFile = path.join(rootPath(bundleDir), owner.journal_ref);
-    rawJournal = readJson(journalFile);
-    const journal = WorkUnitTransactionV2JournalSchema.parse(rawJournal);
-    const pair = WorkUnitTransactionPairSchema.parse({ owner, journal });
-    if (pair.journal.status === 'suspect') {
-      return suspectProjection(bundleDir, operation, options, {
-        owner,
-        journal,
-        reason: `held transaction ${owner.tx_id} has suspect disposition`,
-      });
-    }
-    return WorkUnitTransactionProjectionSchema.parse({
-      disposition: 'busy',
-      caller: callerFor(operation, options),
-      holder: {
-        tx_id: owner.tx_id,
-        operation: owner.operation,
-        journal_ref: owner.journal_ref,
-        target_work_ids: owner.target_work_ids,
-        target_queue_item_ids: owner.target_queue_item_ids,
-        journal_disposition: journal.status,
-      },
-      targets_same_attempt: journal.status === 'started'
-        && Boolean(options.targetWorkIds?.some((workId) => owner.target_work_ids.includes(workId))),
-      repair_kind: WORK_UNIT_REPAIR_KIND.wait,
-      missing_fact: null,
-      write_to: null,
-      rerun: options.rerun || defaultRerun(operation, bundleDir, options),
-      next: {
-        repair_kind: WORK_UNIT_REPAIR_KIND.wait,
-        missing_fact: null,
-        write_to: null,
-        rerun: options.rerun || defaultRerun(operation, bundleDir, options),
-      },
-    });
-  } catch (error) {
-    return suspectProjection(bundleDir, operation, options, {
-      owner: rawOwner,
-      journal: rawJournal,
-      reason: `global work-unit lock owner/journal is unpaired or invalid: ${error.message || String(error)}`,
-    });
-  }
-}
-
-function unresolvedOrphanJournals(bundleDir, { exceptTxId = null } = {}) {
-  const dir = transactionRoot(bundleDir);
-  if (!existsSync(dir)) return [];
-  const out = [];
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
-    let raw;
-    try {
-      raw = readJson(path.join(dir, entry.name));
-      const parsed = WorkUnitTransactionV2JournalSchema.safeParse(raw);
-      if (!parsed.success) {
-        if (isCompleteCommittedV1Diagnostic(raw)) continue;
-        throw parsed.error;
-      }
-      if (parsed.data.tx_id === exceptTxId) continue;
-      if (['started', 'suspect'].includes(parsed.data.status)) out.push(parsed.data);
-    } catch (error) {
-      out.push({
-        tx_id: typeof raw?.tx_id === 'string' ? raw.tx_id : entry.name.replace(/\.json$/, ''),
-        schema_version: raw?.schema_version || 'unknown',
-        status: raw?.status || 'unknown',
-        parse_error: error.message || String(error),
-      });
-    }
-  }
-  return out;
-}
-
-// Deterministic first-recovery coordinate for a multi-orphan state. A journal
-// declared as a mutation target of another unresolved orphan is a wrapped
-// recovery target: its wrapper must be settled first. Manifests are captured
-// at transaction start, so the wrapper relation is acyclic.
-function firstRecoverableOrphan(orphans) {
-  const wrappedRefs = new Set();
-  for (const orphan of orphans) {
-    for (const target of orphan?.mutation_manifest?.targets || []) {
-      if (typeof target?.path === 'string' && target.path.startsWith(`${WORK_UNITS.TRANSACTIONS}/`)) {
-        wrappedRefs.add(target.path);
-      }
-    }
-  }
-  const isV2Orphan = (entry) => entry?.schema_version === WORK_UNIT_TRANSACTION_V2_SCHEMA_VERSION
-    && !entry?.parse_error && typeof entry?.tx_id === 'string';
-  const candidates = orphans.filter((orphan) => !wrappedRefs.has(orphan?.journal_ref));
-  const ordered = [...(candidates.length > 0 ? candidates : orphans)].sort((left, right) => {
-    const byShape = Number(isV2Orphan(right)) - Number(isV2Orphan(left));
-    if (byShape !== 0) return byShape;
-    const byStartedAt = String(left?.started_at || '').localeCompare(String(right?.started_at || ''));
-    if (byStartedAt !== 0) return byStartedAt;
-    return String(left?.tx_id || '').localeCompare(String(right?.tx_id || ''));
-  });
-  return ordered[0] || null;
-}
-
-export function inspectWorkUnitTransaction(bundleDir, {
-  operation = 'submit_work_unit',
-  targetWorkIds = [],
-  targetQueueItemIds = [],
-  rerun = null,
-  includeOrphans = true,
-  exceptTxId = null,
-  ignoreHeldTxId = null,
-} = {}) {
-  const options = { targetWorkIds, targetQueueItemIds, rerun };
-  if (existsSync(lockPath(bundleDir))) {
-    if (ignoreHeldTxId) {
-      try {
-        const owner = WorkUnitTransactionLockOwnerSchema.parse(readJson(transactionLockOwnerPath(bundleDir)));
-        if (owner.tx_id !== ignoreHeldTxId) return readHeldTransactionProjection(bundleDir, operation, options);
-      } catch {
-        return readHeldTransactionProjection(bundleDir, operation, options);
-      }
-    } else {
-      return readHeldTransactionProjection(bundleDir, operation, options);
-    }
-  }
-  if (includeOrphans) {
-    const orphans = unresolvedOrphanJournals(bundleDir, { exceptTxId: exceptTxId || ignoreHeldTxId });
-    if (orphans.length > 0) {
-      const journal = orphans.length === 1
-        ? orphans[0]
-        : (firstRecoverableOrphan(orphans) || orphans[0]);
-      return suspectProjection(bundleDir, operation, options, {
-        journal,
-        unlocked: true,
-        reason: orphans.length === 1
-          ? `unlocked unresolved transaction journal ${journal.tx_id} has disposition ${journal.status}`
-          : `multiple unresolved transaction journals exist (${orphans.map((entry) => entry.tx_id).join(', ')}); recover ${journal.tx_id} first`,
-      });
-    }
-  }
-  return WorkUnitTransactionProjectionSchema.parse({
-    disposition: 'none',
-    caller: callerFor(operation, options),
-    holder: null,
-    targets_same_attempt: false,
-    repair_kind: null,
-    missing_fact: null,
-    write_to: null,
-    rerun: null,
-  });
-}
-
-function transactionBlockedResult(projection) {
-  return {
-    ok: false,
-    reason_code: projection.disposition,
-    repair_kind: projection.repair_kind,
-    missing_fact: projection.missing_fact,
-    write_to: projection.write_to,
-    rerun: projection.rerun,
-    transaction: projection,
-  };
-}
 
 function normalizeOptions(options, fn) {
   if (typeof options === 'function') {

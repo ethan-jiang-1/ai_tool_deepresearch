@@ -153,8 +153,9 @@ test('C2 residue: engine sources carry no superseded leniency tokens', () => {
   assert.ok(validation.includes('runtime receipt missing exact attempt binding'));
   assert.ok(validation.includes('receipt_schema_defaulted'));
   // A7: recover-declaration write_to names the submit/late-submit/new-attempt boundary
-  const submit = read('DEEP_RESEARCH_HARNESS/engine/work-unit-submit.mjs');
-  assert.ok(submit.includes('the submit/late-submit/new-attempt boundary'));
+  // (C4: the payload builder moved to work-unit-submit-declaration-recovery.mjs)
+  const recoveryModule = read('DEEP_RESEARCH_HARNESS/engine/work-unit-submit-declaration-recovery.mjs');
+  assert.ok(recoveryModule.includes('the submit/late-submit/new-attempt boundary'));
 });
 
 test('delta blocks are verbatim-synced with main spec requirement blocks', () => {

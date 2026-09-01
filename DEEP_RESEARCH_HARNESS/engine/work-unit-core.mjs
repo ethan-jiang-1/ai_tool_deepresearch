@@ -45,11 +45,13 @@ export {
 // Submit (6)
 export {
   drySubmitWorkUnit,
-  inspectWorkUnitDeclarationRecovery,
-  lateSubmitWorkUnit,
-  recoverWorkUnitDeclaration,
   submitWorkUnit,
 } from './work-unit-submit.mjs';
+export { lateSubmitWorkUnit } from './work-unit-submit-late-retry.mjs';
+export {
+  inspectWorkUnitDeclarationRecovery,
+  recoverWorkUnitDeclaration,
+} from './work-unit-submit-declaration-recovery.mjs';
 
 // Timeout preflight (1)
 export {

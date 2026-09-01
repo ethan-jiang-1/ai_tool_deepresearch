@@ -89,3 +89,6 @@ export const DEFAULT_KIND_CONTRACTS = Object.freeze({
     }),
   }),
 });
+
+export const WORK_UNIT_INDEX_TARGET = '_work_units/_index.json';
+export const QUEUE_TARGET = 'rb_queue.json';

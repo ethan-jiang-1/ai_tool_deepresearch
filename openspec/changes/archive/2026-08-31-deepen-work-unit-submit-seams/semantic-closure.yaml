@@ -1,0 +1,11 @@
+schema_version: semantic-closure/v1
+change: 2026-08-31-deepen-work-unit-submit-seams
+status: not_applicable
+reason: >-
+  本 change 是 engine 内部的模块布局搬动：公开导出面（work-unit-core、
+  work-unit-index、各被消费模块）逐一 grep 不变，四个新模块是既有函数的
+  move-only 重放（D4 move-only 纪律），唯一逻辑等效重排是 sha256Bytes→utils
+  与 transactionRoot→index 路径 owner 统一（等价实现）。不改变任何 cataloged
+  semantic fact family 的 resolver、establishing surface 结论内容或 verdict
+  consumer——engine 代码的物理文件布局不是 semantic fact；S1-S12 不变量网
+  证明 durable-state 语义逐字节保持。

@@ -27,9 +27,13 @@ describe('work-unit attempt-recovery implementation inventory', () => {
       ],
       'DEEP_RESEARCH_HARNESS/engine/work-unit-submit.mjs': [
         "'reject_work_unit_submit'",
-        "'late_submit_work_unit'",
-        "'recover_work_unit_declaration'",
         "'submit_work_unit'",
+      ],
+      'DEEP_RESEARCH_HARNESS/engine/work-unit-submit-late-retry.mjs': [
+        "'late_submit_work_unit'",
+      ],
+      'DEEP_RESEARCH_HARNESS/engine/work-unit-submit-declaration-recovery.mjs': [
+        "'recover_work_unit_declaration'",
       ],
       'DEEP_RESEARCH_HARNESS/engine/work-unit-supersession.mjs': ["'supersede_work_unit'"],
       'DEEP_RESEARCH_HARNESS/engine/work-unit-transaction.mjs': ["'recover_work_unit_transaction'"],
@@ -64,10 +68,10 @@ describe('work-unit attempt-recovery implementation inventory', () => {
   });
 
   it('writes submitted hashes only through the ledger-first current profile', () => {
-    const submit = source('DEEP_RESEARCH_HARNESS/engine/work-unit-submit.mjs');
-    const writerStart = submit.indexOf('function writeSubmittedStatusAndHashes');
-    const writerEnd = submit.indexOf('function verifySubmitDurablePostcondition');
-    const writer = submit.slice(writerStart, writerEnd);
+    const snapshotSource = source('DEEP_RESEARCH_HARNESS/engine/work-unit-submit-snapshot.mjs');
+    const writerStart = snapshotSource.indexOf('function writeSubmittedStatusAndHashes');
+    const writerEnd = snapshotSource.indexOf('function verifySubmitDurablePostcondition');
+    const writer = snapshotSource.slice(writerStart, writerEnd);
 
     assert.match(writer, /delete record\.result_hash/);
     assert.match(writer, /delete record\.ledger_record_hash/);
