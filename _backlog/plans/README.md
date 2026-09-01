@@ -1,6 +1,6 @@
 # Active Plans — 活跃 plan/分析文档列表
 
-> 最后更新: 2026-08-31（`drift-resync-locks-hygiene-and-work-unit-deepening` 完成关闭（CLS-082）。此前：`test-signal-and-guidance-wording-hygiene` 完成关闭（CLS-081）。此前：`control-surface-drift-density-and-module-boundaries` 已完成关闭；spec-semantic-drift-remediation 于 2026-08-31 完成关闭（CLS-079）） | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
+> 最后更新: 2026-08-31（新增活跃 plan `cleanup-wave2-carving-test-guards-and-ledger`——第二波打扫，四路审计回填期。同日：`drift-resync-locks-hygiene-and-work-unit-deepening` 完成关闭（CLS-082）。此前：`test-signal-and-guidance-wording-hygiene` 完成关闭（CLS-081）。此前：`control-surface-drift-density-and-module-boundaries` 已完成关闭；spec-semantic-drift-remediation 于 2026-08-31 完成关闭（CLS-079）） | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
 >
 > **plan 没有编号，文件名即标识。完成后文件名不变，位置即状态。**
 
@@ -17,6 +17,7 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
+| `cleanup-wave2-carving-test-guards-and-ledger` | 第二波打扫（CLS-082 打法推广）：W1 测试守护网先行（check-all 并发 flakiness 修复 + stale module-path 修正 + 第二梯队四文件行为基线）→ W2 `canonical-topic-state.mjs`（1879 行，7 消费者）切缝 → W3 gate-helpers 梯队处置（切分/下沉/合并四选一，依消费图）→ W4 第二轮死代码（DEAD/DE-EXPORT/DEAD-FLEXIBILITY）→ W5 spec `.mjs` 引用 284 处三分类清扫 + CHI-004 决策表测试。四路只读审计进行中（AUD-1..4），结果回填 §3 后逐 change propose。预估 4–6 个 change，串行。 | 审计回填期，待 W1 propose |
 
 ### 参照资料（非 plan，供后续 change 引用）
 
