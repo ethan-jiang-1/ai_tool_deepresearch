@@ -494,6 +494,10 @@ semantic-closure 预期：`not_applicable` 或 `affected`（按触碰 family 定
 
 **"显著改善"的裁定标准（计划关闭时逐条打勾）**：① 台账 30/30 归零且无新增 MEDIUM；② 死代码与双代真相清零；③ 三个新锁 + 一个 checker 生效（未来词表漂移由机器拦截）；④ 场景墙 ≤9 且 Top-10 无增长；⑤ C4 后 work-unit 域最大文件 ≤1030 行且全部既有测试绿。①②③ 任何一条未达即计划不得关闭（可部分关闭并在台账注明 residual）。
 
+### 10.6a Post-C3 快照（2026-08-31，commit dc20ee0bb，C3 finalizer 19/19）
+
+变化 vs Post-C2：RWP 1147→1142 行（三 requirement 指针化）；GSK-009 去重；registry 676→678 registered、57→59 retired；RWP header 移除 RWP-005/008；锁测试扩展至 registry 断言。场景墙与 Top-10 持平。指标与 Baseline 对照详终局统计。
+
 ### 10.7 Post-C4 快照（2026-08-31，C4 finalizer 19/19）与终局统计
 
 变化 vs Post-C3：**C4 探针全部 DONE**；submit.mjs 2439→1048（T5 后）；engine 模块 87→92、总行数 35635→36012（+13 不变量测试文件外的搬动开销与 5 个新模块头注释）；work-unit-* 模块 22→27；测试 303→305 文件。
