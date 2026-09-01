@@ -263,7 +263,7 @@ The accepted canonical fields SHALL remain `evidence_meaning`, `relationship`, `
 
 ### Requirement: Return-map inspection SHALL filter backfill tokens by target wave
 
-`hasBackfillToken()` SHALL accept a `wave` parameter and match only tokens belonging to that wave:
+`the retired per-wave backfill token check (realized by current return-map entry points)()` SHALL accept a `wave` parameter and match only tokens belonging to that wave:
 
 | Wave | Tokens checked |
 |---|---|
@@ -271,22 +271,22 @@ The accepted canonical fields SHALL remain `evidence_meaning`, `relationship`, `
 | Wave1 | `__BACKFILL_WAVE1_MECHANISMS__`, `__BACKFILL_WAVE1_TRENDS__`, `__BACKFILL_PENDING_QUESTIONS__` |
 | Wave2 | `__BACKFILL_WAVE2_JUDGMENT__` |
 
-When `hasBackfillToken()` returns true for the target wave, return-map validation for that wave SHALL be skipped. Tokens belonging to other waves SHALL NOT cause a skip.
+When `the retired per-wave backfill token check (realized by current return-map entry points)()` returns true for the target wave, return-map validation for that wave SHALL be skipped. Tokens belonging to other waves SHALL NOT cause a skip.
 
-Call sites in `inspectSeedTopicReturnMaps()` SHALL pass the current target wave. The `__BACKFILL_PENDING_QUESTIONS__` token is assigned to Wave1 (Wave1 is its primary consumer; Wave2 appends W2F-xxx entries when no token is present).
+Call sites in `the retired return-map inspection (realized by current return-map entry points)()` SHALL pass the current target wave. The `__BACKFILL_PENDING_QUESTIONS__` token is assigned to Wave1 (Wave1 is its primary consumer; Wave2 appends W2F-xxx entries when no token is present).
 
 #### Scenario: Wave0 inspect not short-circuited by Wave1 token
 
 - **WHEN** a seed topic file has `__BACKFILL_WAVE1_MECHANISMS__` present
 - **AND** Wave0 inspect runs with `wave: 'wave0'`
-- **THEN** `hasBackfillToken(content, 'wave0')` SHALL return false
+- **THEN** `the retired per-wave backfill token check (realized by current return-map entry points)(content, 'wave0')` SHALL return false
 - **AND** Wave0 return-map validation SHALL proceed
 
 #### Scenario: Wave2 inspect not short-circuited by Wave1 shared token
 
 - **WHEN** a seed topic file has `__BACKFILL_PENDING_QUESTIONS__` present (Wave1's token, not yet consumed)
 - **AND** Wave2 inspect runs with `wave: 'wave2'`
-- **THEN** `hasBackfillToken(content, 'wave2')` SHALL return false (token belongs to Wave1)
+- **THEN** `the retired per-wave backfill token check (realized by current return-map entry points)(content, 'wave2')` SHALL return false (token belongs to Wave1)
 - **AND** Wave2 return-map validation SHALL proceed
 
 ### Requirement: Return-map inspection SHALL verify current-round projection identities

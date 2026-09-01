@@ -1,0 +1,7 @@
+schema_version: semantic-closure/v1
+change: 2026-08-31-retire-return-map-symbols-and-de-export
+status: not_applicable
+reason: >-
+  纯表面收窄（de-export）与超<void>级代码删除（R3 零引用已由 AUD-2 验证）；
+  不改任何 cataloged semantic fact family 的 resolver、establishing surface
+  结论内容或 verdict consumer。R3 两条款的行为已由其他入口实现。

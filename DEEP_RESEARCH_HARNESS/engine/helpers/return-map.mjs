@@ -60,13 +60,6 @@ const WAVE_TOKEN_MAP = Object.freeze(Object.fromEntries(['wave0', 'wave1', 'wave
   projectionSlotsForWave(wave).map((slot) => slot.initialToken),
 ])));
 
-function hasBackfillToken(content, wave = null) {
-  if (!content) return false;
-  if (wave && WAVE_TOKEN_MAP[wave]) {
-    return WAVE_TOKEN_MAP[wave].some((token) => content.includes(token));
-  }
-  return /__BACKFILL_[A-Z0-9_]+__/.test(content);
-}
 
 function hasNakedEvidenceList(content) {
   const lines = String(content || '').split(/\r?\n/);
@@ -1010,6 +1003,3 @@ function projectionReadinessResult(findings, extras = {}) {
   };
 }
 
-export function inspectSeedTopicReturnMaps(bundlePath, options = {}) {
-  return evaluateSeedTopicProjectionReadiness(bundlePath, options);
-}

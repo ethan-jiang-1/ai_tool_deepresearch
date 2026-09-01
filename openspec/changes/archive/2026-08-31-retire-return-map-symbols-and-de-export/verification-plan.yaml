@@ -1,0 +1,32 @@
+schema_version: verification-routing/v1
+change: 2026-08-31-retire-return-map-symbols-and-de-export
+test_classes:
+  unit:
+    status: selected
+    rationale: absence-lock 断言（退休/去导出 token 零命中）为 in-process node:test。
+  integration:
+    status: not_applicable
+    rationale: 零 CLI/行为变化。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: 零行为变化。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: 零 Agent 行为变化。
+claims:
+  - id: r3-retired-and-de-export-complete
+    statement: >-
+      R3 两符号 + 两条款退休；DE-EXPORT ~127 项逐文件加载零失败；
+      absence-lock 全绿；全量 npm test 0 fail。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/residual-spec-drift-text-locks.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
