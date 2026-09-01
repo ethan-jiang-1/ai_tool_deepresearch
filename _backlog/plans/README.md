@@ -1,6 +1,6 @@
 # Active Plans — 活跃 plan/分析文档列表
 
-> 最后更新: 2026-08-31（新增活跃 plan `cleanup-wave2-carving-test-guards-and-ledger`——第二波打扫，四路审计回填期。同日：`drift-resync-locks-hygiene-and-work-unit-deepening` 完成关闭（CLS-082）。此前：`test-signal-and-guidance-wording-hygiene` 完成关闭（CLS-081）。此前：`control-surface-drift-density-and-module-boundaries` 已完成关闭；spec-semantic-drift-remediation 于 2026-08-31 完成关闭（CLS-079）） | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
+> 最后更新: 2026-09-01（新增活跃 plan `spec-drift-audit-remediation-and-requirement-slimming`——六路 spec↔code 漂移审计落地：C1 return-map 真相同步、C2 phase-content 坐标重同步、C3 巨型 requirement 瘦身、C4 防复发 guard；DWU capability 拆分复议挂起。此前 2026-08-31：新增活跃 plan `cleanup-wave2-carving-test-guards-and-ledger`——第二波打扫，四路审计回填期。同日：`drift-resync-locks-hygiene-and-work-unit-deepening` 完成关闭（CLS-082）。此前：`test-signal-and-guidance-wording-hygiene` 完成关闭（CLS-081）。此前：`control-surface-drift-density-and-module-boundaries` 已完成关闭；spec-semantic-drift-remediation 于 2026-08-31 完成关闭（CLS-079）） | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
 >
 > **plan 没有编号，文件名即标识。完成后文件名不变，位置即状态。**
 
@@ -17,7 +17,7 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
-| *（当前无活跃 plan）* | | |
+| [`spec-drift-audit-remediation-and-requirement-slimming`](spec-drift-audit-remediation-and-requirement-slimming.md) | 六大 spec 漂移审计落地：return-map 4 项真噪声 + phase-content 4 项坐标腐坏清零（C1/C2）；巨型 requirement 瘦身至仓库常态（C3，按 spec 分批）；防复发 guard 可选（C4）；DWU capability 拆分挂起复议 | 审计完成 6/6；C1/C2 可随时 `/opsx:propose` |
 
 ### 参照资料（非 plan，供后续 change 引用）
 
