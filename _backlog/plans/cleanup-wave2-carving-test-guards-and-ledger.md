@@ -206,7 +206,7 @@ M0 审计回填 ──✅──▶ M1 用户确认 ──✅──▶ W1 测试�
 - [x] M1 用户确认
 - [x] W1 测试守护网 ✅（finalizer 19/19；全量 ×2 绿 @concurrency=4；三缺陷修复 + 基线 4/4）
 - [x] W2 canonical-topic-state 切缝 ✅（finalizer 19/19；1879→604 + 4 模块；全量 0 fail）
-- [ ] W3 gate-helpers-core + wave-depth-contracts 切缝
+- [ ] W3 gate-helpers-core + wave-depth-contracts 切缝（**首次尝试已回滚**：codemod 切割后跨组 import 解析未收敛（submittedFactByRef/loadWave2FindingIndexFact/CARRIED_BINDING_KEYS/ACCEPTED_SOURCE_STATUSES 四处跨组引用错配），已恢复绿色检查点。**重入指引**：AUD-1 §2/§3 聚类地图 + 组间引用需人工核对（尤其 `submittedFactByRef` 归属 verdicts 还是 wave1 簇、`loadWave2FindingIndexFact` 被 wave1 簇引用的跨组边）；codemod 模式见 git 历史 `6b0a4e188`（C4）与本波 W2 commit；零模块级可变状态、无环前提不变）
 - [ ] W4 第二轮死代码清除
 - [ ] W5 spec 引用与 prose 清扫
 - [ ] W6 R3 退休 + DE-EXPORT
