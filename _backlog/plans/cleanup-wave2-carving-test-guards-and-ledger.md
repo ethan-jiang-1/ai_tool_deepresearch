@@ -1,6 +1,6 @@
 # 第二波打扫：engine 第二梯队切缝、测试守护网与账本清扫（cleanup-wave2-carving-test-guards-and-ledger）
 
-> 状态: **active（调查期——四路审计 3/4 完成，AUD-2 死代码清查进行中；全部回填并经用户确认前不开工）** | 创建: 2026-08-31 | 上游: CLS-082 `drift-resync-locks-hygiene-and-work-unit-deepening`（已完成）的成功模式复用
+> 状态: **active（调查完成——四路审计全部回填，§5 终稿 + value÷risk 评估已落；**待用户确认后开工**）** | 创建: 2026-08-31 | 上游: CLS-082 `drift-resync-locks-hygiene-and-work-unit-deepening`（已完成）的成功模式复用
 > 定位: `_backlog` 上游分析与决策记录，非运行时真相；落地一律走 OpenSpec change 生命周期。
 > 执行协议: 沿用 CLS-082 §9——每个 change propose → `/polish-openspec-change` 打磨至 ready for apply → 不停顿直通 apply → governed archive → git commit → 快照复测；合法停靠点仅限三项（open question 需裁决 / 未预见语义冲突 / change 外部 blocker）。
 > 意图（用户原话精神）: "非常有效的打扫卫生"——把 C1–C4 验证过的打法（不变量先行 + 深模块切缝 + 指针化 + 账本增补）推广到第二梯队，**每一步都先让机器可验证**。
@@ -74,55 +74,66 @@ CLS-082 波次验证了三件事：①工作单元深水区可以零行为变化
 
 ---
 
-## 5. 渐进式 change 分解（预估 4–6 个，串行，一次一个 active）
+## 5. 渐进式 change 分解（**终稿 v1**，2026-08-31 四路审计回填后落成；**待用户确认后开工**）
 
-> **状态：草案，待 AUD-2 回填后落成终稿；终稿经用户确认前不立项。** 编号预留给本波：W1–W5。每个 change 的 proposal 前置 = 对应审计结果 + polish 打磨。审计若推翻分解（如 canonical-topic-state 判定"不切"），本节按审计修正。
+> 一次一个 active change，串行；每个 change：propose → polish（ready for apply）→ apply → governed archive → commit → 快照。 AUD 全部完成（AUD-1..4），下表每项的行号/清单均有双侧证据。
 
-### W1 `harden-test-guards-before-carving`（测试守护网，先做；小代码=纯测试）
+### W1 `harden-test-guards-before-carving`（测试守护网；纯测试，先做）
 
-- 范围（依 AUD-3）：
-  1. 修复 check-all 并发 flakiness（超时/并发参数或测试隔离，二选一，explore 定）；
-  2. stale module-path 引用修正（C4 切分后仍指向旧位置的测试断言）；
-  3. 为第二梯队四个大文件的**现有公开行为**补最小守护测试（切缝前的不变量基线——不追求 S1-S12 的深度，只求搬动前后可对比）；
-  4. helper 重复收拢（仅当审计显示 ≥3 处同体 helper 且收拢 diff 有界）。
-- Done condition：全量绿 + 四个目标文件的"行为基线测试"在案。
-- 规模：M。风险：低（纯测试）。
+- AUD-3 三缺陷修复：(S1) 残余 token 负向扫描改为 glob 覆盖全部 `work-unit-*.mjs`（含 5 个新 C4 模块）；(S2) rerun-added-topic negative 清单补新模块；(S3) attempt-recovery 结构锁 indexOf 加边界守卫。
+- check-all flakiness 四选项落地：fixture hermetic 化（mkdtemp + --root 透传）、`--test-concurrency=4`、per-checker 超时余量、`waitForFile` 3s→10s（explore 期定组合）。
+- 零边际断言修复：`evaluateWorkUnitSubmitIntegrity` 恰 3 处（>=3 改为精确计数或登记）。
+- canonical-topic-state 五簇**行为基线测试**（切缝前的不变量网，对齐 C4 的 T1 先行）。
+- Done condition：全量绿 ×3 稳定；基线在案。规模 M；风险低。
 
-### W2 `carve-canonical-topic-state`（最大文件切缝；依 AUD-1）
+### W2 `carve-canonical-topic-state`（最大文件切缝）
 
-- 范围：按 AUD-1 的聚类地图拆 `canonical-topic-state.mjs`（1879 行，7 消费者）。候选缝（预判，待审计确认）：topic mutation workspace / layout resolver / seed projection——三者边界在 spec（CTS-005/006/007）本就分明。
-- 纪律：move-only；桶/导入面 grep 不变；W1 基线测试 + 既有全套回归双网；若审计发现环，采用 C4 transaction 的三层解法。
-- Done condition：主文件 ≤ 修复目标行数（审计给出）；公开导出面不变；全量绿。
-- 规模：L（1879 行 + 7 消费者）。风险：中——消费面广。
+- AUD-1 §1：4 新模块（topic-state-plan-schema ~618 / bundle-io ~130 含 `evaluateCanonicalSeedBindings` 下沉基层 / wave-projection ~344 / inspect ~215）+ 残余 ~556；**零环、无需三层**；32 消费者经 facade 全部不动。
+- 测试锁处理：`canonical-topic-state-contract.test.mjs` 源文本锁重指；dead import `PROJECTION_ENTRY_FIELDS` 删除；簇 2（IO）仅间接覆盖——搬动前后以 W1 基线对比。
+- Done condition：主文件 ≤~560；导出面 grep 不变；全量绿。规模 L；风险中。
 
-### W3 `carve-or-consolidate-gate-helpers-and-tier2`（依 AUD-1/AUD-2 排序，可能拆成 W3a/W3b）
+### W3 `carve-gate-helpers-core-and-wave-depth-contracts`（两个文件一批）
 
-- 范围：gate-helpers-core/checks（桶穿透后的真实切分或保持）、wave-depth-contracts（预判：下沉/合并）、artifact-persistence/handoff-helpers（视审计）。
-- 每个文件的处置四选一：**切分 / 下沉至唯一消费者 / 合并近亲 / 保持原样**——由消费图与环风险决定，不预设。
-- Done condition：逐文件处置表 + 全量绿 + 导出面不变。
-- 规模：M–L。风险：中（gate 评估器是 HITL/质量门禁区， Helper-Oriented 宪法要求确定性裁决不动）。
+- gate-helpers-core（1443→~60 facade + 4 模块）：invocation/result/attempt-audit(~790，**最后搬**，间接覆盖)/plan-progress；mid-file logger import 随簇 3/4；dead imports `relative`/`parseYaml` 顺带删。
+- wave-depth-contracts（1358→core ~45/wave1 ~775/wave2 ~545 + ~20 facade）：合并重复 topic-layout import；`wave-depth-contracts.test.mjs:471` 源文本断言重指。
+- 红线：新模块不得 import 桶 `gate-helpers.mjs`（环）；纯 facade 规则。
+- Done condition：两文件 facade 化 + 消费者零改动；全量绿。规模 M-L；风险中。
 
-### W4 `clear-dead-code-and-de-exports`（第二轮死代码；依 AUD-2）
+### W4 `clear-dead-code-second-wave`（AUD-2 代码侧）
 
-- 范围：AUD-2 的 DEAD（删除）、DE-EXPORT（收窄导出）、DEAD-FLEXIBILITY（删参数面）三类；TEST-ONLY 单列不入（登记）。
-- Done condition：每条 finding 的回归锁（删除后 token 零命中）+ 全量绿。
-- 规模：S–M。风险：低-中（死代码判定需双侧证据，C2 已有先例）。
+- R1 删除：DEAD 导出 ×13（不含 2 个 R3）+ DEAD 私有 ×7（不含 #23）+ 死 import（relative/parseYaml/PROJECTION_ENTRY_FIELDS 已在 W2/W3 顺带）。
+- DEAD-FLEXIBILITY：#24 `sideEffects`/`requireInFlight` 参数面删除 + `loadQueueReadOnly` 统一评估；#25 `handoff_preflight: false` ×10 gate CLI（**propose 期先查 spec 是否命名该字段**）。
+- R2 配套：Navigation 注释同步、machine-checks-catalog 文档漂移修正（#19）、absence-lock 扩展到新退休符号。
+- **不含**：R3 两个 return-map 符号（归 W6）；TEST-ONLY 18（默认保留/注记，de-export 需连同测试重构，另行评估）。
+- Done condition：每条 finding 的 absence-lock + 全量绿。规模 M；风险低-中。
 
-### W5 `sweep-spec-mjs-references-and-ledger`（spec 账本；doc-only）
+### W5 `sweep-spec-references-and-prose`（spec 侧，doc-only）
 
-- 范围（依 AUD-4）：
-  1. `.mjs` 284 处分类结果落地：CLASS-C 过时引用修正；CLASS-B 无谓所有权证据改契约 token/导出名（保留 CLASS-A 合法面：export-lock requirement、CLI 命名、schema 契约引用）；
-  2. CHI-004 决策表回归测试填充（RUN.md 表行 × `WORK_UNIT_RECOVERY_ACTIONS` 导出派生，C2 checker 同族手法）；
-  3. AUD-4 新发现的陈旧 prose。
-- 不含：场景墙表格化（独立 explore）、exit-code 代码锁（观察项转正与否需单独裁决）。
-- Done condition：CLASS-B/C 清零 + 决策表测试绿 + 全量绿。
-- 规模：M。风险：低-中（registry 只增纪律）。
+- AUD-4 CLASS-B 批量（13 处/12 站点/10 文件）按四主题组改写为所有权指针（C3 模式）；**前置：10 文件 list-doc-locks 盘点**。
+- 小修：schema-core Purpose 计数（10→14/6→10）、CHI-004 disposition owner 指针重指 `WORK_UNIT_ATTEMPT_DISPOSITIONS`（C2 引致的落后一跳）、`research-wave-experiments` Purpose 幽灵 playbook 名。
+- delta-synced 标记约定裁决（累积 vs 退役）——19 处标记的处置规则定稿后执行。
+- Done condition：CLASS-B 清零 + absence-lock 扩展 + 全量绿。规模 M；风险低-中。
 
-### 顺序与依赖
+### W6 `retire-return-map-locked-symbols-and-de-export`（R3 退休 + 表面收紧，最后做）
 
-AUD → **W1（守护网）** → W2（最大文件）→ W3（梯队处置）→ W4（死代码）→ W5（spec 账本）。W1 必须最先（守护网是 W2/W3 的安全带）；W4/W5 互不依赖、可按审计完成度插队；W2/W3 串行（同验证面，避免并行 sprawl）。
+- R3：spec delta 退休/re-home `research-return-map:266-289`（`hasBackfillToken`）与 `:276`（`inspectSeedTopicReturnMaps`）两条款 → 代码删除两符号 + machine-checks-catalog #19 同步（若 W4 未清）。
+- DE-EXPORT 127 项（AUD-2 E 类）按目录分批：去掉无外部 importer 的 `export` 关键字，Navigation 注释同步；**排除**：#27/28（故意 test-lock）、#29 `WorkUnitAttemptDispositionSchema`（C2 锁面，审计例外保留）、TEST-ONLY 18 项。
+- Done condition：de-export 后全仓 import 解析零失败（逐文件 load 验证）+ absence-lock + 全量绿。规模 M；风险低-中（量大但机械）。
 
----
+### 排序与依赖
+
+W1 → W2 → W3 → W4 → W5 → W6。W1 是 W2/W3 的安全带；W4 需在 W2/W3 之后（切缝完成后再扫一遍死代码更准）；W5/W6 独立于 W2/W3 但排在后面（de-export 清单在布局稳定后才最终化）。若中途需要腾手，W5/W6 可无限期后置而不阻塞 W1–W4 收益。
+
+### value÷risk 评估（逐项）
+
+| Change | 价值 | 风险 | 裁定建议 |
+|---|---|---|---|
+| W1 | 高（守护网是后续一切的前提 + 修真 bug：并发竞态、逃逸洞） | 低 | ✅ 做 |
+| W2 | 高（最大文件 1879→~556，消费面最广但 facade 全保护，测试网最强） | 中 | ✅ 做（AUD-1 排名第 1） |
+| W3 | 中-高（1443+1358→facade 化；attempt-audit 簇仅间接覆盖是唯一暗礁） | 中 | ✅ 做（batch 处理桶编辑） |
+| W4 | 中-高（23 项死代码 + 2 个 DEAD-FLEXIBILITY，全双侧验证） | 低-中 | ✅ 做 |
+| W5 | 中（CLASS-B 13 处清零 + 账本卫生） | 低-中 | ✅ 做 |
+| W6 | 中（表面收紧 127 项 + 2 个 R3 退休） | 低 | ✅ 做（量大机械，排最后）|
 
 ## 6. 度量追踪（沿用 CLS-082 快照机制）
 
