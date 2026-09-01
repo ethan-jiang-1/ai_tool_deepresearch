@@ -1,0 +1,38 @@
+schema_version: verification-routing/v1
+change: 2026-08-31-carve-gate-helpers-core
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      既有 gate-helpers-core.test.mjs（51 cases）经桶在切缝后全绿，由全量
+      npm test 覆盖；本 change 无新增 unit 断言。
+  integration:
+    status: selected
+    rationale: >-
+      gate CLI integration 面（gate-dynamic-threshold 等）通过 facade 运行
+      全部 gate 生命周期，证明 re-export 与 logger import 修复后行为一致。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      既有 e2e 环由全量 npm test 覆盖。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      纯内部布局搬动。
+claims:
+  - id: gate-helpers-carve-behavior-neutral
+    statement: >-
+      切缝后 facade 保持 17 公开名 re-export + 2 const export；gate CLI
+      integration 全绿；barrel 消费者零改动。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/gate-dynamic-threshold.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

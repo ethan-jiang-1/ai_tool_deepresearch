@@ -1,0 +1,7 @@
+schema_version: semantic-closure/v1
+change: 2026-08-31-carve-gate-helpers-core
+status: not_applicable
+reason: >-
+  纯 move-only 布局搬动：函数体逐字搬运至四个新模块，facade re-export 保持
+  公开面不变（17 公开名 + 2 const）；不改任何 cataloged semantic fact family
+  的 resolver、establishing surface 结论内容或 verdict consumer。
