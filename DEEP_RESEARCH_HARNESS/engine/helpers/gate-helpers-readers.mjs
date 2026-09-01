@@ -262,65 +262,11 @@ function computeWorkUnitLedgerRecordHash(row) {
   return hashValue(base);
 }
 
-function loadSubmittedWorkUnitIndex(bundlePath) {
-  const indexPath = join(bundlePath, '_work_units', '_index.json');
-  if (!existsSync(indexPath)) return null;
-  return WorkUnitIndexSchema.parse(JSON.parse(readFileSync(indexPath, 'utf-8')));
-}
 
 function isWorkUnitLikeLedgerRow(row) {
   return row && typeof row === 'object' && typeof row.work_id === 'string' && row.work_id.startsWith('wu-');
 }
 
-function collectWorkUnitLedgerRowIssues(bundlePath, row, index) {
-  const parsed = WorkUnitLedgerRecordSchema.safeParse(row);
-  if (!parsed.success) {
-    if (!isWorkUnitLikeLedgerRow(row)) return { row: null, indexRecord: null, issues: [] };
-    return {
-      row: null,
-      indexRecord: null,
-      issues: [`work-unit declaration schema invalid for ${row.work_id}: ${zodErrors(parsed.error).map((i) => `${i.field || '<root>'} ${i.message}`).join(', ')}`],
-    };
-  }
-
-  const ledgerRow = parsed.data;
-  const issues = [];
-  const expectedHash = computeWorkUnitLedgerRecordHash(row);
-  if (ledgerRow.ledger_record_hash !== expectedHash) {
-    issues.push(`ledger_record_hash mismatch for ${ledgerRow.work_id}`);
-  }
-
-  const indexRecord = index?.work_units?.[ledgerRow.work_id];
-  if (!indexRecord) {
-    issues.push(`submitted work-unit declaration missing index record: ${ledgerRow.work_id}`);
-  } else {
-    if (indexRecord.status !== 'submitted') {
-      issues.push(`submitted work-unit declaration index status is ${indexRecord.status}: ${ledgerRow.work_id}`);
-    }
-    for (const field of ['queue_item_id', 'wave', 'kind', 'producer_rule', 'creation_reason', 'receipt_nonce']) {
-      if (ledgerRow[field] !== indexRecord[field]) issues.push(`ledger/index mismatch for ${ledgerRow.work_id}: ${field}`);
-    }
-    if (ledgerRow.work_unit_ref !== indexRecord.paths.work_unit_dir) issues.push(`ledger/index mismatch for ${ledgerRow.work_id}: work_unit_ref`);
-    if (ledgerRow.result_ref !== indexRecord.paths.result_ref) issues.push(`ledger/index mismatch for ${ledgerRow.work_id}: result_ref`);
-    if (ledgerRow.runtime_receipt_ref !== indexRecord.paths.runtime_receipt_ref) issues.push(`ledger/index mismatch for ${ledgerRow.work_id}: runtime_receipt_ref`);
-    try {
-      assertCompleteCurrentWorkUnitProfile(bundlePath, indexRecord);
-      const status = readSubmittedStatusFile(bundlePath, indexRecord);
-      validateCurrentSubmittedLedgerFact({ record: indexRecord, row: ledgerRow, status });
-    } catch (error) {
-      issues.push(error.message || String(error));
-    }
-    if (ledgerRow.late_accept === true) {
-      const submittedReplacements = Object.values(index?.work_units || {})
-        .filter((record) => record.queue_item_id === ledgerRow.queue_item_id && record.work_id !== ledgerRow.work_id && record.status === 'submitted');
-      if (submittedReplacements.length > 0) {
-        issues.push(`late-accept conflict for ${ledgerRow.queue_item_id}: submitted replacement ${submittedReplacements.map((record) => record.work_id).join(', ')}`);
-      }
-    }
-  }
-
-  return { row: ledgerRow, indexRecord: indexRecord || null, issues };
-}
 
 /**
  * Read Engine-accepted work-unit submission declarations.

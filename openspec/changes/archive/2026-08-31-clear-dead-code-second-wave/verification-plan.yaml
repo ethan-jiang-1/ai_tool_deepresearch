@@ -1,0 +1,34 @@
+schema_version: verification-routing/v1
+change: 2026-08-31-clear-dead-code-second-wave
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      absence-lock 测试（dead token 零命中 + DE-EXPORT 后加载零失败）为
+      in-process node:test 断言。
+  integration:
+    status: not_applicable
+    rationale: 零 CLI/跨面行为变化。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: 零行为变化。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: 零 Agent 行为变化。
+claims:
+  - id: dead-code-cleared
+    statement: >-
+      AUD-2 R1/R2 全部 DEAD token 全仓零命中；absence-lock 绿；全量 npm test
+      0 fail。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/residual-spec-drift-text-locks.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

@@ -570,9 +570,3 @@ export function recoverPostFinalRecovery({ bundlePath, operationId, hooks = null
 }
 
 export { parsePostFinalRecoveryEvent } from './post-final-reentry-contract.mjs';
-export function inspectActivePostFinalRecoveryStage(bundlePath) {
-  const bundle = safeBundle(bundlePath);
-  const workspaces = inspectWorkspaceRoot(bundle);
-  if (workspaces.accepted.length > 0) return { ok: false, reason_code: 'accepted_workspace', workspaces };
-  return inspectPostFinalHandoffStage(bundle);
-}

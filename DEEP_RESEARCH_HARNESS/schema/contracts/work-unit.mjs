@@ -24,7 +24,6 @@ export const WORK_UNIT_SUPERSESSION_SCHEMA_VERSION = 'work-unit.supersession.v1'
 export const WORK_UNIT_ID_PATTERN = /^wu-w(?<wave>[0-9]+)-b(?<batch>[0-9]{3})-(?<kind_code>[a-z][a-z0-9]{1,7})-i(?<claim>[0-9]{4})$/;
 
 export const WorkUnitStatus = z.enum(['claimed', 'submitted', 'failed', 'timed_out', 'abandoned']);
-export const WorkUnitTerminalStatus = z.enum(['submitted', 'failed', 'timed_out', 'abandoned']);
 
 const JsonObject = z.record(z.string(), z.unknown());
 const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/, 'hash must be a lowercase SHA-256 hex string');

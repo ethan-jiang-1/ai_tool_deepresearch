@@ -625,6 +625,3 @@ export function cleanupCaseRoot(prepared) {
   if (existsSync(prepared.caseRunRoot)) fail('case run root still exists after cleanup');
 }
 
-export function sha256Object(value) {
-  return createHash('sha256').update(JSON.stringify(value)).digest('hex');
-}

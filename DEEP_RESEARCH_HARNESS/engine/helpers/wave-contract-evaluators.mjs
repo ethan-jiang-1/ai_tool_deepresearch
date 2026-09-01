@@ -404,9 +404,6 @@ function matchingAlternativeFiles(bundlePath, target) {
   return [...byPath.values()];
 }
 
-function globRegex(pattern) {
-  return new RegExp(`^${basename(pattern).replace(/\./g, '\\.').replace(/\*/g, '[^/]*')}$`);
-}
 
 function readStatus(bundlePath) {
   const path = join(bundlePath, 'rb_status.json');

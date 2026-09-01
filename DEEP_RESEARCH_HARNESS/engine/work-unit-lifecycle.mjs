@@ -319,12 +319,6 @@ export function parsePhase(phase) {
   return Number.parseInt(match.groups.wave, 10);
 }
 
-export function defaultKindForWave(wave) {
-  if (wave === 0) return 'wave0_source_intake';
-  if (wave === 1) return 'wave1_topic_deepening';
-  if (wave === 2) return 'wave2_targeted_evidence';
-  return null;
-}
 
 export function itemWave(item) {
   if (Number.isInteger(item.payload?.wave)) return item.payload.wave;

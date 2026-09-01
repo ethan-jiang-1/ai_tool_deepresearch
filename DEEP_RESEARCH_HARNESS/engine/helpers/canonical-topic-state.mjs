@@ -66,7 +66,6 @@ export { SEED_TOPIC_PROJECTION_ENTRY_FIELDS, SEED_TOPIC_PROJECTION_CARD_LABEL, S
 
 export const TOPIC_STATE_ROOT = '_diagnostics/topic-state';
 
-export const TOPIC_STATE_OPERATIONS = Object.freeze(['inspect', 'schema', 'apply', 'recover']);
 
 function refreshTopicRegistryTable(body, oldRegistry, finalRegistry) {
   const candidates = locateCanonicalSections(body, 'Topic Registry')

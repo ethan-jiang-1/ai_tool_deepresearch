@@ -268,9 +268,6 @@ export function transactionPath(bundleDir, txId) {
   return path.join(transactionDir(bundleDir), `${txId}.json`);
 }
 
-function writeTransaction(bundleDir, tx) {
-  writeJson(transactionPath(bundleDir, tx.tx_id), tx);
-}
 
 export {
   inspectWorkUnitTransaction,

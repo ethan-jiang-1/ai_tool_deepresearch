@@ -201,6 +201,3 @@ export function resolveWorkUnitAssignmentContract({
   });
 }
 
-export function validateWorkUnitAssignmentAdmission(input) {
-  return resolveWorkUnitAssignmentContract(input);
-}

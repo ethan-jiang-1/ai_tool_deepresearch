@@ -149,11 +149,6 @@ export function projectionSha256(projection) {
   return hash(canonicalJson(projection));
 }
 
-export function profileContextSha256(profile) {
-  const parsed = parsedProfile(profile);
-  if (!parsed.ok) return parsed;
-  return { ok: true, sha256: hash(canonicalJson(profileContext(parsed.profile))) };
-}
 
 export function evaluateCompositionProceed(profile) {
   const parsed = parsedProfile(profile);

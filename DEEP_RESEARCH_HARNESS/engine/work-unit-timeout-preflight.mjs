@@ -301,12 +301,6 @@ function drySubmitHasSameAttemptRepair(dry) {
   return true;
 }
 
-function drySubmitIsNonRepairable(dry) {
-  if (!dry || dry.expected_submit !== 'fail') return false;
-  const violations = Array.isArray(dry.violations) ? dry.violations : [];
-  if ((dry.reason_codes || []).some((code) => NON_REPAIRABLE_DRY_CODES.has(code))) return true;
-  return violations.some((violation) => NON_REPAIRABLE_DRY_PHASES.has(violation.phase));
-}
 
 function parseCandidate(candidatePath) {
   try {

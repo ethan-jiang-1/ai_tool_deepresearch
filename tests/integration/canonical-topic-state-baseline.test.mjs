@@ -50,7 +50,6 @@ describe('canonical-topic-state public export surface (W1 baseline)', () => {
     for (const name of [
       'TOPIC_STATE_SCHEMA_VERSION',
       'TOPIC_STATE_ROOT',
-      'TOPIC_STATE_OPERATIONS',
       'TopicApplyPlanSchema',
       'describeTopicApplyPlanSchema',
       'projectTopicApplyValidationErrors',
@@ -64,8 +63,8 @@ describe('canonical-topic-state public export surface (W1 baseline)', () => {
     }
   });
 
-  it('TOPIC_STATE_OPERATIONS matches the CLI operation set', () => {
-    assert.deepEqual([...cts.TOPIC_STATE_OPERATIONS].sort(), ['apply', 'inspect', 'recover', 'schema']);
+  it('TOPIC_STATE_OPERATIONS matches the CLI operation set (deleted as dead code in W4)', () => {
+    assert.equal(cts.TOPIC_STATE_OPERATIONS, undefined, 'TOPIC_STATE_OPERATIONS deleted by W4 dead-code cleanup');
   });
 
   it('smoke: apply commits a topic, inspect reports clean, crash mid-apply recovers via the CLI', () => {

@@ -50,7 +50,6 @@ export const FILE_CLASSIFICATIONS = Object.freeze([
   'explained_non_authoritative',
 ]);
 
-export const SEVERITY_LEVELS = Object.freeze(['info', 'warning', 'blocker']);
 
 // Known control files at bundle root — always expected
 const ROOT_CONTROL_FILES = new Set([

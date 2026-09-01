@@ -681,22 +681,6 @@ function findingIndexAuthorityFinding(bundlePath, findingIndexFact) {
   });
 }
 
-function topicRegistryAuthorityFinding(bundlePath) {
-  return makeContractFinding({
-    id: 'return_map_topic_registry_authority',
-    ruleId: 'return_map_topic_registry_authority',
-    findingSource: 'checker',
-    classification: 'blocking',
-    blockingBasis: 'authority_integrity',
-    surface: resolvePath(bundlePath, 'rb_plan.md'),
-    expected: 'One normalized canonical topic-registry fact for projection readiness.',
-    observed: 'topicRegistryFact is unavailable or invalid',
-    missingFact: 'Seed projection readiness cannot read canonical topic-registry authority.',
-    repairKind: 'missing_contract',
-    writeTo: 'Canonical topic registry authority recovery boundary',
-    detail: '[return_map_topic_registry_authority] canonical topic-registry fact is unavailable.',
-  });
-}
 
 function resolveFindingTopicTokens(layouts, tokens) {
   const resolved = new Map();

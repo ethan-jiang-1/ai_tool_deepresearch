@@ -181,13 +181,6 @@ export function locateCanonicalSections(body, name) {
   return sections;
 }
 
-export function replaceCanonicalSectionContent(body, name, content) {
-  const section = locateCanonicalSection(body, name);
-  if (!section) return { ok: false, body, reason: 'canonical_section_missing' };
-  const normalized = String(content).replace(/^\n+|\n+$/g, '');
-  const replacement = `${body.slice(section.start, section.headerEnd)}\n\n${normalized}\n`;
-  return { ok: true, body: `${body.slice(0, section.start)}${replacement}${body.slice(section.end)}`, section };
-}
 
 export function canonicalSectionContent(body, name) {
   const section = locateCanonicalSection(body, name);

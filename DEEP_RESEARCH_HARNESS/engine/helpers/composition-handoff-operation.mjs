@@ -63,9 +63,6 @@ function result(value) {
   };
 }
 
-function restoreCommand(bundlePath) {
-  return `node DEEP_RESEARCH_HARNESS/cli/operate-composition-handoff.mjs restore --bundle ${bundlePath} --current-node phases/phase-readiness.md`;
-}
 
 function rerunCommand(bundlePath) {
   return `node DEEP_RESEARCH_HARNESS/cli/gates/check-gate-readiness-passed.mjs --bundle ${bundlePath} --current-node phases/phase-readiness.md`;

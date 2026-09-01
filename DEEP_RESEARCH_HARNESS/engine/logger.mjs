@@ -59,20 +59,6 @@ const LEVEL_LABELS = { debug: 'DEBUG', info: 'INFO', warn: 'WARN', error: 'ERROR
  *
  * @impl LOC-010
  */
-export const DIAGNOSTIC_KINDS = Object.freeze([
-  'phase_start',
-  'phase_end',
-  'queue_enqueue',
-  'queue_claim',
-  'queue_complete',
-  'queue_fail',
-  'receipt_check',
-  'ledger_append',
-  'rerun_action_summary',
-  'file_observability_finding',
-  'file_explanation',
-  'gate_failure_detail',
-]);
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Single read point for bundle name (Design D9)

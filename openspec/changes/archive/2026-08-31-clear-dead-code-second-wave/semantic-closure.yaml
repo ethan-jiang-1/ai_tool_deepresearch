@@ -1,0 +1,7 @@
+schema_version: semantic-closure/v1
+change: 2026-08-31-clear-dead-code-second-wave
+status: not_applicable
+reason: >-
+  纯死代码删除与参数面收窄：AUD-2 双侧验证全部 token 零引用（不可达或
+  超级不再使用）；不改任何 cataloged semantic fact family 的 resolver、
+  establishing surface 结论内容或 verdict consumer。
