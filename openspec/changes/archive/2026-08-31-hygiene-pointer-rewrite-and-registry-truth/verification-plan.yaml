@@ -1,0 +1,72 @@
+schema_version: verification-routing/v1
+change: 2026-08-31-hygiene-pointer-rewrite-and-registry-truth
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      指针化后的文本锚点（owner 归属句、retention 注记、旧复述句消失）、
+      GSK-009 去重断言、registry 四条目与 header 集合断言均为 in-process
+      确定性文本/registry 断言，由 node:test 锁定。
+  integration:
+    status: not_applicable
+    rationale: >-
+      零 CLI/跨面执行变化；governance checker 由 npm run governance:check 覆盖。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      零 lifecycle/gate 行为变化。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      不声称任何真实 Agent 行为变化；纯 accepted spec 指针化与 registry 账本。
+claims:
+  - id: rwp-pointer-rewrite
+    statement: >-
+      RWP 三个 requirement 改为 owner 指针（WPG-015/WTS-012/RRM），旧字段契约
+      复述与旧示例串不再出现，全部 scenario 标题保留并带 retention 注记。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/residual-spec-drift-text-locks.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: gsk009-morale-dedup
+    statement: >-
+      GSK-009 块内 morale 禁令段不再复述（唯一归属 cli-exit-code-conventions），
+      High-friction scenario 标题保留且正文为 convention 归属；gate 专属
+      0/1/2 映射保留。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/residual-spec-drift-text-locks.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: registry-ledger-truth
+    statement: >-
+      req-registry 含 RRM-008/CTS-012 新条目（标题与 main heading 一致）、
+      RWP-005/008 标 [DEPRECATED] 且不在 RWP header、AGO-006 标题对齐 AGO
+      正文口径；check-project-reqs 0 unregistered / 0 orphan / 0 duplicate。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/residual-spec-drift-text-locks.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

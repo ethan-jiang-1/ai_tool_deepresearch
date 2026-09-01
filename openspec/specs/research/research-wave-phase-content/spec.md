@@ -1,6 +1,6 @@
 # Research Wave Phase Content
 
-> req: RWP-001, RWP-002, RWP-003, RWP-004, RWP-005, RWP-006, RWP-007, RWP-008, RWP-009, RWP-010, RWP-011, RWP-012, RWP-013, RWP-014, RWP-015, RWP-016, RWP-017, RWP-018, RWP-019, RWP-020, RWP-021, RWP-022, RWP-023
+> req: RWP-001, RWP-002, RWP-003, RWP-004, RWP-006, RWP-007, RWP-009, RWP-010, RWP-011, RWP-012, RWP-013, RWP-014, RWP-015, RWP-016, RWP-017, RWP-018, RWP-019, RWP-020, RWP-021, RWP-022, RWP-023
 
 > delta-synced: strengthen-user-intent-carry-through (RWP-022), document-wave0-deferred-all-or-nothing (RWP-023)
 
@@ -483,7 +483,7 @@ The wave2-complete Gate SHALL include a rerun add check that forbids `## Delta S
 Phase-wave0 §3.3、Phase-wave1 §3.3、and Phase-wave2 §3.2.3 SHALL instruct the Agent to update seed projection sections from current-round submitted authority. When a `__BACKFILL_*__` token is present (first materialization), the Agent SHALL replace it with return-map entries. When no token is present (rerun), the Agent SHALL:
 
 1. Read current-round submitted rows via `operate-work-unit inspect --eligible-rows` for the topic/wave. Eligible rows are those whose work unit index record `rerun_count` matches the current `rb_profile.yaml` value, validated through ledger/index/manifest/queue-snapshot/canonical-topic binding by the Engine.
-2. Read submitted outputs at the returned `result_path` locations. Derive return-map entries (evidence_meaning, relationship, refs, status, next_hop) by reading the outputs — NOT by mechanically extracting fields from ledger rows.
+2. Read submitted outputs at the returned `result_path` locations. Derive return-map entries with the canonical entry fields owned by the research-return-map contract, by reading the outputs — NOT by mechanically extracting fields from ledger rows.
 3. For Wave0, obtain each new `<work_id>/<n>` entry ID from the existing submitted contribution reader: `n` is the exact global source-array ordinal owned by that accepted work unit's contribution, not a per-work-unit local index or a mutable-array re-read. For Wave1, retain the existing positive ordinal unique within the submitted work unit. For Wave2, retain the exact current-round W2F identity. Use the existing Projection Packet writer to upsert the returned identity; do not append raw Markdown or infer a historical ordinal split.
 4. For entries that should not appear in the projection (intermediate outputs, process-only, not consumer-facing), write an explicit no-projection disposition entry with `relationship: defers`, `status: deferred`, and `next_hop` containing a limitation reason.
 
@@ -516,7 +516,7 @@ Rerun 场景表的 `action: add` 行 SHALL 新增一行说明：`_cache/ 写入�
 #### Scenario: Entry with no-projection disposition satisfies check
 
 - **WHEN** a submitted row produced process-only output not suitable for consumer projection
-- **THEN** the Agent SHALL write an entry with `relationship: defers`, `status: deferred`, `next_hop: “limitation: process-only output, not consumer-facing”`
+- **THEN** the Agent SHALL write an entry with `relationship: defers`, `status: deferred`, `next_hop: “limitation: not materializable; process-only output”` (the canonical no-projection limitation form owned by research-return-map)
 - **AND** this entry SHALL satisfy the authority reference check (explicit disposition)
 
 #### Scenario: Wave1 classification uses direction resolver
@@ -1053,38 +1053,35 @@ When fallback is accepted by claim, the Phase Agent SHALL execute the single cla
 
 ### Requirement: Work unit index record SHALL carry Engine-owned rerun_count
 
-`operate-work-unit claim` SHALL read the current `rerun_count` from `rb_profile.yaml` and write it into the work unit index record's `rerun_count` field at claim time. The field SHALL be a non-negative integer or absent (legacy records). This field SHALL be Engine-owned — the Agent SHALL NOT write or modify it.
-
-`operate-work-unit inspect` SHALL accept an `--eligible-rows` flag. When present, it SHALL return all submitted rows for the bundle whose index `rerun_count` matches the current profile `rerun_count`, validated through ledger/index/manifest/queue-snapshot/canonical-topic binding. Each returned row SHALL include `work_id`, `result_path`, `rerun_count`, and resolved topic binding. Legacy rows without `rerun_count` in the index record SHALL be treated as `legacy_unbound` and excluded from eligible rows (they are not current-round authority).
+Wave phase docs SHALL teach Engine-owned `rerun_count` round identity as a pointer to its single Source of Record: the provenance-gate requirement "Work unit index record carries Engine-owned rerun_count stamped at claim time" (WPG-015, `agent/work-unit-provenance-gate`), which owns claim-time stamping, the non-negative integer field contract, Agent write prohibition, and the `operate-work-unit inspect --eligible-rows` round filtering (including `legacy_unbound` exclusion). This phase-doc requirement SHALL NOT restate the Engine-owned field contract; when the phase body mentions round identity or eligible rows it SHALL direct the Agent to the owning requirement for the behavioral truth.
 
 #### Scenario: Claim stamps current rerun_count into index
 
-- **WHEN** profile `rerun_count` is 2 and `operate-work-unit claim` creates a new work unit
-- **THEN** the index record SHALL have `rerun_count: 2`
-- **AND** the Agent SHALL NOT be able to modify this field
+- **WHEN** the phase doc describes claim-time `rerun_count` stamping or `--eligible-rows` round filtering
+- **THEN** the guidance SHALL attribute the behavior to the WPG-015 owning requirement instead of restating the field contract
+- **AND** the teaching SHALL retain the retention note that this scenario title is retained only as the OpenSpec delta-sync key
 
 #### Scenario: Eligible rows filtered by round
 
-- **WHEN** a bundle has submitted rows with index.rerun_count values 1, 2, and one legacy row without the field
-- **AND** profile `rerun_count` is 2
-- **THEN** `operate-work-unit inspect --eligible-rows` SHALL return only the row with `rerun_count: 2`
-- **AND** legacy rows and round-1 rows SHALL be excluded
+- **WHEN** the phase doc teaches eligible-row round filtering
+- **THEN** the guidance SHALL defer the filtering semantics (including `legacy_unbound` exclusion) to the WPG-015 owning requirement
+- **AND** the scenario title is retained only as the OpenSpec delta-sync key
 
 ### Requirement: Wave2 finding SHALL carry created_in_rerun_count
 
-`finding-index.yaml`'s per-finding contract SHALL include an optional `created_in_rerun_count` field (non-negative integer). The Phase Agent SHALL write this field when creating new findings in Wave2 synthesis, reading the current value from `rb_profile.yaml`. Existing findings without this field SHALL be treated as `legacy_unbound` — they SHALL always be included in projection and authority verification regardless of round.
+Wave phase docs SHALL teach the finding-index round marker as a pointer to its single Source of Record: the wave2-synthesis requirement owning the finding-index currentness contract (WTS-012, `research/wave2-synthesis`), which owns the optional `created_in_rerun_count` field contract, the Phase Agent write duty from the current `rb_profile.yaml` value, and `legacy_unbound` inclusion semantics. This phase-doc requirement SHALL NOT restate the finding-index field contract.
 
 #### Scenario: New finding carries round marker
 
-- **WHEN** Wave2 synthesis creates finding W2F-015 in round 2
-- **THEN** the finding SHALL have `created_in_rerun_count: 2`
+- **WHEN** the phase doc describes the finding-index `created_in_rerun_count` round marker
+- **THEN** the guidance SHALL attribute the contract to the WTS-012 owning requirement instead of restating the field contract
+- **AND** the teaching SHALL retain the retention note that this scenario title is retained only as the OpenSpec delta-sync key
 
 #### Scenario: Legacy finding without round marker is preserved
 
-- **WHEN** a pre-v0.29 finding has no `created_in_rerun_count` field
-- **AND** Wave2 authority verification runs in round 2
-- **THEN** the finding SHALL be treated as legacy_unbound and included in verification
-- **AND** no blocking finding SHALL be produced solely due to the missing field
+- **WHEN** the phase doc teaches legacy finding inclusion
+- **THEN** the guidance SHALL defer the `legacy_unbound` inclusion semantics to the WTS-012 owning requirement
+- **AND** the scenario title is retained only as the OpenSpec delta-sync key
 
 ### Requirement: Wave phases SHALL operate one receipt-bound carried-target loop
 

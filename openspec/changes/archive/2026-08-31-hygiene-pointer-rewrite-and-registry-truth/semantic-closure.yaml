@@ -1,0 +1,11 @@
+schema_version: semantic-closure/v1
+change: 2026-08-31-hygiene-pointer-rewrite-and-registry-truth
+status: not_applicable
+reason: >-
+  本 change 零 engine/CLI 改动。RWP 三个 requirement 与 GSK-009 的指针化让渡
+  的是"复述"不是"行为"：被指向的 owner requirement（WPG-015、WTS-012、
+  CLE-002、RRM-003/007）均为既有 accepted truth，可观察行为集合不变；
+  retention 注记保持 delta-sync key 可检索。registry 四处为账本增补/对齐
+  （两个新 ID 注册的是 main spec 中本已存在的 heading；两个死 ID 的内容已
+  不存在于任何 accepted surface；AGO-006 松散标题对齐其正文既有口径），
+  不新增 semantic fact family、不改变任何 family 的 resolver/verdict。

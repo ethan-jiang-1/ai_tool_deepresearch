@@ -1,6 +1,6 @@
 # Canonical Topic State
 
-> req: CTS-001, CTS-002, CTS-003, CTS-004, CTS-005, CTS-006, CTS-007, CTS-008, CTS-009, CTS-010, CTS-011
+> req: CTS-001, CTS-002, CTS-003, CTS-004, CTS-005, CTS-006, CTS-007, CTS-008, CTS-009, CTS-010, CTS-011, CTS-012
 
 > delta-synced: document-wave0-deferred-all-or-nothing (CTS-011)
 

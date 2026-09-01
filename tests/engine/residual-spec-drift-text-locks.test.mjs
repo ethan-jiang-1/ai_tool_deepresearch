@@ -172,3 +172,40 @@ test('delta blocks are verbatim-synced with main spec requirement blocks', () =>
     }
   }
 });
+
+test('C3: RWP pointer rewrites replace Engine-rule restatements', () => {
+  const t = read('openspec/specs/research/research-wave-phase-content/spec.md');
+  assert.ok(t.includes('as a pointer to its single Source of Record: the provenance-gate requirement'), 'rerun_count teaching pointer required');
+  assert.ok(t.includes('(WPG-015, `agent/work-unit-provenance-gate`)'), 'WPG-015 owner attribution required');
+  assert.ok(t.includes('(WTS-012, `research/wave2-synthesis`)'), 'WTS-012 owner attribution required');
+  assert.ok(t.includes('canonical entry fields owned by the research-return-map contract'), 'return-map field pointer required');
+  assert.ok(t.includes('limitation: not materializable; process-only output'), 'no-projection example must use the RRM canonical form');
+  assert.ok(!t.includes('limitation: process-only output, not consumer-facing'), 'divergent example string must be gone');
+  assert.ok(!t.includes('The field SHALL be a non-negative integer or absent'), 'rerun_count field contract restatement must be gone');
+  assert.ok(!t.includes('finding-index.yaml`\'s per-finding contract SHALL include'), 'created_in_rerun_count contract restatement must be gone');
+  assert.ok((t.match(/retained only as the OpenSpec delta-sync key/g) || []).length >= 4, 'all retained scenario titles must carry retention notes');
+});
+
+test('C3: GSK-009 morale prohibition is owned by the exit-code convention', () => {
+  const t = read('openspec/specs/engine/gate-skeleton/spec.md');
+  assert.ok(!t.includes('Gate CLIs SHALL NOT encode morale, fatigue, reassurance, or continuation encouragement'), 'duplicated morale prohibition must be gone');
+  assert.ok(t.includes('owned by the framework-wide CLI exit-code convention'), 'convention attribution required');
+  assert.ok(t.includes('#### Scenario: High-friction pass keeps pass code'), 'scenario title retained as sync key');
+  assert.ok(t.includes('retained only as the OpenSpec delta-sync key'), 'retention note required');
+  assert.ok(t.includes('`1` for normal gate failure'), 'gate-specific 0/1/2 mapping retained');
+});
+
+test('C3: registry ledger truth (RRM-008/CTS-012, RWP-005/008 retired, AGO-006 aligned)', () => {
+  const reg = read('openspec/governance/req-registry.yaml');
+  assert.ok(reg.includes('RRM-008: research-return-map — Template and command guidance SHALL preserve separate Seed Topic questions'));
+  assert.ok(reg.includes('CTS-012: canonical-topic-state — Canonical reference binding SHALL resolve exact UID subsets'));
+  assert.ok(reg.includes('[DEPRECATED] — content no longer exists in any accepted surface (2026-08-31 archaeology)'));
+  assert.ok(reg.includes('AGO-006: agent-output-declaration — cache_trails SHALL be Engine-verified during operate-work-unit submit'));
+  assert.ok(!reg.includes('cache_trails MUST be populated by Engine during work-unit submit validation, not Agent claims'));
+  const rwp = read('openspec/specs/research/research-wave-phase-content/spec.md');
+  assert.ok(!rwp.includes('RWP-005') && !rwp.includes('RWP-008'), 'deprecated IDs must not remain in header');
+  const rrm = read('openspec/specs/research/research-return-map/spec.md');
+  assert.ok(rrm.includes('RRM-008'), 'header must declare RRM-008');
+  const cts = read('openspec/specs/research/canonical-topic-state/spec.md');
+  assert.ok(cts.includes('CTS-012'), 'header must declare CTS-012');
+});

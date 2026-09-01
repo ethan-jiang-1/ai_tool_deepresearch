@@ -144,7 +144,7 @@ AGO-002: agent-output-declaration — Work-unit result leaf cache_trails declara
 AGO-003: agent-output-declaration — Work-unit submit writes bundle-level rb_output_declarations.jsonl ledger
 AGO-004: agent-output-declaration — Engine consumes declaration ledger rather than scanning directories for Agent outputs
 AGO-005: agent-output-declaration — Ledger declarations preserve non-empty creation context for accepted outputs
-AGO-006: agent-output-declaration — cache_trails MUST be populated by Engine during work-unit submit validation, not Agent claims
+AGO-006: agent-output-declaration — cache_trails SHALL be Engine-verified during operate-work-unit submit per the AGO-006 body (agent-output-declaration)
 AGO-007: agent-output-declaration — Wave1 submitted ledger canonicalizes required output roles
 
 # agent/agent-testing
@@ -562,6 +562,7 @@ CTS-008: canonical-topic-state — Wave1 depth-review selection resolves one can
 CTS-009: canonical-topic-state — Wave0 deferred-contribution packets atomically expand exact current source identities
 CTS-010: canonical-topic-state — operate-topic-state schema projection exposes wave-dependent source-identity forms
 CTS-011: canonical-topic-state — Wave0 deferred-contribution guidance and collision feedback state the disposition-compatibility precondition and the explicit-entry recovery
+CTS-012: canonical-topic-state — Canonical reference binding SHALL resolve exact UID subsets (scalar current UID, all sentinel, related_topic_uids array) into one canonical Topic-set conclusion
 
 # research/content-delivery-experiments
 CDE-001: content-delivery-experiments — case-132 uses real HITL2 gate output for valid decisions, direct negative facts, sentinel rejection, and non-blocking diagnostic-event absence
@@ -668,6 +669,7 @@ RRM-004: research-return-map — Evidence-bearing return-map refs include concre
 RRM-005: research-return-map — Return-map parsing tolerates balanced bold field-label presentation
 RRM-006: research-return-map — Return-map inspection filters backfill tokens by target wave using explicit token-wave mapping
 RRM-007: research-return-map — Return-map inspection verifies per-row current-round authority references in seed projection with explicit no-projection disposition detection
+RRM-008: research-return-map — Template and command guidance SHALL preserve separate Seed Topic questions with the seed-topic-template.md as the sole canonical instantiable Seed Topic template
 
 # research/research-styles
 RES-001: research-styles — Research style JSON definition files under DEEP_RESEARCH_HARNESS/schema/research-styles/
@@ -723,10 +725,10 @@ RWP-001: research-wave-phase-content — Wave0 phase body completeness (9-sectio
 RWP-002: "research-wave-phase-content — Wave1 phase body completeness with subagent boundary (9-section + Future Expansion Guidance, subagent:true as future marker)"
 RWP-003: research-wave-phase-content — Wave2 phase body completeness (9-section, queue-driven three-stage with finding triage + targeted search loop)
 RWP-004: research-wave-phase-content — Wave1 foundation placeholder boundary enforcement (5 prohibited completion claims, marker required)
-RWP-005: research-wave-phase-content — Wave1 future expansion tracks documentation (6 tracks, read-only, not gate pass conditions)
+RWP-005: "research-wave-phase-content — Wave1 future expansion tracks documentation (6 tracks, read-only, not gate pass conditions) [DEPRECATED] — content no longer exists in any accepted surface (2026-08-31 archaeology)"
 RWP-006: research-wave-phase-content — Wave2 synthesis artifact references verified artifacts via Markdown links
 RWP-007: research-wave-phase-content — Anti-cheating rules in wave phase bodies (≥10 phase-specific bans for wave2)
-RWP-008: research-wave-phase-content — Wave2 gap-fill sub-agent phase file behavior specification
+RWP-008: "research-wave-phase-content — Wave2 gap-fill sub-agent phase file behavior specification [DEPRECATED] — content no longer exists in any accepted surface (2026-08-31 archaeology)"
 RWP-009: research-wave-phase-content — Wave0 phase produces 00-shared-*.md + _INDEX.md + README.md + artifacts/wave0/<topic>/source.yaml
 RWP-010: research-wave-phase-content — Wave1 phase produces reference/{topic_slug}-<qualifier>.md rich MD per topic
 RWP-011: research-wave-phase-content — Wave2 phase produces 00-cross-*.md (optional), synthesis stays in artifacts/wave2/

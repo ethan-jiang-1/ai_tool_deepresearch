@@ -665,9 +665,16 @@ For gate CLIs, structured stdout `{ check, routing, inspect, advice }` SHALL be 
 - `1` for normal gate failure, handoff preflight failure, status-window failure, or content/rule failure that the Agent can inspect and repair; and
 - `2` for routing contract, configuration, binding, or invocation errors such as invalid input, config error, missing required flags, or caller misuse.
 
-Gate CLIs SHALL NOT encode morale, fatigue, reassurance, or continuation encouragement in the numeric exit code. High-friction pass/fail guidance, repair strategy, final-delivery reassurance, and autonomous-continuation reminders SHALL be expressed through `advice[]`, diagnostic artifacts, or Agent-readable Markdown without changing the numeric code for the underlying condition.
+The morale/fatigue/continuation-encouragement prohibition for exit codes is owned by the framework-wide CLI exit-code convention (`engine/cli-exit-code-conventions`) and applies to gate CLIs as-is; this requirement SHALL NOT restate it beyond the alignment statement above. Gate-specific repair strategy, final-delivery reassurance, and autonomous-continuation reminders SHALL be expressed through `advice[]`, diagnostic artifacts, or Agent-readable Markdown without changing the numeric code for the underlying condition.
 
 Advice SHALL NOT tell the Agent to hand-edit runtime authority files such as `rb_status.json`, `rb_output_declarations.jsonl`, `_work_units/_index.json`, or hash-bound work-unit result surfaces.
+
+#### Scenario: High-friction pass keeps pass code
+
+- **WHEN** a gate passes after many attempts and emits autonomous-continuation advice
+- **THEN** the process exit code SHALL follow the framework-wide CLI exit-code convention for a pass condition
+- **AND** advice SHALL carry the continuation reminder that `check.next` must be consumed through the accepted handoff path
+- **AND** the scenario title is retained only as the OpenSpec delta-sync key; the prohibition content is owned by `engine/cli-exit-code-conventions`
 
 #### Scenario: Gate caller reads stdout before deciding
 
@@ -680,12 +687,6 @@ Advice SHALL NOT tell the Agent to hand-edit runtime authority files such as `rb
 - **WHEN** a lifecycle gate fails because a required entry witness is missing
 - **THEN** the gate SHALL use the normal gate failure class and emit repair advice naming `enter-phase`
 - **AND** it SHALL NOT use exit code to express frustration, reassurance, or encouragement
-
-#### Scenario: High-friction pass keeps pass code
-
-- **WHEN** a gate passes after many attempts and emits autonomous-continuation advice
-- **THEN** the process exit code SHALL remain the normal pass code
-- **AND** advice SHALL carry the continuation reminder that `check.next` must be consumed through the accepted handoff path
 
 #### Scenario: Advice does not recommend manual authority edits
 
