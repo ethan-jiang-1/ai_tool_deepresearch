@@ -1,0 +1,88 @@
+schema_version: verification-routing/v1
+change: 2026-08-31-harden-test-guards-before-carving
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      负向扫描 glob 化、normalOwners 清单扩展、结构锁守卫、基线文件的导出面
+      与源文本锚点均为 in-process node:test 断言。
+  integration:
+    status: selected
+    rationale: >-
+      canonical-topic-state 基线的 apply/inspect/recover smoke 走公开 API 对
+      fixture bundle 的 durable 断言（integration 所有权面）；check-all
+      aggregation 测试本身是既有 integration 面，本 change 修复其并发暴露。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      零 lifecycle/gate 链路行为变化；既有 e2e 由全量 npm test 覆盖。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      不声称任何真实 Agent 行为变化。
+claims:
+  - id: negative-sweep-covers-new-modules
+    statement: >-
+      残余 token 负向扫描覆盖全部 engine/work-unit-*.mjs（含 5 个新 C4
+      模块）；normalOwners 清单含新模块；人为在任一新模块注入禁用 token 会被
+      断言抓住。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/residual-spec-drift-text-locks.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: structure-lock-bounded
+    statement: >-
+      attempt-recovery 结构锁三锚点任一缺失即显式失败（不再静默空切片）。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-attempt-recovery.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: canonical-topic-state-baseline-green
+    statement: >-
+      canonical-topic-state 公开导出面逐名断言 + apply/inspect/recover smoke
+      + evaluateCanonicalSeedBindings 源锚点，对未改 engine 全绿，作为 W2
+      切缝的漂移捕捉基线。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/canonical-topic-state-baseline.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: concurrency-limited-stable
+    statement: >-
+      test script 以 --test-concurrency=4 运行全量绿 ×2；check-all
+      aggregation 在限流后不再出现并发竞态失败。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/governance/check-all.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

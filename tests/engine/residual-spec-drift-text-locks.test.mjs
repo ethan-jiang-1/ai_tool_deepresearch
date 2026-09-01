@@ -8,7 +8,7 @@
 // @impl AGQ-027
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -139,12 +139,15 @@ test('Purpose/guidance/catalog prose fixes', () => {
 });
 
 test('C2 residue: engine sources carry no superseded leniency tokens', () => {
+  const workUnitModules = readdirSync(join(process.cwd(), 'DEEP_RESEARCH_HARNESS', 'engine'))
+    .filter((name) => /^work-unit-.*\.mjs$/.test(name))
+    .map((name) => `DEEP_RESEARCH_HARNESS/engine/${name}`);
+  assert.ok(workUnitModules.length >= 26, `expected the post-C4 work-unit module family, found ${workUnitModules.length}`);
+  for (const required of ['work-unit-submit-snapshot.mjs', 'work-unit-submit-late-retry.mjs', 'work-unit-submit-declaration-recovery.mjs', 'work-unit-transaction-primitives.mjs', 'work-unit-transaction-projection.mjs']) {
+    assert.ok(workUnitModules.some((rel) => rel.endsWith(required)), `missing C4 module: ${required}`);
+  }
   for (const token of ['allowNonceNormalization', 'receipt_binding_identity_autofilled', 'nonce_normalized_from_record']) {
-    for (const rel of [
-      'DEEP_RESEARCH_HARNESS/engine/work-unit-validation.mjs',
-      'DEEP_RESEARCH_HARNESS/engine/work-unit-submit.mjs',
-      'DEEP_RESEARCH_HARNESS/engine/work-unit-supersession.mjs',
-    ]) {
+    for (const rel of workUnitModules) {
       assert.ok(!read(rel).includes(token), `${token} must be absent from ${rel}`);
     }
   }

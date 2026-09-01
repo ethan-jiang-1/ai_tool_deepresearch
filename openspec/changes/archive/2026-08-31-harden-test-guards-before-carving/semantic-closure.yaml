@@ -1,0 +1,10 @@
+schema_version: semantic-closure/v1
+change: 2026-08-31-harden-test-guards-before-carving
+status: not_applicable
+reason: >-
+  本 change 零生产代码改动（DEEP_RESEARCH_HARNESS/engine、schema、cli 均
+  不触碰），只修改测试文件与 package.json 的测试脚本参数。不改变任何
+  cataloged semantic fact family 的 resolver、establishing surface 结论内容
+  或 verdict consumer。新增的基线测试是对既有公开行为的守护断言，不引入
+  新 semantic fact；--test-concurrency 是测试基建参数，不影响任何运行时
+  事实。无新 family 或 closure 条目需求。

@@ -411,6 +411,11 @@ describe('rerun-added Topic follows the normal Wave0 producer', () => {
       'DEEP_RESEARCH_HARNESS/engine/work-unit-lifecycle.mjs',
       'DEEP_RESEARCH_HARNESS/engine/work-unit-envelope.mjs',
       'DEEP_RESEARCH_HARNESS/engine/work-unit-submit.mjs',
+      'DEEP_RESEARCH_HARNESS/engine/work-unit-submit-snapshot.mjs',
+      'DEEP_RESEARCH_HARNESS/engine/work-unit-submit-late-retry.mjs',
+      'DEEP_RESEARCH_HARNESS/engine/work-unit-submit-declaration-recovery.mjs',
+      'DEEP_RESEARCH_HARNESS/engine/work-unit-transaction-primitives.mjs',
+      'DEEP_RESEARCH_HARNESS/engine/work-unit-transaction-projection.mjs',
       'DEEP_RESEARCH_HARNESS/engine/helpers/wave-contract-evaluators.mjs',
       'DEEP_RESEARCH_HARNESS/schema/gate_definitions/gate-wave0-complete.definition.json',
     ].map((file) => readFileSync(path.join(REPO_ROOT, file), 'utf8')).join('\n');

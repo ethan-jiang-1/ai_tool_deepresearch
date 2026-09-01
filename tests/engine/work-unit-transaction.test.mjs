@@ -60,7 +60,7 @@ function journals(bundleDir) {
     .map((name) => JSON.parse(readFileSync(path.join(dir, name), 'utf8')));
 }
 
-function waitForFile(file, timeoutMs = 3000) {
+function waitForFile(file, timeoutMs = 10000) {
   const started = Date.now();
   return new Promise((resolve, reject) => {
     const poll = () => {

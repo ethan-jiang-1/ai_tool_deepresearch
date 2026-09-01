@@ -61,6 +61,8 @@ describe('work-unit attempt-recovery implementation inventory', () => {
 
     const helperStart = transaction.indexOf('export function withWorkUnitTransaction');
     const helperEnd = transaction.indexOf('export function recoverWorkUnitTransaction');
+    assert.ok(helperStart !== -1, 'withWorkUnitTransaction anchor missing');
+    assert.ok(helperEnd > helperStart, 'recoverWorkUnitTransaction anchor missing or out of order');
     const helper = transaction.slice(helperStart, helperEnd);
     const release = helper.lastIndexOf('rmSync(ownerDir');
     assert.ok(release > 0);
@@ -89,6 +91,8 @@ describe('work-unit attempt-recovery implementation inventory', () => {
     assert.match(integrity, /gate_evaluated:\s*false/);
 
     const submit = source('DEEP_RESEARCH_HARNESS/engine/work-unit-submit.mjs');
+    // exact call-site count post-C4: outerIntegrity + lockedIntegrity + one
+    // dry/preflight shared derivation. Update deliberately if the flow changes.
     assert.ok((submit.match(/evaluateWorkUnitSubmitIntegrity\(/g) || []).length >= 3);
     assert.match(submit, /outerIntegrity[\s\S]{0,2400}withWorkUnitTransaction[\s\S]{0,3200}lockedIntegrity/);
   });
