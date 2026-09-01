@@ -1,0 +1,44 @@
+schema_version: verification-routing/v1
+change: 2026-09-01-sync-return-map-spec-truth
+test_classes:
+  unit:
+    status: selected
+    rationale: 主 spec 三处 requirement 文本与引擎注释的真相同步由静态文本锁（node:test 文本断言）直接证明。
+  integration:
+    status: not_applicable
+    rationale: 无 CLI/子进程行为变更。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: 无 workflow 级状态链变更。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: 无 Agent/Markdown 流程行为变更。
+claims:
+  - id: rrm-spec-retired-prose-removed
+    statement: 主 spec 的 RRM-003/006/007 块不再包含伪函数名、现在时退役 token 规则清单与已被指针化的 canonical-owner 描述；delta 与主 spec 块逐字同步。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/rrm-spec-truth-sync-text-locks.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: return-map-comment-ghost-symbol-removed
+    statement: engine/helpers/return-map.mjs 的导航注释不再列出已 de-export 的 inspectSeedTopicReturnMaps，且列出的符号均有真实 export。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/rrm-spec-truth-sync-text-locks.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

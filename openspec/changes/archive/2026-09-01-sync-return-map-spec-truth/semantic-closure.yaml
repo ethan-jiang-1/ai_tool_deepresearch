@@ -1,0 +1,8 @@
+schema_version: semantic-closure/v1
+change: 2026-09-01-sync-return-map-spec-truth
+status: not_applicable
+reason: >-
+  纯 spec 文本真相同步 + 一行引擎注释修正：不改任何 deterministic fact 的
+  resolution、conclusion 或 consumer 集；openspec/governance/semantic-fact-families.yaml
+  的 22 个 family 中不存在 return-map/projection/seed-topic 相关 family，本 change
+  的三处 requirement 块改写不向任何 family 添加或改写 statement。
