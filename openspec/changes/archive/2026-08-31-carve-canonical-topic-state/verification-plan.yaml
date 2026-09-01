@@ -1,0 +1,37 @@
+schema_version: verification-routing/v1
+change: 2026-08-31-carve-canonical-topic-state
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      本 change 无新 unit 断言；既有 canonical-topic-state.test.mjs 符号级
+      套件与新模块逐文件加载由全量 npm test 覆盖（integration/e2e claims
+      已选）。
+  integration:
+    status: selected
+    rationale: W1 基线（导出面 + apply/inspect/crash/recover smoke）与既有 CLI/集成面（operate-topic-state-direction 等 13 文件）在切缝后全绿。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      既有 e2e 环（canonical-seed-authoring、rerun-round-continuity 等）作为
+      切缝回归网由全量 npm test 重跑覆盖；本 change 不新增端到端场景。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: 纯内部布局搬动，不声称 Agent 行为变化。
+claims:
+  - id: cts-carve-behavior-neutral
+    statement: >-
+      切缝后公开导出面（11 名 + passthrough）不变；基线（export 面 + smoke +
+      crash/recover）与既有符号级套件、e2e 环全绿；主文件 1879→604。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/canonical-topic-state-baseline.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

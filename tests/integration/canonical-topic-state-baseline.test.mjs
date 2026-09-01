@@ -98,8 +98,8 @@ describe('canonical-topic-state public export surface (W1 baseline)', () => {
   it('source anchor: evaluateCanonicalSeedBindings still lives in this module pre-carve', () => {
     // W2 will move this function into topic-state-bundle-io.mjs; this anchor
     // exists so the carve updates the baseline alongside the move.
-    const source = readFileSync(join(process.cwd(), 'DEEP_RESEARCH_HARNESS', 'engine', 'helpers', 'canonical-topic-state.mjs'), 'utf8');
-    assert.ok(source.includes('export function evaluateCanonicalSeedBindings'));
+    const source = readFileSync(join(process.cwd(), 'DEEP_RESEARCH_HARNESS', 'engine', 'helpers', 'topic-state-bundle-io.mjs'), 'utf8');
+    assert.ok(source.includes('export function evaluateCanonicalSeedBindings'), 'seed binding evaluation moved to bundle-io');
   });
 });
 

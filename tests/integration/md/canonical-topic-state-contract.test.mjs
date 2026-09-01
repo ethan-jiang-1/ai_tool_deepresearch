@@ -3,7 +3,13 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const read = (path) => readFileSync(path, 'utf8');
-const helper = read('DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs');
+const helper = [
+  'DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs',
+  'DEEP_RESEARCH_HARNESS/engine/helpers/topic-state-plan-schema.mjs',
+  'DEEP_RESEARCH_HARNESS/engine/helpers/topic-state-bundle-io.mjs',
+  'DEEP_RESEARCH_HARNESS/engine/helpers/topic-state-wave-projection.mjs',
+  'DEEP_RESEARCH_HARNESS/engine/helpers/topic-state-inspect.mjs',
+].map(read).join('\n');
 const resolver = read('DEEP_RESEARCH_HARNESS/engine/helpers/topic-layout.mjs');
 const cli = read('DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs');
 const commands = read('DEEP_RESEARCH_HARNESS/COMMANDS.md');
