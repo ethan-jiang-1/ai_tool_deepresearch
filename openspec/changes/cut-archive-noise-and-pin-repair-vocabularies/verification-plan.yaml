@@ -1,0 +1,65 @@
+schema_version: verification-routing/v1
+change: cut-archive-noise-and-pin-repair-vocabularies
+test_classes:
+  unit:
+    status: selected
+    rationale: 闭集导出、enum-restatement 注册与复用关卡为 in-process deterministic 断言。
+  integration:
+    status: selected
+    rationale: 根入口文档与 CONTEXT.md 属于真实文档面的 routing/drift 回归（md 文档锁）。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: 零 workflow-scale 行为链变化。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: 零 Agent 运行行为变化；纯阅读面与治理检查。
+claims:
+  - id: file-repair-directives-single-export-and-pinned
+    statement: >-
+      file-observability 六值 repair_directive 闭集为单一冻结导出 FILE_REPAIR_DIRECTIVES，
+      发射点全部引用导出且输出字节不变；check-spec-enum-restatements 注册该集合后
+      governance 全绿，篡改复述可变红。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/governance/spec-enum-restatements-checker.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: archive-boundary-and-glossary-triage-doc-locked
+    statement: >-
+      根 AGENTS.md/README.md 均含 openspec/changes/archive/ Do-Not-Read 边界，
+      CONTEXT.md 含字段名分诊行；focused routing/drift 回归对缺行变红。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/static-regression.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: reuse-first-gate-aggregates-green
+    statement: >-
+      RET-012 复用关卡可机械判定（三件套齐备为绿、缺失为红），且经聚合 governance
+      健康入口可见；本 change 自身作为正例通过。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/governance/check-all.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

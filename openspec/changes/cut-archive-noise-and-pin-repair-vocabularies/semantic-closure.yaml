@@ -1,0 +1,9 @@
+schema_version: semantic-closure/v1
+change: cut-archive-noise-and-pin-repair-vocabularies
+status: not_applicable
+reason: >-
+  本 change 只收敛 Agent 阅读面（Do-Not-Read 指令行、glossary 分诊行）、提取等价的
+  file-observability 闭集导出并注册进 enum-restatement checker、新增治理关卡要求；
+  不引入、不改变任何 run-fact deterministic fact family 的结论归属
+  （gate/status/queue/work-unit/final 等 family 的 resolver 与 consumer 均不动），
+  也不新增 cataloged family，故无 per-family closure 需要。
