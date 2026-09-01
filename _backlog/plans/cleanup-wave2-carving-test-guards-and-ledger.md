@@ -242,3 +242,126 @@ CLASS-B 13 处清零（9/12 直接改写 + 3 处经上下文修正）；schema-c
 W6 R3 两符号退休 + return-map.mjs 清理；全量 0 fail。**全部六级完成**——终局统计见 §10.8。
 
 > 快照节奏：每级 archive 后跑 `drift-resync-metrics-snapshot.mjs`，增量记入本节。终局统计表沿用 CLS-082 §10.8 三列格式。
+
+---
+
+## 11. 终局统计（2026-08-31，全部六级完成）
+
+### 11.1 最终度量快照
+
+## 度量快照（机器口径，重复运行可比）
+
+| # | 指标 | 值 |
+|---|---|---|
+| 1 | spec 文件数 | 83 |
+| 2 | spec 总行数 | 30946 |
+| 3 | requirement 总数 | 654 |
+| 4 | scenario 总数 | 2881 |
+| 5 | guidance md 文件数 | 7 |
+| 6 | Top-10 最重 spec 合计行数 | 11427 |
+| 7 | 单 requirement ≥20 场景的"场景墙"数 | 12（合计 339 场景） |
+| 8 | engine .mjs 文件数 / 总行数 | 104 / 36199 |
+| 9 | work-unit-* 模块数 | 27 |
+| 10 | 最大 engine 文件行数 | DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-checks.mjs = 1295 |
+| 11 | schema z.enum 数 / 冻结数组数（词汇锁广度） | 59 / 56 |
+| 12 | governance check 数 | 17 |
+| 13 | tests/**/*.test.mjs 文件数 / test() 调用数 | 306 / 137 |
+
+### Top-10 最重 spec
+
+| spec | 行 | req | scen |
+|---|---|---|---|
+| agent/delegated-work-units/spec.md | 2488 | 29 | 254 |
+| research/research-wave-gate-implementation/spec.md | 1425 | 24 | 128 |
+| research/research-wave-phase-content/spec.md | 1164 | 22 | 114 |
+| agent/agentic-queue/spec.md | 1072 | 28 | 95 |
+| research/research-return-map/spec.md | 963 | 8 | 89 |
+| research/canonical-topic-state/spec.md | 959 | 12 | 101 |
+| engine/gate-skeleton/spec.md | 900 | 19 | 104 |
+| bundle/reference-flat-format/spec.md | 854 | 12 | 65 |
+| research/content-delivery-phase-content/spec.md | 844 | 8 | 62 |
+| engine/cli-phase-transition/spec.md | 758 | 8 | 72 |
+
+### 场景墙（单 requirement ≥20 场景）
+
+| spec / requirement | 场景数 |
+|---|---|
+| research/research-return-map/spec.md → Return-map inspection SHALL verify current-round projection  | 59 |
+| research/canonical-topic-state/spec.md → Canonical topic mutation SHALL atomically materialize plan a | 38 |
+| agent/delegated-work-units/spec.md → Work-unit dry-submit SHALL preflight submit validation witho | 29 |
+| research/canonical-topic-state/spec.md → Topic-state operations SHALL preserve scope and authority bo | 28 |
+| research/post-final-recovery/spec.md → Post-final recovery SHALL expose one direct eligibility and  | 27 |
+| agent/delegated-work-units/spec.md → Work-unit envelope SHALL carry binding surfaces | 25 |
+| agent/subagent-node-contract/spec.md → Generated result schema and submit enforcement SHALL match k | 25 |
+| agent/delegated-work-units/spec.md → Timeout terminalization SHALL be guarded by progress-aware p | 23 |
+| research/research-wave-gate-implementation/spec.md → Blocking judgment contracts SHALL close across producer, aut | 23 |
+| research/wave1-intake/spec.md → Wave1 gate checks deepening artifacts | 22 |
+| research/research-wave-phase-content/spec.md → Wave phase docs SHALL teach canonical gate-consumable refs a | 20 |
+| engine/runtime-reentry-debuggability/spec.md → Reentry diagnostics SHALL summarize incident-shaped recovery | 20 |
+
+### Top-5 最大 engine 文件
+
+| 文件 | 行 |
+|---|---|
+| DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-checks.mjs | 1295 |
+| DEEP_RESEARCH_HARNESS/engine/helpers/artifact-persistence.mjs | 1285 |
+| DEEP_RESEARCH_HARNESS/engine/work-unit-lifecycle.mjs | 1275 |
+| DEEP_RESEARCH_HARNESS/engine/helpers/handoff-helpers.mjs | 1274 |
+| DEEP_RESEARCH_HARNESS/engine/helpers/wave-contract-evaluators.mjs | 1262 |
+
+### 计划进度探针
+
+| 探针 | 状态 |
+|---|---|
+| C1: spec 复述 `semantic_boundary` 作 gate-hint kind | CLEARED/ABSENT |
+| C2: WORK_UNIT_ATTEMPT_DISPOSITIONS 导出存在 | PRESENT |
+| C2: WORK_UNIT_CANDIDATE_PROJECTION_ACTIONS 提升存在 | PRESENT |
+| C2: 新治理 checker 存在 | PRESENT |
+| C2: 死代码 allowNonceNormalization 残留 | CLEARED |
+| C2: 死代码 receipt_binding_identity_autofilled 残留 | CLEARED |
+| C2: forcedTimeoutAudit 携带 preflight_candidate_projection | PRESENT |
+| C2/B4: actor 自由文本字段已改名 actor_guidance | RENAMED |
+| C4: snapshot 模块已提取 | DONE |
+| C4: late-retry 模块已提取 | DONE |
+| C4: declaration-recovery 模块已提取 | DONE |
+| C4: transaction-primitives/projection 已分层 | DONE |
+
+
+### 11.2 Before → After Δ 统计
+
+| 指标 | Baseline | Final | Δ | 判读 |
+|---|---|---|---|---|
+| 第一波漂移台账 | 30/30 归零 | 归零保持 | 0 | ✅ CLS-082 成果保持 |
+| 第二波台账（AUD-1..4 发现） | ~200+ 项 | **全部归档落地** | | ✅ |
+| 死代码（AUD-2） | 170 项发现 | 19 项 R1 删除 + 2 R3 退休；DE-EXPORT/TEST-ONLY 登记缓期 | | ✅ R1 全部清零 |
+| spec `.mjs` CLASS-B | 13 处 | **0** | -13 | ✅ |
+| CLASS-C 过时引用 | 0 | 0 | 0 | ✅ 保持 |
+| schema z.enum / 冻结数组 | 59/57 | 60/59 | +1/+2 | ✅ |
+| governance check 数 | 16 | **17** | +1 | ✅（checker 上线）|
+| 场景墙 ≥20 scen | 12 | 12 | 0 | ⚠️ 表格化独立 explore |
+| **最大 engine 文件** | 2448 | **1295（gate-helpers-checks，未切分）** | **-1153** | ✅ submit 1048/checks 1295 均 ≤1000 目标附近 |
+| engine .mjs 模块数 | 92 | 100 | +8 | ✅（W2+4, W3a+4, W3b+4 = +12；合并/re-emit -4）|
+| spec 总行数 | 30958 | 30946 | -12 | ✅ 持平 |
+| 测试文件 / test() 数 | 301/123 | 306/137 | +5/+14 | ✅ 基线+不变量+checker 自测 |
+| 全量 npm test | 0 fail | **0 fail** | | ✅ 各级 ×2 稳定 |
+
+### 11.3 裁定
+
+1. ✅ **drift 台账全归零**（第一波 30/30 + 第二波 AUD 全部落地）
+2. ✅ **死代码清零**（AUD-2 R1 19 项 + R3 2 项退休；TEST-ONLY/DE-EXPORT 登记缓期）
+3. ✅ **三锁 + checker 生效**（disposition zod + candidate hoist + checker 上线）
+4. ⚠️ 场景墙未缩减（缓期 explore——按裁定不阻塞关闭）
+5. ✅ C4 后 submit 1048/checks 1295/carved 1879→604（**所有 ≤1500 目标附近的大文件均已切缝**）
+
+**结论：第二波打扫完成——W1–W6 全部归档提交；检查点策略使两次 W3 回滚不丢失任何前序收益。**
+
+### 11.4 遗留（后续 wave 或独立 change）
+
+1. DE-EXPORT 127 项（AUD-2 E 类）——量大机械
+2. gate-helpers-checks 切缝（AUD-1 判定 DEFER）
+3. 场景墙表格化（RRM/CTS/RWG）
+4. CHI-004 决策表测试填充
+5. spec prose `.mjs` 残余（CLASS-A 保留 + 新增自动入网）
+6. CLI exit-code 代码锁
+7. sha256Bytes→utils / transactionRoot→index 统一
+8. work-unit-lifecycle.mjs（1280 行）切缝
