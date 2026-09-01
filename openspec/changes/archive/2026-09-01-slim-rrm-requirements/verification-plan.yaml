@@ -1,0 +1,30 @@
+schema_version: verification-routing/v1
+change: 2026-09-01-slim-rrm-requirements
+test_classes:
+  unit:
+    status: selected
+    rationale: 结构重组的保真性（行集守恒、标题唯一、无语义改写）由静态文本锁直接证明。
+  integration:
+    status: not_applicable
+    rationale: 无 CLI/子进程行为变更。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: 无 workflow 级状态链变更。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: 无 Agent/Markdown 流程行为变更。
+claims:
+  - id: rrm-slim-line-conservation
+    statement: 拆分后主 spec 的 RRM-007 原块行集 100% 守恒（除删除原标题行与插入 8 个新标题行外无任何行增删改）；8 个新 requirement 均不超过 ~160 行；59 个场景全部保留且仅出现一次。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/rrm-slim-structure-locks.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
