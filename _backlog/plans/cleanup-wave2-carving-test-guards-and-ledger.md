@@ -209,7 +209,7 @@ M0 审计回填 ──✅──▶ M1 用户确认 ──✅──▶ W1 测试�
 - [x] W3a wave-depth-contracts 切缝 ✅（finalizer 19/19；1358→4 模块 + 11 名 facade；全量 0 fail）
 - [x] W3b gate-helpers-core 切缝 ✅（finalizer 19/19；1443→facade + 4 模块；全量 0 fail；第三次尝试成功）（**两次尝试均回滚**：第一次 export-const 缺陷，第二次 e2e 层 47 处失败=隐藏语义耦合：codemod 切割后跨组 import 解析未收敛（submittedFactByRef/loadWave2FindingIndexFact/CARRIED_BINDING_KEYS/ACCEPTED_SOURCE_STATUSES 四处跨组引用错配），已恢复绿色检查点。**重入指引（第二次尝试后更新）**：第一次回滚根因=codemod export 前缀漏 const（已修）；第二次回滚根因=e2e 层 47 处失败（"no latest passed gate_attempt"）——即使补回被丢弃的中部 logger import 后仍复现，说明 **gate-helpers-core 的 attempt/result 簇与 handoff-helpers/enter-phase 读取路径存在 AUD-1 未识别的语义耦合**（可能为 trace 写入时序或 buildGateResult 的 next 派生对未搬动函数的依赖）。**重入前必须**：①先只切 wave-depth-contracts（三次尝试中最干净、无 e2e 依赖），单独验证；②gate-helpers-core 切分前对 buildGateResult/writeGateAttempt 的调用链做逐函数追踪（含 handoff-helpers 的 gate_attempt 读取），确认无隐藏耦合；③codemod 模式见 git 历史（6b0a4e188/W2 commit），export 前缀需覆盖 const。检查点策略：每次切割后立即全量回归，绿则 commit，红则 checkout 回滚。
 - [x] W4 第二轮死代码清除 ✅（finalizer 19/19；19 项删除全仓零命中；#25 缓期）
-- [ ] W5 spec 引用与 prose 清扫
+- [x] W5 spec 引用与 prose 清扫 ✅（finalizer 19/19；CLASS-B 9/12 直接改写 + 3 处经上下文修正；schema-core 计数 + CTS owner 指针 + RWE playbook 名；全量 0 fail）
 - [ ] W6 R3 退休 + DE-EXPORT
 - [ ] M-终局 统计表 + plan 关闭
 
@@ -232,5 +232,9 @@ gate-helpers-core 1443→facade + 4 模块（invocation 284 / result 186 / attem
 #### Post-W4 快照（2026-08-31）
 
 W4 死代码清除落地；全量 0 fail。W5 准入达成。
+
+#### Post-W5 快照（2026-08-31）
+
+CLASS-B 13 处清零（9/12 直接改写 + 3 处经上下文修正）；schema-core Purpose 计数更新；CTS owner 指针重指；RWE playbook 名更新；全量 0 fail。W6 准入达成。
 
 > 快照节奏：每级 archive 后跑 `drift-resync-metrics-snapshot.mjs`，增量记入本节。终局统计表沿用 CLS-082 §10.8 三列格式。
