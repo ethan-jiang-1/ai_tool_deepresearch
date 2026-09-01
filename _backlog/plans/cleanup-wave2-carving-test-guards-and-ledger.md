@@ -206,7 +206,7 @@ M0 审计回填 ──✅──▶ M1 用户确认 ──✅──▶ W1 测试�
 - [x] M1 用户确认
 - [x] W1 测试守护网 ✅（finalizer 19/19；全量 ×2 绿 @concurrency=4；三缺陷修复 + 基线 4/4）
 - [x] W2 canonical-topic-state 切缝 ✅（finalizer 19/19；1879→604 + 4 模块；全量 0 fail）
-- [ ] W3 gate-helpers-core + wave-depth-contracts 切缝（**首次尝试已回滚**：codemod 切割后跨组 import 解析未收敛（submittedFactByRef/loadWave2FindingIndexFact/CARRIED_BINDING_KEYS/ACCEPTED_SOURCE_STATUSES 四处跨组引用错配），已恢复绿色检查点。**重入指引**：AUD-1 §2/§3 聚类地图 + 组间引用需人工核对（尤其 `submittedFactByRef` 归属 verdicts 还是 wave1 簇、`loadWave2FindingIndexFact` 被 wave1 簇引用的跨组边）；codemod 模式见 git 历史 `6b0a4e188`（C4）与本波 W2 commit；零模块级可变状态、无环前提不变）
+- [ ] W3 gate-helpers-core + wave-depth-contracts 切缝（**两次尝试均回滚**：第一次 export-const 缺陷，第二次 e2e 层 47 处失败=隐藏语义耦合：codemod 切割后跨组 import 解析未收敛（submittedFactByRef/loadWave2FindingIndexFact/CARRIED_BINDING_KEYS/ACCEPTED_SOURCE_STATUSES 四处跨组引用错配），已恢复绿色检查点。**重入指引（第二次尝试后更新）**：第一次回滚根因=codemod export 前缀漏 const（已修）；第二次回滚根因=e2e 层 47 处失败（"no latest passed gate_attempt"）——即使补回被丢弃的中部 logger import 后仍复现，说明 **gate-helpers-core 的 attempt/result 簇与 handoff-helpers/enter-phase 读取路径存在 AUD-1 未识别的语义耦合**（可能为 trace 写入时序或 buildGateResult 的 next 派生对未搬动函数的依赖）。**重入前必须**：①先只切 wave-depth-contracts（三次尝试中最干净、无 e2e 依赖），单独验证；②gate-helpers-core 切分前对 buildGateResult/writeGateAttempt 的调用链做逐函数追踪（含 handoff-helpers 的 gate_attempt 读取），确认无隐藏耦合；③codemod 模式见 git 历史（6b0a4e188/W2 commit），export 前缀需覆盖 const。检查点策略：每次切割后立即全量回归，绿则 commit，红则 checkout 回滚。
 - [ ] W4 第二轮死代码清除
 - [ ] W5 spec 引用与 prose 清扫
 - [ ] W6 R3 退休 + DE-EXPORT
