@@ -137,6 +137,8 @@ ACR-001: agent-context-routing — Root CONTEXT.md preserves canonical terminolo
 ACR-002: agent-context-routing — Root and framework Agent entry routes open with Execution Brief; Deep Research Routing is a pointer only; Charter-then-context only when the next action depends on ownership vocabulary
 ACR-003: agent-context-routing — Root ADR records Markdown-driven Agent Flow and Engine-gated deterministic checkpoints without redefining behavior
 ACR-004: agent-context-routing — Static documentation regression preserves Execution Brief routing and locks entry-selection completeness on the canonical section, not pointer restatement
+ACR-005: agent-context-routing — Glossary field-name triage classifies the three repair vocabularies by field name with owner pointers and defers full value sets to their owners
+ACR-006: agent-context-routing — Archived OpenSpec change artifacts stay outside default task context via the root Do-Not-Read boundary with an explicit archive/history unlock
 
 # agent/agent-output-declaration
 AGO-001: agent-output-declaration — Work-unit result output_files declaration with role and source_url rules
@@ -537,6 +539,7 @@ RET-008: requirement-traceability — Capability catalog declares current-accept
 RET-009: requirement-traceability — Main spec files carry a level-one title
 RET-010: requirement-traceability — Requirement IDs in guidance prose resolve against the registry
 RET-011: requirement-traceability — Requirement IDs in code implementation tags resolve against the registry
+RET-012: "requirement-traceability — Reuse-first gate: a new Agent-facing closed feedback vocabulary needs one code-derived frozen export, an enum-restatement SETS registration, and the root glossary triage row in the same change"
 
 # governance/semantic-fact-closure
 SEF-001: semantic-fact-closure — Semantic fact catalog provides a bounded shared vocabulary

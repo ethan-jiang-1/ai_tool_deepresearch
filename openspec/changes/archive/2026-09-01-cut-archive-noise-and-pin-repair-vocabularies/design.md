@@ -24,7 +24,7 @@ archive 现状：`openspec/changes/archive/` 1758 个 md；governance checkers �
 
 **D2 glossary 分诊用 ADDED requirement，不改写既有 glossary 大 requirement。** 既有「Project glossary preserves canonical terminology boundaries」（ACR-001）很长；MODIFY 需全文复述、diff 噪声大。分诊是独立可测的新规范面（ACR-005），标题为稳定语义锚点。明确边界：分诊行**不复制完整值集**（避免成为 checker 校验面），只给字段名 → 语义归属 → owner/枚举源。
 
-**D3 `FILE_REPAIR_DIRECTIVES` 单一冻结导出。** 在 `file-observability.mjs` 提取 `export const FILE_REPAIR_DIRECTIVES = Object.freeze([...six values...])`，六个发射点改引用导出（纯等价重构，行为零变化）。`check-spec-enum-restatements.mjs` 按既有模式注册 `{ id: 'FILE_REPAIR_DIRECTIVES', values, pins: ['materialize_canonical_surface', 'current_entry_contract'] }`（pins 选发射面两端各一值，防集合整体丢失）。备选：只加测试断言不加导出——拒绝，因为那会允许第二个字面量集合存在，与 FIO-008 修改后的"single export"矛盾。
+**D3 `FILE_REPAIR_DIRECTIVES` 单一冻结导出。** 在 `file-observability.mjs` 提取 `export const FILE_REPAIR_DIRECTIVES = Object.freeze([...six values...])`（数组为唯一值 owner），六个发射点改引用导出（纯等价重构，行为零变化）；如需拼写便利，只允许从该数组派生只读 lookup（如 `Object.fromEntries(...)`），不得出现第二份字面量清单——与 FIO-008 修改文本的 "no second spelling, alias, or parallel literal set" 对齐。`check-spec-enum-restatements.mjs` 按既有模式注册 `{ id: 'FILE_REPAIR_DIRECTIVES', values, pins: ['materialize_canonical_surface', 'current_entry_contract'] }`（pins 选发射面两端各一值，防集合整体丢失）。`tests/governance/spec-enum-restatements-checker.test.mjs` L15 的 `SETS.length` 断言 8→9 同 change 更新。备选：只加测试断言不加导出——拒绝，因为那会允许第二个字面量集合存在，与 FIO-008 修改后的"single export"矛盾。
 
 **D4 复用优先关卡放在 `governance/requirement-traceability`（RET-012）。** 备选：`engine/check-inspect-feedback`（拒绝：该 spec 拥有既有词汇语义，不是 change 治理规则的家）。RET 已拥有 discovery discipline（registry、catalog、ID 检查），"新增词汇先证明既有面装不下 + 三件套同 change 交付"是其自然延伸。
 
@@ -38,9 +38,11 @@ archive 现状：`openspec/changes/archive/` 1758 个 md；governance checkers �
 
 ## Risks / Trade-offs
 
-- [doc-lock 触碰] `CONTEXT.md` 被 `change-feedback-finalizer.test.mjs` L271、`change-feedback-loop-archive.test.mjs` L105 exact 引用；`AGENTS.md` 被 `static-regression.test.mjs` 引用 → apply 前跑 `node scripts/list-doc-locks.mjs` 逐文件盘点，同一 change 更新锁。
-- [FIO 字面量测试] 现有测试可能断言六值字面量或扫描发射面 `repair_kind` 字面量 → 提取导出后同步改断言引用导出；`validate-work-unit-hygiene.mjs` 类静态扫描需确认不被误伤。
-- [checker 扫描面未知] enum-restatement checker 当前 8 个集合的具体扫描面以实现为准 → apply 时先读 `check-spec-enum-restatements.mjs` 再按其模式注册，不做投机假设。
+- [doc-lock 触碰] `CONTEXT.md` 被 `tests/integration/md/repair-directive-lock.test.mjs`（FIO-008/F-03/F-23，断言三行 repair 词汇行与 gate Rosetta 行逐值存在）及 `change-feedback-finalizer`/`change-feedback-loop-archive` exact 引用；根 `AGENTS.md`/`README.md` 实查无内容级 doc lock（`list-doc-locks` 命中为工具自测样例与 `DEEP_RESEARCH_HARNESS/README.md` 子串误报）→ apply 前跑 `node scripts/list-doc-locks.mjs` 逐文件盘点，同一 change 更新锁；本 change 只在 CONTEXT.md **新增**分诊头行，不动被锁三行与 Rosetta 行。
+- [checker 注册的连带断言] `tests/governance/spec-enum-restatements-checker.test.mjs` L15 `assert.equal(SETS.length, 8)` → 注册后必须改 9（已入任务 1.2）。
+- [checker 误报面已实证排除] 扫描面仅 `openspec/specs` + `openspec/guidance`；六值中仅 `current_entry_contract` 出现在其他 spec 文件，且全部是 `unsupported_current_entry_contract` 形态——memberRegex 的 `(?<![A-Za-z0-9_-])` lookbehind 使其不匹配；全库无六值与其它集合 token 的同句混排 → 注册后既有句子零新增 finding（FIO-008 原句 dominant=新集、无 closure cue）。
+- [既有跨面重映射，超范围] `cli/check-reentry.mjs` L626 `repair_kind: root.repair_directive` 把 file-observability 指令值重映射进 blocker `detail.repair_kind` 字段——属当前接受行为（`repair-directive-lock.test.mjs` 只锁 consumer 读取 `root.repair_directive`）；本 change 不改 CLI 输出，仅如实记录为"混用即 bug"原则下的既有张力，留待后续独立 change 评估。
+- [FIO 字面量测试] `repair-directive-lock.test.mjs` 断言 emitter 含 `repair_directive:`、不含 `repair_kind:`、含六个裸值——提取后三项均保持为真（值仍在文件内，仅改为数组字面量+引用），无需改该测试；`validate-work-unit-hygiene.mjs` 实查无 repair 字样扫描，不受影响。
 - [archive 摩擦残留] 指令层不消除命中数量 → 已在 D1 记录升级路径（机械层独立 change）。
 
 ## Migration Plan

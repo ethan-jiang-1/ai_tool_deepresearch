@@ -67,6 +67,16 @@ runtime record. There is deliberately no `DEEP_RESEARCH_HARNESS/CONTEXT.md`.
 
 ### 术语罗塞塔石碑：反馈面与枚举速查 (Rosetta Stone: Feedback Surfaces & Enums)
 
+**字段名分诊（先归类，再行动）**：遇到任何 `repair*` / 恢复类字段，先按**字段名**归类，不要按语义猜——
+
+| 字段 | 出现位置 | 语义归属 | 回答的问题 | owner / 可执行枚举源 |
+|---|---|---|---|---|
+| `repair_kind` | gate/phase `hints[]` 与 finding `repair.kind` | Gate/Phase 门禁面 | Who 处置这次门禁未通过 | `DEEP_RESEARCH_HARNESS/schema/contracts/gate-definition.mjs` 的 `GATE_REPAIR_KINDS` |
+| `recovery_action`（载体 `next.recovery_action`） | work-unit 五反馈面 | Work-Unit 恢复面 | What to run（恢复动作 / CLI 动词） | `DEEP_RESEARCH_HARNESS/engine/work-unit-repair-vocabulary.mjs` |
+| `repair_directive` | file-observability finding | File-Observability 面 | 文件观测如何自愈 | `DEEP_RESEARCH_HARNESS/engine/helpers/file-observability.mjs` 的 `FILE_REPAIR_DIRECTIVES` |
+
+三个字段名不同是**故意的物理隔离**；把一个面的字段名或值集用到另一个面是缺陷。本表只做字段名归类与 owner 指路，值集与完整契约以下方速查表和各 owner surface 为准。
+
 | 反馈面 (Surface) | 载体字段 (Field) | 闭合枚举 (Closed Enum) | 权威源 (Source of Record) | 语义归属与核心用途 |
 |---|---|---|---|---|
 | **Gate / Phase 门禁面** | `repair_kind`（`hints[]` / finding `repair.kind`） | `agent_action`, `engine_operation`, `user_decision`, `external_action`, `missing_contract` | `openspec/specs/engine/check-inspect-feedback/spec.md`（语义）+ `DEEP_RESEARCH_HARNESS/schema/contracts/gate-definition.mjs` `GATE_REPAIR_KINDS`（可执行枚举） | 责任主体划分（归 Agent、Engine 还是 User 处置，回答 Who） |

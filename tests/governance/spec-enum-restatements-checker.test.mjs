@@ -11,8 +11,8 @@ import { classifySentence, logicalLines, scanTree, SETS } from '../../openspec/g
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 describe('check-spec-enum-restatements: derivation', () => {
-  it('derives all eight sets with fixture pins present and no empty set', () => {
-    assert.equal(SETS.length, 8);
+  it('derives all nine sets with fixture pins present and no empty set', () => {
+    assert.equal(SETS.length, 9);
     for (const set of SETS) {
       assert.ok(Array.isArray(set.values) && set.values.length > 0, `${set.id} must be non-empty`);
       for (const pin of set.pins) {

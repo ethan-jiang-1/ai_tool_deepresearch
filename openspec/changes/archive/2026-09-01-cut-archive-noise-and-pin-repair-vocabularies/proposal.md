@@ -18,11 +18,21 @@
 
 **不产出**：不合并/重命名三个词汇；不移动、不压缩、不剪枝 `openspec/changes/archive/`（机械方案留待后续 explore）；不改 `finalize-change-archive.mjs` 归档路径；不改任何 gate/CLI/work-unit runtime 行为。
 
-## Capabilities
+## Capability Discovery
+
+| Candidate path | Evidence read | Decision | Reason |
+|---|---|---|---|
+| `agent/agent-context-routing` | `openspec/specs/agent/agent-context-routing/spec.md`（ACR-001 glossary 要求、ACR-004 regression 要求）；根 `CONTEXT.md`、根 `AGENTS.md`/`README.md` | Modify | glossary 字段名分诊与 archive Do-Not-Read 边界的 owner surface；glossary 与根入口文档行为都在此 capability 契约内 |
+| `bundle/file-observability` | `openspec/specs/bundle/file-observability/spec.md`（FIO-008）；`DEEP_RESEARCH_HARNESS/engine/helpers/file-observability.mjs`；`openspec/governance/check-spec-enum-restatements.mjs` | Modify | `repair_directive` 闭集单一导出与 SETS 注册修改 FIO-008 的规范文本 |
+| `governance/requirement-traceability` | `openspec/specs/governance/requirement-traceability/spec.md`（RET-001..011）；`openspec/governance/check-spec-enum-restatements.mjs` | Modify | 新增闭合反馈词汇的复用优先关卡属 discovery discipline，RET 是其 owner |
+| `engine/check-inspect-feedback` | `openspec/specs/engine/check-inspect-feedback/spec.md`（CHI-*） | Verify-only | 既有 `repair_kind`/`recovery_action` 词汇语义不变，无 delta；仅被 RET-012 关卡引用为既有面 |
+| `governance/change-feedback-loop` | `openspec/specs/governance/change-feedback-loop/spec.md`；`openspec/operations/change-feedback-loop.md` | Verify-only | lifecycle 程序原样使用，本 change 不修改其契约 |
+| `governance/semantic-fact-closure` | `openspec/governance/semantic-fact-families.yaml`；本 change `semantic-closure.yaml` | Excluded | 不引入、不改变任何 deterministic fact family 结论；record 为 `not_applicable` |
+| `workflow/workflow-directory-contract` | `openspec/specs/workflow/workflow-directory-contract/spec.md` | Excluded | `openspec/changes/archive/` 目录位置不动，仅新增指令层边界，不触发目录契约变更 |
 
 ### New Capabilities
 
-（无。全部为既有 capability 的 requirement 修改。）
+（无。全部为既有 capability 的 requirement 修改，见上表 Modify 行。）
 
 ### Modified Capabilities
 

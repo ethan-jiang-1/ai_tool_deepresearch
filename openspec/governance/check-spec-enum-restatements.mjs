@@ -26,6 +26,8 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 
 import { WORK_UNIT_RECOVERY_ACTIONS } from '../../DEEP_RESEARCH_HARNESS/engine/work-unit-repair-vocabulary.mjs';
+// @impl FIO-008 — file-observability closed directive set joins the derived guard.
+import { FILE_REPAIR_DIRECTIVES } from '../../DEEP_RESEARCH_HARNESS/engine/helpers/file-observability.mjs';
 import {
   GATE_BLOCKING_BASES,
   GATE_REPAIR_KINDS,
@@ -48,6 +50,7 @@ export const SETS = [
   { id: 'PHASE_STATUS_AUDIT_OUTCOMES', values: PHASE_STATUS_AUDIT_OUTCOMES, pins: ['passed'] },
   { id: 'WORK_UNIT_CANDIDATE_PROJECTION_ACTIONS', values: WORK_UNIT_CANDIDATE_PROJECTION_ACTIONS, pins: ['submit', 'return_to_actor'] },
   { id: 'WORK_UNIT_ATTEMPT_DISPOSITIONS', values: WORK_UNIT_ATTEMPT_DISPOSITIONS, pins: ['current', 'not_submitted'] },
+  { id: 'FILE_REPAIR_DIRECTIVES', values: FILE_REPAIR_DIRECTIVES, pins: ['materialize_canonical_surface', 'current_entry_contract'] },
 ];
 
 const CUE_RE = /closed (disposition |recovery |gate-hint )?vocabulary|the [a-z-]+ (kinds|vocabulary|values|set)|exactly one of|one of the closed|CLI-verb spelling|CLI 动词拼写/;

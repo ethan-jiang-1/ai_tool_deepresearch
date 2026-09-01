@@ -42,6 +42,7 @@ Do not list, scan, or read these paths as task context unless the user explicitl
 - `_backlog/`
 - `_temp/`
 - `.exp-bundles/`, and any lowercase `dpt_rb_*/` or `dpt_disp_*/` run-bundle directory anywhere in the repository (run bundles are runtime state, not task context)
+- `openspec/changes/archive/` (archived change artifacts are historical record, not current behavior, task context, or authority; open one only when the user explicitly asks for archive or history lookup, and treat its search hits as historical rather than current accepted behavior)
 
 ## Hard Rules
 

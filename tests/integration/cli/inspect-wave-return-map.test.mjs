@@ -27,7 +27,8 @@ function runInspect(cli, bundle) {
   const result = spawnSync('node', [join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'cli', cli), '--bundle', bundle], {
     cwd: REPO_ROOT,
     encoding: 'utf-8',
-    timeout: 10000,
+    // 60s: same full-suite contention posture as deterministic-chain-harness runNode.
+    timeout: 60000,
   });
   return { status: result.status, output: JSON.parse(result.stdout) };
 }

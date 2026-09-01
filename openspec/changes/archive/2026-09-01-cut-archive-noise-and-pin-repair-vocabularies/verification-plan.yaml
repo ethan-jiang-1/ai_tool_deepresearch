@@ -34,12 +34,12 @@ claims:
   - id: archive-boundary-and-glossary-triage-doc-locked
     statement: >-
       根 AGENTS.md/README.md 均含 openspec/changes/archive/ Do-Not-Read 边界，
-      CONTEXT.md 含字段名分诊行；focused routing/drift 回归对缺行变红。
-    test_class: unit
+      CONTEXT.md 含字段名分诊行；focused routing contract 对缺行变红。
+    test_class: integration
     proof_subject: deterministic_contract
     asset:
       kind: node_test
-      path: tests/engine/static-regression.test.mjs
+      path: tests/integration/md/agent-context-routing-contract.test.mjs
     execution_profile:
       fixture: none
       subject_execution: none

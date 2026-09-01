@@ -7,7 +7,11 @@ import { spawnSync } from 'node:child_process';
 export const REPO_ROOT = process.cwd();
 const INSTANTIATE = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS', 'cli', 'instantiate-run-bundle.mjs');
 
-export function runNode(args, { expectedStatus = 0, timeout = 30000 } = {}) {
+export function runNode(args, { expectedStatus = 0, timeout = 180000 } = {}) {
+  // 180s default: under full parallel `npm test` load, subprocess-heavy chains
+  // (gate -> enter-phase -> inspect) are CPU-starved and a 30s spawn timeout
+  // produced documented resource-contention failures (see tests/README.md
+  // "Full-Suite Failure Triage"). Isolated runs prove behavior is green.
   const result = spawnSync(process.execPath, args, {
     cwd: REPO_ROOT,
     encoding: 'utf8',
@@ -36,7 +40,7 @@ export function createTempRoot() {
 
 export function instantiateBundle(root, label) {
   const name = `det-e2e-${label}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  const result = runNode([INSTANTIATE, name, '--target-dir', root], { timeout: 30000 });
+  const result = runNode([INSTANTIATE, name, '--target-dir', root], { timeout: 180000 });
   const bundle = result.stdout.trim();
   const currentRunBundleRoot = realpathSync(root);
   if (dirname(bundle) !== currentRunBundleRoot || basename(bundle) !== `dpt_rb_${name}`) {

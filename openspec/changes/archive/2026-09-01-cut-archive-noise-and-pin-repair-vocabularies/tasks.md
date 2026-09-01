@@ -1,0 +1,31 @@
+# Tasks: cut-archive-noise-and-pin-repair-vocabularies
+
+- [x] 0.1 openspec-feedback:plan-review —— delta specs（ACR-005/006、FIO-008、RET-012）与 design 复核：三个词汇不合并、不改枚举值域、archive 路径不动；`openspec validate --strict` 绿；`node openspec/governance/check-semantic-closure.mjs --change <change> --mode plan` 与 `check-verification-routing.mjs --change <change> --mode plan` PASS。已知预期中间态：`check-project-reqs.mjs --mode plan` 报 ACR-005/006、RET-012 unregistered——live prefix 追加新 ID 无 reservation 路径，修复边界是任务 5.1 的 registry 同步，不得改用 reservation 文件（live prefix 会报 neither-pending-nor-transitioned）。（已按 openspec/operations/change-feedback-loop.md Apply Review 完成整体复核；semantic-closure `not_applicable` 理由对实际 surface 复核成立；polish 发现均已转为任务。）
+- [x] 0.2 openspec-feedback:closeout-review —— archive 前置复核：全量 `npm test` 0 fail、`node openspec/governance/check-all.mjs` 全 PASS、semantic-closure record 与实际 target edits 一致、无未登记 finding。（已完成：scoped diff 边界 = 15 modified + 2 new files 全部在本 change scope；delta↔main 四组 requirement 规范化比对 4/4 MATCH；semantic-closure `not_applicable` 对实际 diff 复核成立——无 fact-family resolver/consumer 触碰；closeout 唯一发现即 5.4，已按 feedback loop 转为任务并完成；无其他未登记 finding）
+
+## 1. 词汇闭集提取与 checker 注册（FIO-008）
+
+- [x] 1.1 读 `openspec/governance/check-spec-enum-restatements.mjs` 确认注册模式与扫描面；在 `DEEP_RESEARCH_HARNESS/engine/helpers/file-observability.mjs` 提取 `export const FILE_REPAIR_DIRECTIVES = Object.freeze([...])`（六值：materialize_canonical_surface / reconcile_topic_identity / repair_topic_reference / classify_namespace / current_entry_contract / exact_topic_state_recover），六个发射点（约 L559/599/619/635/692/714）改引用导出。Done：纯等价重构，`node --test tests/engine/`（file-observability 相关文件）全绿，发射输出字节不变。（已完成：0 字面量发射点残留；module 加载 OK；repair-directive-lock 5/5 绿）
+- [x] 1.2 `check-spec-enum-restatements.mjs` 注册 `{ id: 'FILE_REPAIR_DIRECTIVES', values: FILE_REPAIR_DIRECTIVES, pins: ['materialize_canonical_surface', 'current_entry_contract'] }`（实现为 `// @impl FIO-008`），并同步 `tests/governance/spec-enum-restatements-checker.test.mjs` L15 的 `assert.equal(SETS.length, 8)` → `9`。Done：checker PASS；checker 测试全绿；手工把 FIO-008 修改文本中任一值改错可使其变红（临时验证后还原）。（已完成：9 sets derived PASS；self-test 7/7；tamper `semantic_boundary` → 红、还原 → PASS）
+- [x] 1.3 盘点并同步引用六值字面量的既有测试（`grep -rn "materialize_canonical_surface\|current_entry_contract" tests/ | grep -v .test-bundles`），断言改为引用导出或保持字面量但断言与导出一致。Done：相关测试全绿。（已完成：9 个测试文件 89/89 pass，repair-directive-lock 断言在提取后自然保持为真，无需改动）
+
+## 2. archive 指令边界（ACR-006）
+
+- [x] 2.1 `node scripts/list-doc-locks.mjs AGENTS.md` 与 `list-doc-locks.mjs README.md` 盘点；根 `AGENTS.md` 与根 `README.md` 的 Do-Not-Read 清单各加一行：`openspec/changes/archive/` = historical record，仅用户显式要求 archive/history 时打开，其下命中不构成 task context/authority。同步更新受影响锁测试。Done：两文件均含该行，`node --test tests/engine/static-regression.test.mjs`（及锁盘点列出的其余测试）全绿。（已完成：实查两文件无内容级内容锁——盘点命中为工具自测样例、bundle 内 README 子串与路径引用测试；routing contract 全绿）
+- [x] 2.2 扩展 focused routing regression `tests/integration/md/agent-context-routing-contract.test.mjs`（ACR-004 载体，实查已读根 `AGENTS.md`/`README.md`/`CONTEXT.md`）：断言两份根入口文档均含 `openspec/changes/archive/` Do-Not-Read 边界，缺失即红。Done：删行→红，恢复→绿（临时验证后还原）。`// @impl ACR-006`（已完成：7/7 绿；删行 fail 1 报 "must name openspec/changes/archive/"；还原 7/7 绿）
+
+## 3. glossary 分诊行（ACR-005）
+
+- [x] 3.1 `node scripts/list-doc-locks.mjs CONTEXT.md` 盘点（已知 `repair-directive-lock.test.mjs` 锁三行 repair 词汇行与 Rosetta 行，`change-feedback-finalizer.test.mjs` L271、`change-feedback-loop-archive.test.mjs` L105 exact 引用）；根 `CONTEXT.md` 罗塞塔表前加「字段名分诊」头行：`repair_kind` → 门禁面/Who（枚举源 `gate-definition.mjs GATE_REPAIR_KINDS`）；`next.recovery_action` → 恢复面/What to run（`work-unit-repair-vocabulary.mjs`）；`repair_directive` → file-observability 面/文件自愈（`file-observability.mjs`）；声明字段名不同是故意的、混用即 bug；不复制完整值集。被锁三行与 Rosetta 行原样保留。同步受影响锁。Done：分诊行就位、`repair-directive-lock` 与 routing contract 全绿、content-drift PASS。`// @impl ACR-005`（已完成：repair-directive-lock 5/5 + routing contract 7/7 + guidance-terminology = 20/20 绿；content-drift clean）
+
+## 4. 词汇扩张关卡（RET-012）
+
+- [x] 4.1 评估关卡的可判定实现位置：优先在既有 governance 检查（如 `check-spec-enum-restatements.mjs` 或 registry 校验）中检测"新增闭合反馈字段名缺导出/注册/glossary 行"的可机械证据；若现有 checker 不宜承载，则由 `check-all.mjs` 聚合面新增最小检查（实现为 `// @impl RET-012`），红例：delta/代码出现新的闭合反馈字段名而无三件套。Done：检查可运行且聚合入口可见。（已完成：新增 `openspec/governance/check-feedback-vocabulary-gate.mjs`——check-all 按 `check-*.mjs` 自动发现聚合；四向检查：导出冻结非空 / SETS 注册且值深相等 / CONTEXT 分诊行存在且含 owner 指针 / 分诊表新增未知字段名即红；自测 `tests/governance/feedback-vocabulary-gate.test.mjs` 7/7）
+- [x] 4.2 用本 change 自身做一次正例回归：三件套（FIO 导出、checker 注册、CONTEXT 行）齐备时关卡绿。Done：`node openspec/governance/check-all.mjs` 全 PASS。（已完成：check-all --change 17/17 PASS，含新 `check-feedback-vocabulary-gate.mjs` 自动聚合与三个 change-scoped 检查）
+
+## 5. Registry 同步与收尾
+
+- [x] 5.1 apply 阶段把 ACR-005/006、RET-012 写入 main specs（ACR spec header 扩为 ACR-001..006；RET 扩为 RET-001..012；FIO-008 文本同步 delta）并登记 `req-registry.yaml`。Done：`node openspec/governance/check-project-reqs.mjs --mode plan` 无 unregistered/orphan。（已完成：plan 681 registered / 0 orphan / 0 unregistered；impl-ids 550 files 560 tokens clean；content-drift 475 refs clean；修正 RET-012 描述含 `: ` 的 YAML 双引号问题）
+- [x] 5.2 归档硬性收尾 1：`node openspec/governance/check-project-reqs.mjs --mode archive --change cut-archive-noise-and-pin-repair-vocabularies` PASS（0 duplicate / 0 orphan / 0 unregistered / 0 reusedRetired）。（已完成：archive-mode 681 registered 全一致，exit 0）
+- [x] 5.3 归档硬性收尾 2：`node openspec/governance/check-project-specs.mjs` PASS（0 violations）；`npm test` 全量 0 fail；`node openspec/governance/check-all.mjs` 全 PASS。（已完成：specs 82 files 0 violations；npm test 2931/2931 exit 0（第三轮，timeout 修复后 182s）；check-all --change 17/17 PASS）
+- [x] 5.4 closeout finding（回归门修复）：`tests/integration/cli/inspect-wave-return-map.test.mjs` 在满载并行下两次全量各 1 fail（subtest "shares one ordered Wave0 omission batch..." spawn `enter-phase.mjs` `exited null`，单 subtest 被饿 77 分钟），孤立复跑 14/14 全绿——定性为 `tests/README.md` 记录的资源竞争伪影；受影响 requirement：无（不涉行为契约）；authoritative owner：测试基建（`tests/e2e/helpers/deterministic-chain-harness.mjs` `runNode` 默认 timeout、该测试 `runInspect` timeout）；最小修复：提升 spawn timeout 为负载容忍值并注明 triage 依据，不改任何被锁行为与断言；done condition：孤立 14/14 绿 + 全量 `npm test` 0 fail。（已完成：runNode 30s→180s、instantiate 30s→180s、runInspect 10s→60s，均注明依据；孤立 28/28 绿；修复后全量 2931/2931 exit 0 且时长 1825s→183s，竞争定性实锤）

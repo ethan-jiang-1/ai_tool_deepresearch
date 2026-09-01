@@ -1,4 +1,4 @@
-// @impl ACR-001, ACR-002, ACR-003, ACR-004
+// @impl ACR-001, ACR-002, ACR-003, ACR-004, ACR-006
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -94,6 +94,29 @@ describe('agent context routing contract', () => {
     assert.match(startHere, /Do not pre-read every root document or recursively scan directories/);
     assert.match(startHere, /不要先 Charter-then-context/);
     assert.match(text, /\| `docs\/adr\/` \|/);
+  });
+
+  // @impl ACR-006
+  it('keeps archived change artifacts outside default task context in both root entry documents', () => {
+    for (const path of ['AGENTS.md', 'README.md']) {
+      const text = read(path);
+      const doNotRead = section(text, 'Do Not Read', path);
+      assert.match(
+        doNotRead,
+        /`openspec\/changes\/archive\/`/,
+        `${path} Do-Not-Read scope must name openspec/changes/archive/`,
+      );
+      assert.match(
+        doNotRead,
+        /historical record, not current behavior, task context, or authority/,
+        `${path} must state the archived-artifact boundary`,
+      );
+      assert.match(
+        doNotRead,
+        /only when the user explicitly asks for archive or history lookup/,
+        `${path} must state the explicit archive/history unlock`,
+      );
+    }
   });
 
   it('keeps Harness Execution Brief and shared-context coordinates outside research entry', () => {

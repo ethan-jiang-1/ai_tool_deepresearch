@@ -50,6 +50,22 @@ export const FILE_CLASSIFICATIONS = Object.freeze([
   'explained_non_authoritative',
 ]);
 
+// @impl FIO-008 — single code-derived owner of the file-observability closed
+// repair_directive vocabulary. This array is the sole value owner; any spelling
+// projection must derive from it (no second literal list).
+export const FILE_REPAIR_DIRECTIVES = Object.freeze([
+  'materialize_canonical_surface',
+  'reconcile_topic_identity',
+  'repair_topic_reference',
+  'classify_namespace',
+  'current_entry_contract',
+  'exact_topic_state_recover',
+]);
+
+const REPAIR_DIRECTIVE = Object.freeze(
+  Object.fromEntries(FILE_REPAIR_DIRECTIVES.map((value) => [value, value])),
+);
+
 
 // Known control files at bundle root — always expected
 const ROOT_CONTROL_FILES = new Set([
@@ -556,7 +572,7 @@ export function auditCanonicalTopicFootprint(bundlePath, {
           ? { kind: 'related_topic', surface: `${relPath}#metadata.related_topic` }
           : null,
       ].filter(Boolean),
-      repair_directive: 'materialize_canonical_surface',
+      repair_directive: REPAIR_DIRECTIVE.materialize_canonical_surface,
     });
   }
 
@@ -596,7 +612,7 @@ export function auditCanonicalTopicFootprint(bundlePath, {
       topic_identity: identity,
       primary_surface: primaryFact.surface,
       supporting_details: identityFacts.filter((fact) => fact !== primaryFact).map((fact) => ({ kind: fact.kind, surface: fact.surface })),
-      repair_directive: durable ? 'reconcile_topic_identity' : 'repair_topic_reference',
+      repair_directive: durable ? REPAIR_DIRECTIVE.reconcile_topic_identity : REPAIR_DIRECTIVE.repair_topic_reference,
     });
   }
 
@@ -616,7 +632,7 @@ export function auditCanonicalTopicFootprint(bundlePath, {
         topic_identity: identity,
         primary_surface: missing[0],
         supporting_details: missing.slice(1).map((surface) => ({ kind: 'missing_surface', surface })),
-        repair_directive: 'materialize_canonical_surface',
+        repair_directive: REPAIR_DIRECTIVE.materialize_canonical_surface,
       });
     }
   }
@@ -632,7 +648,7 @@ export function auditCanonicalTopicFootprint(bundlePath, {
           topic_identity: null,
           primary_surface: `artifacts/${entry.name}`,
           supporting_details: [],
-          repair_directive: 'classify_namespace',
+          repair_directive: REPAIR_DIRECTIVE.classify_namespace,
         });
       }
     }
@@ -689,7 +705,7 @@ export function auditFileObservability(bundlePath, {
         topic_identity: null,
         primary_surface: currentEntry.missing_files.join(', '),
         supporting_details: currentEntry.missing_files,
-        repair_directive: 'current_entry_contract',
+        repair_directive: REPAIR_DIRECTIVE.current_entry_contract,
       }],
       inspect: [`[unsupported_current_entry_contract] Missing current bundle entry file(s): ${currentEntry.missing_files.join(', ')}`],
       advice: ['Current Harness operations require both BUNDLE_ENTRY.md and BUNDLE_MAP.md at the selected bundle root.'],
@@ -711,7 +727,7 @@ export function auditFileObservability(bundlePath, {
         topic_identity: null,
         primary_surface: workspace,
         supporting_details: [],
-        repair_directive: 'exact_topic_state_recover',
+        repair_directive: REPAIR_DIRECTIVE.exact_topic_state_recover,
       }],
       inspect: ['[accepted_topic_layout_workspace] A canonical topic layout operation requires exact recovery before file classification.'],
       advice: [`node DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs recover --bundle ${bundlePath} --operation-id ${acceptedOperation}`],
