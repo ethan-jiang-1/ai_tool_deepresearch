@@ -134,7 +134,7 @@ semantic-closure 预期：`not_applicable` 或 `affected`（按触碰 family 定
 3. H4：`research-wave-phase-content:486-488,519` return-map 字段/处置形状复述改 RRM-003/RRM-007 指针（同时消除 D9 示例串分叉）。
 4. H5：`cli-inspect-output-conventions:27,110,213` 三处字段清单收敛为共享 finding 投影（gate-skeleton）+ CHI-005 语义引用；保留 IOC 自身 exit-code 语义。**注意 D8 双 owner 须在 change 内写明**：形状归 gate-skeleton、`repair_kind` 语义归 check-inspect-feedback。
 5. H2（若 C1 未顺带处理 D2/D3/D5/D6/D7/D10 的其余复述面，逐对定稿 owner+指针方向；建议 owner：D2→agent-output-declaration、D3→schema-core、D5→schema-core、D6→wave2-synthesis、D7→gate-skeleton、D10→gate-skeleton）。
-6. 表格化三处巨型场景块（沿用已关闭 control-surface 清理的先例）：`research-return-map:292`（59 scen）、`canonical-topic-state:48`（38 scen）、`research-wave-gate-implementation:805`（23 scen）。
+6. **场景墙表格化改判缓期（2026-08-31 执行期裁定）**：control-surface 清理的先例是*散文墙*表格化，scenario 块没有既定表格化先例——scenario 标题是 delta-sync key 与校验面，合并 59/38/23 个场景需要逐例语义裁决，自主执行风险恰是本计划反对的漂移源。登记为独立 pending task（触发：专门的 explore change 逐墙设计）；本 change 指标 ④（场景墙 ≤9）如未达在终局统计如实注明 residual。
 7. 账本手术（C2）：RRM L879 注册 RRM-008（或 re-home 至 seed-topic-materialization，explore 期定稿）；CTS L876 注册 CTS-012（或并入 CTS-007）；RWP-005/008 头部 ID 处置（恢复正文锚点或移出 header + registry `[DEPRECATED]`——两者取一，不折中）；req-registry 仅增纪律 + D2 的 registry 行（:147）与 AGO 正文口径对齐。
 8. **spec prose 中的实现文件引用清扫（2026-08-31 用户评审新增）**：spec 行为 requirement 不得把实现 `.mjs` 文件当所有权证据（代码↔spec 关联由 `@impl` 注释与 req-registry 在另一方向承担）；例外=导出面/CLI 本身是 requirement 主题的 house 模式（如 CHI-004 的 export-lock requirement）。现状全仓 284 处 `.mjs` 引用/55 文件，逐处分类（subject-of-requirement 保留 / 所有权证据改契约 token 或导出名）。Done condition：分类表 + 违例清零，C2 checker 可选加守卫。
 9. （弹性，diff 有界才做）吸收 CLS-079 遗留：list-doc-locks 盲点根治、reference-target descriptor 迁移。
@@ -406,6 +406,87 @@ semantic-closure 预期：`not_applicable` 或 `affected`（按触碰 family 定
 | C2: 死代码 receipt_binding_identity_autofilled 残留 | PRESENT(死代码未清) |
 | C2: forcedTimeoutAudit 携带 preflight_candidate_projection | ABSENT(未实现) |
 | C2/B4: actor 自由文本字段已改名 actor_guidance | NOT-YET |
+| C4: snapshot 模块已提取 | NOT-YET |
+| C4: late-retry 模块已提取 | NOT-YET |
+| C4: declaration-recovery 模块已提取 | NOT-YET |
+| C4: transaction-primitives/projection 已分层 | NOT-YET |
+
+### 10.6 Post-C2 快照（2026-08-31，C2 finalizer 19/19）
+
+变化 vs Post-C1：词汇锁广度 z.enum 59→60 / 冻结数组 57→59；**治理 16→17（`check-spec-enum-restatements` 上线，全树 0 FAIL 0 误报）**；submit.mjs 2448→2440（死代码清除起效）；**C2 探针全部翻转**（disposition 锁/candidate 提升/checker/preflight 字段 PRESENT，actor 改名 RENAMED）；台账 B1–B4、A6/A7 关闭；测试 302→304 文件、2903/2903。场景墙 12 持平（归 C3/缓期处置）。
+
+## 度量快照（机器口径，重复运行可比）
+
+| # | 指标 | 值 |
+|---|---|---|
+| 1 | spec 文件数 | 83 |
+| 2 | spec 总行数 | 30948 |
+| 3 | requirement 总数 | 654 |
+| 4 | scenario 总数 | 2881 |
+| 5 | guidance md 文件数 | 7 |
+| 6 | Top-10 最重 spec 合计行数 | 11429 |
+| 7 | 单 requirement ≥20 场景的"场景墙"数 | 12（合计 339 场景） |
+| 8 | engine .mjs 文件数 / 总行数 | 87 / 35635 |
+| 9 | work-unit-* 模块数 | 22 |
+| 10 | 最大 engine 文件行数 | DEEP_RESEARCH_HARNESS/engine/work-unit-submit.mjs = 2440 |
+| 11 | schema z.enum 数 / 冻结数组数（词汇锁广度） | 60 / 59 |
+| 12 | governance check 数 | 17 |
+| 13 | tests/**/*.test.mjs 文件数 / test() 调用数 | 303 / 133 |
+
+### Top-10 最重 spec
+
+| spec | 行 | req | scen |
+|---|---|---|---|
+| agent/delegated-work-units/spec.md | 2488 | 29 | 254 |
+| research/research-wave-gate-implementation/spec.md | 1425 | 24 | 128 |
+| research/research-wave-phase-content/spec.md | 1167 | 22 | 114 |
+| agent/agentic-queue/spec.md | 1072 | 28 | 95 |
+| research/research-return-map/spec.md | 963 | 8 | 89 |
+| research/canonical-topic-state/spec.md | 959 | 12 | 101 |
+| engine/gate-skeleton/spec.md | 899 | 19 | 104 |
+| bundle/reference-flat-format/spec.md | 854 | 12 | 65 |
+| research/content-delivery-phase-content/spec.md | 844 | 8 | 62 |
+| engine/cli-phase-transition/spec.md | 758 | 8 | 72 |
+
+### 场景墙（单 requirement ≥20 场景）
+
+| spec / requirement | 场景数 |
+|---|---|
+| research/research-return-map/spec.md → Return-map inspection SHALL verify current-round projection  | 59 |
+| research/canonical-topic-state/spec.md → Canonical topic mutation SHALL atomically materialize plan a | 38 |
+| agent/delegated-work-units/spec.md → Work-unit dry-submit SHALL preflight submit validation witho | 29 |
+| research/canonical-topic-state/spec.md → Topic-state operations SHALL preserve scope and authority bo | 28 |
+| research/post-final-recovery/spec.md → Post-final recovery SHALL expose one direct eligibility and  | 27 |
+| agent/delegated-work-units/spec.md → Work-unit envelope SHALL carry binding surfaces | 25 |
+| agent/subagent-node-contract/spec.md → Generated result schema and submit enforcement SHALL match k | 25 |
+| agent/delegated-work-units/spec.md → Timeout terminalization SHALL be guarded by progress-aware p | 23 |
+| research/research-wave-gate-implementation/spec.md → Blocking judgment contracts SHALL close across producer, aut | 23 |
+| research/wave1-intake/spec.md → Wave1 gate checks deepening artifacts | 22 |
+| research/research-wave-phase-content/spec.md → Wave phase docs SHALL teach canonical gate-consumable refs a | 20 |
+| engine/runtime-reentry-debuggability/spec.md → Reentry diagnostics SHALL summarize incident-shaped recovery | 20 |
+
+### Top-5 最大 engine 文件
+
+| 文件 | 行 |
+|---|---|
+| DEEP_RESEARCH_HARNESS/engine/work-unit-submit.mjs | 2440 |
+| DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs | 1880 |
+| DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-core.mjs | 1444 |
+| DEEP_RESEARCH_HARNESS/engine/helpers/wave-depth-contracts.mjs | 1359 |
+| DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-checks.mjs | 1295 |
+
+### 计划进度探针
+
+| 探针 | 状态 |
+|---|---|
+| C1: spec 复述 `semantic_boundary` 作 gate-hint kind | CLEARED/ABSENT |
+| C2: WORK_UNIT_ATTEMPT_DISPOSITIONS 导出存在 | PRESENT |
+| C2: WORK_UNIT_CANDIDATE_PROJECTION_ACTIONS 提升存在 | PRESENT |
+| C2: 新治理 checker 存在 | PRESENT |
+| C2: 死代码 allowNonceNormalization 残留 | CLEARED |
+| C2: 死代码 receipt_binding_identity_autofilled 残留 | CLEARED |
+| C2: forcedTimeoutAudit 携带 preflight_candidate_projection | PRESENT |
+| C2/B4: actor 自由文本字段已改名 actor_guidance | RENAMED |
 | C4: snapshot 模块已提取 | NOT-YET |
 | C4: late-retry 模块已提取 | NOT-YET |
 | C4: declaration-recovery 模块已提取 | NOT-YET |
