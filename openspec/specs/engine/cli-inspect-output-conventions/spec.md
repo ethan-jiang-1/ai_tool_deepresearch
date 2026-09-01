@@ -270,7 +270,7 @@ Wave inspect CLIs SHALL preserve the non-gate `{ check, inspect, advice, hints }
 
 Exit codes SHALL remain `0` for pass, `1` for known inspected-contract failure, and `2` for invocation/configuration failure. A missing `--bundle` value SHALL identify the missing required argument and return a command template containing `<bundle-path>`; because no runtime bundle was resolved, it SHALL NOT fabricate an absolute path. A definition parse/load failure SHALL preserve the same Gate-definition schema coordinate returned by the shared parser and SHALL use `repair_kind: missing_contract` with the exact framework contract boundary rather than suggesting edits inside an arbitrary run bundle.
 
-Shared artifact/provenance failures SHALL be projected from the same `wave-contract-findings.mjs` finding used by the formal Gate. Inspect-only advisory findings MAY use that same shape, but SHALL remain non-blocking and SHALL NOT acquire formal routing or durable side effects.
+Shared artifact/provenance failures SHALL be projected from the same shared contract-finding projection used by the formal Gate. Inspect-only advisory findings MAY use that same shape, but SHALL remain non-blocking and SHALL NOT acquire formal routing or durable side effects.
 
 Before resolving a bundle or loading a Wave definition, each Wave inspect CLI
 SHALL parse its public invocation. Its only legal forms are one standalone

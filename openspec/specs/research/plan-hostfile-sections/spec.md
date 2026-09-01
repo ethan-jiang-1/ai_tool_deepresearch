@@ -147,7 +147,7 @@ The `## Progress` section SHALL contain a pre-populated checklist of all workflo
 
 The shared `writePlanProgress()` helper SHALL use the canonical host-file locator and return `committed`, `unchanged`, or `failed` to its caller. A `failed` outcome SHALL leave the full pre-write plan bytes unchanged and SHALL NOT be represented as a checked Progress claim. Progress is presentation: a failure to update it SHALL NOT reverse the already-evaluated deterministic gate content result or independently create a new Gate rule. For setup-ready, the existing pass is consumable only when the actual remaining bytes can still be covered by the required route-bound checkpoint and trace contract; this is a handoff-audit prerequisite, not a Progress presentation verdict.
 
-Gate list source: the template pre-populates gates from the known workflow manifest lifecycle. `check-gate-setup-ready.mjs` remains the first caller; other gate CLIs integrate in follow-up changes.
+Gate list source: the template pre-populates gates from the known workflow manifest lifecycle. `the setup-ready gate CLI` remains the first caller; other gate CLIs integrate in follow-up changes.
 
 #### Scenario: Gate pass flips Progress checkbox
 - **WHEN** `check-gate-setup-ready.mjs` evaluates all rules and the gate passes

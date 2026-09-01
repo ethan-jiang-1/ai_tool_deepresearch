@@ -1,0 +1,34 @@
+schema_version: verification-routing/v1
+change: 2026-08-31-sweep-spec-references-and-prose
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      CLASS-B 13 处改写为 Source of Record 指针后由 absence-lock 断言
+      （residual-spec-drift-text-locks.test.mjs）锁定不再回退。
+  integration:
+    status: not_applicable
+    rationale: 零 CLI/行为变化。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: 零行为变化。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: 零 Agent 行为变化。
+claims:
+  - id: class-b-cleared
+    statement: >-
+      AUD-4 CLASS-B 13 处全部改写为 Source of Record 指针或删除实现文件名；
+      check-content-drift 全绿确认无悬空引用。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/residual-spec-drift-text-locks.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

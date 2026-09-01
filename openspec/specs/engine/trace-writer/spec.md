@@ -55,7 +55,7 @@ All modules writing to `rb_trace.jsonl` SHALL include `bundle` where the existin
 
 ### Requirement: Run start trace marker
 
-系统 SHALL 在 run 生命周期起点写入 trace marker 事件：bundle 实例化时，`instantiate-run-bundle.mjs` 调用 `createTrace(...).traceInit('deep_research_run', { bundle })`，写入 `run_start` 事件到 `rb_trace.jsonl` 首行。
+系统 SHALL 在 run 生命周期起点写入 trace marker 事件：bundle 实例化时，`the run-bundle instantiation entry` 调用 `createTrace(...).traceInit('deep_research_run', { bundle })`，写入 `run_start` 事件到 `rb_trace.jsonl` 首行。
 
 `run_start` SHALL 始终是 `rb_trace.jsonl` 的第一行。
 

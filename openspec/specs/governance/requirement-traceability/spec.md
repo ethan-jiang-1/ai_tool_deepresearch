@@ -86,7 +86,7 @@ registry; it SHALL NOT change plan-mode or archive-mode behavior.
 
 #### Scenario: propose-time prefix query returns the registered facts
 
-- **WHEN** a change author runs `node openspec/governance/check-project-reqs.mjs --check-prefix ACR`
+- **WHEN** a change author runs `node the project-requirements governance check --check-prefix ACR`
 - **THEN** the command SHALL print the `ACR` mapping and all `ACR-*` IDs with their states and exit `0`
 - **AND** an unknown prefix SHALL exit `2` with a usage message instead of printing an empty result
 

@@ -1,0 +1,7 @@
+schema_version: semantic-closure/v1
+change: 2026-08-31-sweep-spec-references-and-prose
+status: not_applicable
+reason: >-
+  纯 spec prose 句级改写（实现文件名→Source of Record 指针）；不改任何
+  requirement 正文语义或 cataloged semantic fact family 的 resolver、
+  establishing surface 结论内容或 verdict consumer。

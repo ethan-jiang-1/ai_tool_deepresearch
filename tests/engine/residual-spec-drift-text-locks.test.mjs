@@ -85,11 +85,11 @@ test('CHI-004: recovery vocabulary is export-pointer based, gate-hint example co
     'disposition closed set must be enumerated for the C2 lock/checker to guard',
   );
   assert.ok(
-    /closed disposition vocabulary `unsupported_current_contract`[^)]*attempt-disposition emission surface/.test(t) &&
-    !/closed disposition vocabulary `unsupported_current_contract`[^)]*\.mjs/.test(t),
-    'disposition sentence must own the set without naming the implementation file',
+    /closed disposition vocabulary `unsupported_current_contract`/.test(t) &&
+    /locked by its unit test/.test(t),
+    'disposition set must be enumerated with owner pointer and lock reference',
   );
-  assert.ok(t.includes("attempt-disposition emission surface"), 'disposition owner surface required');
+  assert.ok(t.includes('WORK_UNIT_ATTEMPT_DISPOSITIONS'), 'frozen export owner pointer required');
 });
 
 test('DEW-012: strict-attempt-binding single generation, retired clauses annotated', () => {

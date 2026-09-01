@@ -40,7 +40,7 @@ lock-deletion, or cleanup advice.
 
 All five work-unit feedback surfaces — formal submit rejection, late-submit rejection, transaction
 blocking, dry-submit, and inspect — SHALL emit the same `attempt_disposition` + `next` shape. The shape
-SHALL carry the disposition root (one of the closed disposition vocabulary `unsupported_current_contract`, `not_submitted`, `historical`, `unresolved`, `current`, owned by the engine's attempt-disposition emission surface and locked by its unit test), the authoritative owner
+SHALL carry the disposition root (one of the closed disposition vocabulary `unsupported_current_contract`, `not_submitted`, `historical`, `unresolved`, `current`, owned by the frozen export `WORK_UNIT_ATTEMPT_DISPOSITIONS` in schema/contracts/work-unit.mjs and locked by its unit test), the authoritative owner
 surface, an exact legal operation or honest `missing_contract`, and the same checkpoint to rerun. A
 recovery result (including `recoverWorkUnitTransaction`) SHALL NOT be a dead end: it SHALL carry the same
 `next`/rerun coordinate for the checkpoint that produced the feedback, so the caller never has to

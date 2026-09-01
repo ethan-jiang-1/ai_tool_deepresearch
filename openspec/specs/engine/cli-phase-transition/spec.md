@@ -350,7 +350,7 @@ Exceptional status-sync retry SHALL be idempotent only when status is already th
 
 Successful status synchronization after a degraded or accepted exceptional handoff SHALL establish the normal source-gate status window for the target lifecycle phase. It SHALL preserve degraded/recovery context in diagnostics or trace and SHALL NOT reinterpret either handoff as a gate attempt that did not occur.
 
-`--to <gate>` SHALL normally name the just-passed source gate being synchronized into `rb_status.json`. For the accepted ReopenResearchPass path, `--to hitl2_recorded` SHALL name the existing HITL2 decision checkpoint semantics recorded by the recovery event; it SHALL NOT claim that `check-gate-hitl2-recorded.mjs` ran post-Final. It SHALL NOT name the next phase's gate.
+`--to <gate>` SHALL normally name the just-passed source gate being synchronized into `rb_status.json`. For the accepted ReopenResearchPass path, `--to hitl2_recorded` SHALL name the existing HITL2 decision checkpoint semantics recorded by the recovery event; it SHALL NOT claim that the HITL2-recorded gate CLI ran post-Final. It SHALL NOT name the next phase's gate.
 
 Before writing `current_gate`, `next_gate`, or `phase_transition`, the CLI SHALL read `rb_trace.jsonl`, `manifest.json`, and `transitions.chain.json` and verify one accepted witness class:
 

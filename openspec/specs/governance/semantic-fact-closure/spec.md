@@ -158,7 +158,7 @@ on its family. A structurally valid plan-mode declaration is not a substitute
 for that ordered global-catalog write.
 
 The semantic-closure checker SHALL obtain selected verification assets through
-the canonical `verification-routing-contract.mjs` parser. It SHALL not define a
+the canonical `the verification-routing contract` parser. It SHALL not define a
 second `verification-plan.yaml` schema, route taxonomy, or asset-boundary
 interpretation.
 

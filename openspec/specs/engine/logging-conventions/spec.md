@@ -121,7 +121,7 @@ Gate CLIs SHALL use `writeGateAttempt()` as the only gate logging entrypoint for
 
 ### Requirement: Inspect-bundle observable extension
 
-`inspect-bundle.mjs` SHALL evaluate the selected root through the shared
+`the bundle inspection CLI` SHALL evaluate the selected root through the shared
 current-entry predicate before every view. The predicate passes only when both
 `BUNDLE_ENTRY.md` and `BUNDLE_MAP.md` exist at that root.
 
