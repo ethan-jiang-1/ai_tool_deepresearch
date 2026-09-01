@@ -54,7 +54,7 @@ CLS-082 波次验证了三件事：①工作单元深水区可以零行为变化
 | AUD-1 | engine 第二梯队四文件深挖（canonical-topic-state / gate-helpers-core / wave-depth-contracts / gate-helpers-checks）+ Next-5 榜单 | 聚类地图、消费图、环风险、测试覆盖、切分/下沉/合并建议与排序 | **进行中** |
 | AUD-2 | 第二轮死代码清查（exported-never-imported、private-never-called、dead-flexibility 参数面、孤儿 schema 枚举、test-only 面） | 哪些是 DEAD / DE-EXPORT / TEST-ONLY / DEAD-FLEXIBILITY | **进行中** |
 | AUD-3 | 测试层守护面（C4 切分后的 stale module-path 引用、零覆盖模块清单、helper 重复度量化、check-all 并发 flakiness 根因） | 切缝前测试网怎么补、测试基建怎么收拢 | **进行中** |
-| AUD-4 | spec 侧第二轮（`.mjs` 284 处三分类全量、四归档 change 自身引入的新漂移抽检、experiments 族与 user-research-controls 陈旧 prose、头部 meta 卫生） | CLASS-B/C 清单、新增漂移、清扫分组 | **进行中** |
+| AUD-4 | spec 侧第二轮（`.mjs` 284 处三分类全量、四归档 change 自身引入的新漂移抽检、experiments 族与 user-research-controls 陈旧 prose、头部 meta 卫生） | ✅ **完成**（308 处实测）：CLASS-A 295（96%，合法保留）/ **CLASS-B 13 处·12 站点·10 文件（清扫目标，完整清单见审计报告）** / CLASS-C **0**（所有 MISS 均有合规解释）；四归档 change 自身**未引入新漂移**，仅 1 处 C2 引致的 owner 指针落后一跳（`check-inspect-feedback:200` disposition 词汇应改指 `WORK_UNIT_ATTEMPT_DISPOSITIONS` 冻结导出）；另确认 schema-core Purpose 计数过时（10→14 枚举/6→10 契约）、`research-wave-experiments` Purpose 引用不存在的 playbook 文件名、delta-synced 标记约定需一次裁决。清扫分组建议：finding-shape 三兄弟 / shorthand 路径对 / governance 对 / 四个单点；**前置：10 个涉改文件先跑 list-doc-locks** |
 
 > 回填规则：审计结论逐条对照本计划的 change 分解（§5）；与计划冲突的发现（如某文件判定"合并而非切分"）以审计为准并在此登记修正。
 
