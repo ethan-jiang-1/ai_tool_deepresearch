@@ -1075,15 +1075,15 @@ Before normal or late submit reports success, its durable postcondition SHALL pr
 Allowed canonicalization is limited to:
 
 - unwrapping a submitted JSON object whose only top-level key is `result`;
-- filling missing receipt schema version with the current receipt-event schema literal, and filling missing receipt binding identity fields from the claimed work-unit record when the receipt event is otherwise valid JSON and has no conflicting identity values;
+- filling a missing receipt `schema_version` with the current receipt-event schema literal. Missing receipt binding identity fields (`work_id`, `queue_item_id`, `kind`, `receipt_nonce`) SHALL NOT be filled or reconstructed: a receipt event that omits any of them SHALL be rejected under the strict current-attempt binding boundary (DEW-004), which every current attempt passes;
 - materializing `page-content.md` as canonical `page.md` inside the same declared cache leaf when the canonical page file is missing, or accepting an identical non-authority sidecar when both files exist;
-- replacing a stale result/receipt `receipt_nonce` with the Engine record nonce only when `work_id`, `queue_item_id`, and `kind` all match the claimed record and the submitted result path resolves inside that work unit's assigned directory.
+- nonce correction is not canonicalization: a result/receipt `receipt_nonce` that differs from the Engine record nonce SHALL be rejected regardless of binding completeness or where the submitted result path resolves (DEW-004). The historical containment-gated nonce normalization is retired and unreachable for current attempts.
 
 Runtime receipt `detail` is optional diagnostic presentation, not identity or completion authority. The receipt schema SHALL accept either a keyed JSON object or a human-readable string at `detail` without creating a normalization event or rewriting one form into the other. Array, number, boolean, null, malformed JSONL, conflicting identity, and conflicting schema values SHALL remain invalid. Timeout-preflight, submit, inspect and Gate consumers SHALL NOT derive progress/coverage authority from the contents or shape of `detail`.
 
 Accepted submit transactions SHALL persist canonical authority surfaces before reporting success: assigned `result.json` SHALL contain the canonical flat result, assigned `runtime-receipt.jsonl` SHALL contain canonical receipt events, declared cache leaves SHALL contain canonical `page.md`, and ledger rows SHALL be built from canonical data. Any normalization SHALL be visible through structured diagnostics in submit output, trace, log, or an equivalent Engine diagnostic surface. Invalid submit SHALL remain non-terminal and SHALL NOT append a ledger row or complete queue demand.
 
-This requirement SHALL NOT remove the existing ability to submit a candidate `resultPath` from a temporary or caller-provided location when all identity fields already match. The stricter assigned-directory containment check applies only to nonce correction. In every successful case, the Engine SHALL still persist the accepted canonical result to the assigned work-unit `result_ref`.
+This requirement SHALL NOT remove the existing ability to submit a candidate `resultPath` from a temporary or caller-provided location when all identity fields already match. Assigned-directory containment no longer gates any canonicalization step; it is validation input only. In every successful case, the Engine SHALL still persist the accepted canonical result to the assigned work-unit `result_ref`.
 
 #### Scenario: single result wrapper is unwrapped
 
@@ -1102,11 +1102,9 @@ This requirement SHALL NOT remove the existing ability to submit a candidate `re
 #### Scenario: missing receipt schema or binding identity is canonicalized
 
 - **WHEN** `runtime-receipt.jsonl` contains parseable JSON events that omit the current receipt-event `schema_version` or one or more binding identity fields: `work_id`, `queue_item_id`, `kind`, or `receipt_nonce`
-- **AND** the missing binding identity fields can be filled from the claimed work-unit record
-- **AND** no present identity field conflicts with that record
-- **THEN** submit SHALL validate the canonical receipt events with the filled schema version and binding identity fields
-- **AND** the assigned `runtime-receipt.jsonl` SHALL be persisted in canonical JSONL form before submit reports success
-- **AND** diagnostics SHALL identify the receipt line numbers and autofilled schema or identity fields
+- **THEN** submit SHALL fill only a missing `schema_version` and SHALL reject any event with a missing or conflicting binding identity field under the strict current-attempt binding boundary, before ledger append
+- **AND** the assigned `runtime-receipt.jsonl` SHALL be persisted in canonical JSONL form before submit reports success only when every event passed the strict binding check
+- **AND** diagnostics SHALL identify the receipt line numbers and the defaulted schema version; the historical receipt binding identity autofill is retired and unreachable for current attempts (the scenario title is retained only as the OpenSpec delta-sync key)
 
 #### Scenario: diagnostic receipt detail accepts object or string
 
@@ -1172,9 +1170,9 @@ This requirement SHALL NOT remove the existing ability to submit a candidate `re
 - **WHEN** a result or receipt carries a stale `receipt_nonce`
 - **AND** `work_id`, `queue_item_id`, and `kind` match the claimed work-unit record
 - **AND** the submitted result path resolves inside that work unit's assigned directory
-- **THEN** submit MAY normalize the nonce to the Engine record nonce before strict validation
-- **AND** assigned `result.json` and `runtime-receipt.jsonl` SHALL persist the canonical record nonce before submit reports success
-- **AND** diagnostics SHALL record the nonce normalization
+- **THEN** submit SHALL still reject the nonce mismatch as non-terminal; the Engine record nonce SHALL NOT be substituted and no nonce normalization SHALL be recorded
+- **AND** no assigned `result.json` or `runtime-receipt.jsonl` bytes SHALL be rewritten with a canonical record nonce
+- **AND** the historical normalization diagnostics are retired; the scenario title is retained only as the OpenSpec delta-sync key
 
 #### Scenario: nonce mismatch with unsafe binding is rejected
 

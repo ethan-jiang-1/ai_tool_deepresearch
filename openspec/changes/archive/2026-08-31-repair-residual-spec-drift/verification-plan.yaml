@@ -1,0 +1,101 @@
+schema_version: verification-routing/v1
+change: 2026-08-31-repair-residual-spec-drift
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      本 change 全部可证明事实均为 in-process 确定性文本断言：涉改 requirement
+      块内旧句不再出现（`semantic_boundary` gate-hint 误列、5 值恢复词汇枚举、
+      binding-identity autofill / nonce normalization 授权句）、新锚点句存在
+      （disposition 五值列举、导出指针、drained 并存句、`wave0_source_intake`
+      判别键、retention 注记、Purpose 修正、catalog/guidance 修正）。均由
+      node:test 断言锁定，无跨进程行为。
+  integration:
+    status: not_applicable
+    rationale: >-
+      无 CLI、无跨文件工作流执行面变化；governance checker（content-drift、
+      spec-req-ids、project-reqs、capability-taxonomy）由 `npm run
+      governance:check` 作为既有治理面直接覆盖。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      零 lifecycle/gate/recovery 行为变化，不驱动端到端 bundle 链。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      不声称任何真实 Agent 行为变化；纯 accepted spec 文本重同步。
+claims:
+  - id: chi004-recovery-vocab-pointer
+    statement: >-
+      CHI-004：requirement 块内恢复词汇以 `WORK_UNIT_RECOVERY_ACTIONS` /
+      `RECOVERY_ACTION_CLI_VERB` 导出指针表述；5 值枚举清单与全域下划线拼写
+      禁令不再出现；gate-hint kinds 示例含 `missing_contract` 且不含
+      `semantic_boundary`；disposition 封闭集五值在 requirement 内列举并指向
+      `work-unit-attempt-disposition.mjs`。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/residual-spec-drift-text-locks.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: dew012-strict-binding-single-generation
+    statement: >-
+      DEW-012：仅保留 receipt schema-version 填补；binding-identity autofill 与
+      nonce normalization 授权句不再出现，严格拒绝口径与 DEW-004 对齐；两个
+      改写 scenario 标题保留并带 retention 注记；temporary-resultPath 容忍段
+      不再声称 containment 仅服务于 nonce 修正。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/residual-spec-drift-text-locks.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: agq-cd-prose-realignment
+    statement: >-
+      AGQ-027 drained 结论措辞与代码现状一致（`drained: true` 与 `passed:
+      false` 并存、exit 非零、refill 池不变量）；AGQ-007 以
+      `kind: 'wave0_source_intake'` 为判别键、`source_intake_fan_in` 为历史
+      命名；CDP Final 两处 `final_delivery` 措辞归一为"保留的
+      stop-authorization 值，非 trace event 名"。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/residual-spec-drift-text-locks.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: purpose-catalog-guidance-sync
+    statement: >-
+      gate-skeleton Purpose gate 计数为 10/10；canonical-topic-state Purpose
+      含只读 `schema` 操作；research-wave-gate-implementation Purpose 含
+      `setup-ready`；invariants-brief 恢复词汇为导出指针（无 5 值封闭清单）；
+      specs/README.md research-return-map 行承认 RRM-006/007 确定性巡检。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/residual-spec-drift-text-locks.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

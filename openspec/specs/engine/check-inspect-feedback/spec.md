@@ -197,31 +197,27 @@ lock-deletion, or cleanup advice.
 
 All five work-unit feedback surfaces — formal submit rejection, late-submit rejection, transaction
 blocking, dry-submit, and inspect — SHALL emit the same `attempt_disposition` + `next` shape. The shape
-SHALL carry the disposition root (one of the closed disposition vocabulary), the authoritative owner
+SHALL carry the disposition root (one of the closed disposition vocabulary `unsupported_current_contract`, `not_submitted`, `historical`, `unresolved`, `current`, owned by the engine's attempt-disposition emission surface and locked by its unit test), the authoritative owner
 surface, an exact legal operation or honest `missing_contract`, and the same checkpoint to rerun. A
 recovery result (including `recoverWorkUnitTransaction`) SHALL NOT be a dead end: it SHALL carry the same
 `next`/rerun coordinate for the checkpoint that produced the feedback, so the caller never has to
 reconstruct the original command.
 
-For attempt-owned work-unit recovery feedback (the five surfaces above), `recovery_action` (and `repair_kind`) values that name a
-work-unit recovery operation SHALL use the CLI-verb spelling (`recover-transaction`, `recover-declaration`,
-`supersede`, `wait`, `missing_contract`) or carry the exact command string; a feedback result SHALL NOT
-emit an underscore-spelled `repair_kind` that no CLI verb matches. Agent-facing work-unit recovery guidance
+For attempt-owned work-unit recovery feedback (the five surfaces above), the emitted `recovery_action` (and `repair_kind`) value set SHALL be exactly the engine-owned export `WORK_UNIT_RECOVERY_ACTIONS` — the full closed set, including CLI-verb-spelled and underscore-spelled members; each emitted value SHALL honor the CLI verb declared for it in `RECOVERY_ACTION_CLI_VERB` or be an explicit no-verb wait/author/stop boundary. A feedback result SHALL NOT emit a recovery value outside that export, nor present a rerun coordinate contradicting the emitted value's declared verb mapping. Agent-facing work-unit recovery guidance
 — including `COMMANDS.md`, `shared-subagent-protocol.md`, `cli/README.md`,
 `command_playbook/provenance-forensics-guide.md`, and the wave phase nodes — SHALL spell those recovery
-`repair_kind` values with the same CLI-verb spelling and SHALL NOT present an underscore-spelled recovery
-`repair_kind` that no CLI verb matches. This rule SHALL NOT rename the
+`repair_kind` values exactly as emitted and consistent with their `RUN.md` decision-table rows, and SHALL NOT present a recovery `repair_kind` value outside the engine-owned export. This rule SHALL NOT rename the
 non-recovery `repair_kind` vocabularies owned by other surfaces (for example the gate-hint kinds
-`agent_action`, `engine_operation`, `user_decision`, `external_action`, `semantic_boundary`, and the
+`agent_action`, `engine_operation`, `user_decision`, `external_action`, `missing_contract`, and the
 topic-state/entry kinds), which keep their existing contract wording. A successful `supersede` result
 SHALL place `tx_id` and `successor_queue_item_id` at the top level of the result (not nested inside the
 relation object) and SHALL name the successor's ordinary actor-observed location, so the reader does not
 have to reconstruct the next claim/submit path from nested fields. The mapping from disposition
 root to `repair_kind` to CLI verb SHALL be stated in one test-locked decision table in `RUN.md`'s recovery
 section, with one row per attempt-owned recovery `repair_kind` the engine can emit. A deterministic
-regression SHALL assert that every such emitted `recovery_action` has a table row and a matching CLI verb (or
-exact command string), and SHALL additionally scan the full Agent-facing work-unit recovery guidance
-surface for underscore-spelled recovery `repair_kind` values, failing when one appears.
+regression SHALL assert that every such emitted `recovery_action` has a table row and honors its declared CLI verb mapping (or
+explicit no-verb boundary), and SHALL additionally scan the full Agent-facing work-unit recovery guidance
+surface for recovery `repair_kind` values that are not `WORK_UNIT_RECOVERY_ACTIONS` members or lack a `RUN.md` decision-table row, failing when one appears.
 
 #### Scenario: contention feedback preserves the current attempt
 
@@ -274,8 +270,7 @@ surface for underscore-spelled recovery `repair_kind` values, failing when one a
 #### Scenario: repair kind matches the CLI verb
 
 - **WHEN** an engine feedback emits a `repair_kind` naming a work-unit recovery operation
-- **THEN** the value SHALL match the CLI verb spelling (`recover-transaction` / `recover-declaration` /
-  `supersede`) or carry the exact command string
+- **THEN** the value SHALL be a member of `WORK_UNIT_RECOVERY_ACTIONS` and SHALL honor its declared `RECOVERY_ACTION_CLI_VERB` verb mapping, or be an explicit no-verb wait/author/stop boundary
 - **AND** the RUN.md recovery decision table SHALL contain that `repair_kind` row with the matching CLI verb
   and the checkpoint to rerun
 - **AND** the lock regression SHALL fail if an emitted `repair_kind` has no table row
@@ -285,10 +280,9 @@ surface for underscore-spelled recovery `repair_kind` values, failing when one a
 - **WHEN** any Agent-facing work-unit recovery guidance surface (`COMMANDS.md`,
   `shared-subagent-protocol.md`, `cli/README.md`, `command_playbook/provenance-forensics-guide.md`, or a
   wave phase node) mentions a work-unit recovery `repair_kind`
-- **THEN** the value SHALL use the CLI-verb spelling (`recover-transaction` / `recover-declaration` /
-  `supersede`) or carry the exact command string
-- **AND** the deterministic decision-table regression SHALL scan those surfaces and fail when an
-  underscore-spelled recovery `repair_kind` appears in any of them
+- **THEN** the value SHALL be a member of `WORK_UNIT_RECOVERY_ACTIONS` with a `RUN.md` decision-table row consistent with its declared verb mapping
+- **AND** the deterministic decision-table regression SHALL scan those surfaces and fail when a recovery
+  `repair_kind` appears that is outside the engine-owned export or lacks a `RUN.md` decision-table row
 
 #### Scenario: recovery result is not a dead end
 

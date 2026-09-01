@@ -136,7 +136,8 @@ semantic-closure 预期：`not_applicable` 或 `affected`（按触碰 family 定
 5. H2（若 C1 未顺带处理 D2/D3/D5/D6/D7/D10 的其余复述面，逐对定稿 owner+指针方向；建议 owner：D2→agent-output-declaration、D3→schema-core、D5→schema-core、D6→wave2-synthesis、D7→gate-skeleton、D10→gate-skeleton）。
 6. 表格化三处巨型场景块（沿用已关闭 control-surface 清理的先例）：`research-return-map:292`（59 scen）、`canonical-topic-state:48`（38 scen）、`research-wave-gate-implementation:805`（23 scen）。
 7. 账本手术（C2）：RRM L879 注册 RRM-008（或 re-home 至 seed-topic-materialization，explore 期定稿）；CTS L876 注册 CTS-012（或并入 CTS-007）；RWP-005/008 头部 ID 处置（恢复正文锚点或移出 header + registry `[DEPRECATED]`——两者取一，不折中）；req-registry 仅增纪律 + D2 的 registry 行（:147）与 AGO 正文口径对齐。
-8. （弹性，diff 有界才做）吸收 CLS-079 遗留：list-doc-locks 盲点根治、reference-target descriptor 迁移。
+8. **spec prose 中的实现文件引用清扫（2026-08-31 用户评审新增）**：spec 行为 requirement 不得把实现 `.mjs` 文件当所有权证据（代码↔spec 关联由 `@impl` 注释与 req-registry 在另一方向承担）；例外=导出面/CLI 本身是 requirement 主题的 house 模式（如 CHI-004 的 export-lock requirement）。现状全仓 284 处 `.mjs` 引用/55 文件，逐处分类（subject-of-requirement 保留 / 所有权证据改契约 token 或导出名）。Done condition：分类表 + 违例清零，C2 checker 可选加守卫。
+9. （弹性，diff 有界才做）吸收 CLS-079 遗留：list-doc-locks 盲点根治、reference-target descriptor 迁移。
 
 ### C4 `deepen-work-unit-submit-seams`（engine 内部搬动，外部接口零变化）
 
@@ -163,6 +164,7 @@ semantic-closure 预期：`not_applicable` 或 `affected`（按触碰 family 定
 | `recommended_action` 三义 | **改名 `actor_guidance`**（选项 A） | 自由文本域无 schema/无 spec/零断言；折叠成新封闭集=词表增殖（选项 B 高半径）；写入 spec=锁死不稳定英文句（选项 C 最差） |
 | 治理 checker 导入策略 | **静态 import** + definition-only 不变量注释 + fail-closed + 降级路径备案 | 五模块实测无副作用加载；check-all 每_checker 独立进程隔离；regex 抽取无法防"导出变了 regex 没跟" |
 | AGQ-027 | 改 spec 措辞（非改代码） | 代码注释自证 distinct-verdict 设计意图；可达状态无行为差异 |
+| **spec prose 不得点名实现 .mjs**（用户评审裁定，2026-08-31） | 契约 token/导出名可以，实现文件路径不行；例外=导出面本身是 requirement 主题 | upstream spec 不得知道 downstream 实现在哪个文件；C1 已回改 AGQ-007/CIF/CDP 三处 |
 | CHI-004 决策表测试 | **不并入本计划任何 change**，登记独立 pending task | 独立债务，避免 C2 sprawl |
 
 ## 5. 非目标（显式排除）

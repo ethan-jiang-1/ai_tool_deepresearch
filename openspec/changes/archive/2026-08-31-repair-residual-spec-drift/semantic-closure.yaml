@@ -1,0 +1,13 @@
+schema_version: semantic-closure/v1
+change: 2026-08-31-repair-residual-spec-drift
+status: not_applicable
+reason: >-
+  本 change 零 engine/CLI/schema 改动，不改变任何 cataloged semantic fact
+  family 的 resolver、establishing surface 结论内容或 verdict consumer。四块
+  delta 均为 spec 文本重同步：CHI-004 恢复词汇从枚举清单改为既有
+  `WORK_UNIT_RECOVERY_ACTIONS` 导出指针（truth source 未变，仍是
+  work-unit-repair-vocabulary.mjs 与 RUN.md 决策表）；DEW-012 双代真相条款
+  收敛到代码已实现的严格拒绝口径（可观察行为集合不变——宽容分支本就不可
+  达）；AGQ-007/AGQ-027 与 CDP Final 为措辞对齐代码现状；Purpose/guidance/
+  catalog 直编辑不在 requirement 面。无新 fact、无 resolver 变更、无新
+  family 或 closure 条目需求。

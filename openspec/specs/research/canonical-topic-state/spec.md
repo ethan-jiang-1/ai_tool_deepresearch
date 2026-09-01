@@ -6,7 +6,7 @@
 
 ## Purpose
 
-Define the canonical topic registry, progress read model, atomic mutation workspace, and scope/authority boundaries. The topic registry in `rb_plan.md` is the bundle's only canonical topic identity owner. Progress is projected from direct runtime facts without persistence. Mutation goes through a single `operate-topic-state.mjs` CLI with exactly `inspect|apply|recover` operations and one `_diagnostics/topic-state/<operation-id>/` workspace.
+Define the canonical topic registry, progress read model, atomic mutation workspace, and scope/authority boundaries. The topic registry in `rb_plan.md` is the bundle's only canonical topic identity owner. Progress is projected from direct runtime facts without persistence. Mutation goes through a single `operate-topic-state.mjs` CLI with exactly `inspect|apply|recover` mutations plus the read-only `schema` authoring projection, and one `_diagnostics/topic-state/<operation-id>/` workspace.
 ## Requirements
 ### Requirement: Topic registry SHALL own stable identity and minimum durable intent
 

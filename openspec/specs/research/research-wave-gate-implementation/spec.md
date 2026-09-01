@@ -4,7 +4,7 @@
 
 ## Purpose
 
-定义 `wave0-complete`、`wave1-complete`、`wave2-complete` 三个 gate 的真实 deterministic rule set 和 CLI 实现要求。所有规则都基于当前 accepted executable surface：现有 bundle files、reference/artifacts 目录结构、reference metadata schema、trace contract。Gate 不做研究质量判断。
+定义 `wave0-complete`、`wave1-complete`、`wave2-complete`、`setup-ready` 等 active gate 的真实 deterministic rule set 和 CLI 实现要求。所有规则都基于当前 accepted executable surface：现有 bundle files、reference/artifacts 目录结构、reference metadata schema、trace contract。Gate 不做研究质量判断。
 ## Requirements
 ### Requirement: Wave0 complete gate rule set
 

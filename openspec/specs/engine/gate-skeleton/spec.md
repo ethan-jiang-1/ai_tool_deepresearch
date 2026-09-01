@@ -4,7 +4,7 @@
 
 ## Purpose
 
-定义 Workflow Foundation 的 9 个 Gate definition JSON 骨架和 9 个 Gate CLI 骨架的产出要求。建立 gate 文件的统一 shape - definition 和 CLI 的正确结构 - 使后续 content change 只需要在已有文件里增加 rules 和实现逻辑，不再争论文件形态。
+定义 Workflow Foundation 的 10 个 Gate definition JSON 骨架和 10 个 Gate CLI 骨架的产出要求。建立 gate 文件的统一 shape - definition 和 CLI 的正确结构 - 使后续 content change 只需要在已有文件里增加 rules 和实现逻辑，不再争论文件形态。
 ## Requirements
 ### Requirement: Gate definition JSON skeleton structure
 
