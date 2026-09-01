@@ -537,7 +537,7 @@ function declarationRecoveryFailure(bundleDir, workId, error) {
     reason_code: reasonCode,
     repair_kind: 'missing_contract',
     missing_fact: missingFact,
-    write_to: `submitted declaration recovery prerequisites for ${workId || '<work-id>'}; do not edit rb_output_declarations.jsonl, index, status, queue, or hashes manually`,
+    write_to: `submitted declaration recovery prerequisites for ${workId || '<work-id>'}; repair via operate-work-unit submit / late-submit / a fresh claim (the submit/late-submit/new-attempt boundary); do not edit rb_output_declarations.jsonl, index, status, queue, or hashes manually`,
     rerun: declarationRecoveryCommand(bundleDir, workId),
     inspect: [missingFact],
     advice: 'Repair only through the existing owner of the failed direct fact, then rerun the same recover-declaration checkpoint.',
@@ -729,7 +729,7 @@ function prepareCurrentDeclarationRecovery(bundleDir, workId) {
   const result = parsedResult;
   const resultHash = hashValue(result);
 
-  validateSubmitRuntimeReceipt(bundleDir, record, { normalizations, allowNonceNormalization: false });
+  validateSubmitRuntimeReceipt(bundleDir, record, { normalizations });
   validateOutputFiles(bundleDir, result, manifest.output_contract);
   const cacheValidation = validateCacheTrails(bundleDir, result, manifest.cache_policy, {
     record,
@@ -1243,9 +1243,6 @@ function validateSubmitPlan(bundleDir, {
     throw new Error(`work_id ${record.work_id} is ${record.status}; ${verb}`);
   }
 
-  const resultPathInsideAssignedDir = resultPath
-    ? isPathInsideDir(resultPath, path.join(bundleDir, record.paths.work_unit_dir))
-    : false;
   const manifest = readAndValidateManifest(bundleDir, index, record);
   validateManifestTopicBinding(bundleDir, manifest);
   const result = readAndValidateResult(bundleDir, resultPath, record, {
@@ -1258,7 +1255,6 @@ function validateSubmitPlan(bundleDir, {
   const directOutputEvaluations = requireDirectOutputs(bundleDir, manifest);
   const runtimeReceipt = validateSubmitRuntimeReceipt(bundleDir, record, {
     normalizations,
-    allowNonceNormalization: resultPathInsideAssignedDir,
   });
   const queue = requireQueueInFlight
     ? validateQueueBindingForSubmit(bundleDir, record, manifest, { sideEffects: false })
@@ -1643,9 +1639,6 @@ function collectDrySubmitPlan(bundleDir, { work_id, resultPath }) {
     return finalizeCandidatePlan({ index, record, violations, normalizations });
   }
 
-  const resultPathInsideAssignedDir = resultPath
-    ? isPathInsideDir(resultPath, path.join(bundleDir, record.paths.work_unit_dir))
-    : false;
 
   try {
     manifest = readAndValidateManifest(bundleDir, index, record);
@@ -1699,7 +1692,6 @@ function collectDrySubmitPlan(bundleDir, { work_id, resultPath }) {
   try {
     runtimeReceipt = validateSubmitRuntimeReceipt(bundleDir, record, {
       normalizations,
-      allowNonceNormalization: resultPathInsideAssignedDir,
     });
   } catch (error) {
     violations.push(...violationsForError(error, { phase: 'runtime_receipt', bundleDir, record, resultPath }));

@@ -618,7 +618,7 @@ export function claimWorkUnits(bundleDir, {
   if (actorObservation !== null) {
     const malformed = describeActorObservationInputIssues(actorObservation);
     if (!malformed.valid) {
-      const recommendedAction = `Perform one bounded native probe for ${preview.planned_role_key}, then rerun the same claim.`;
+      const actorGuidance = `Perform one bounded native probe for ${preview.planned_role_key}, then rerun the same claim.`;
       const repair = malformedActorObservationRepair({
         bundleDir,
         phase,
@@ -634,7 +634,7 @@ export function claimWorkUnits(bundleDir, {
         actor_observation_contract: actorObservationContract,
         provided_observation: malformed.provided_observation,
         input_issues: malformed.input_issues,
-        recommended_action: recommendedAction,
+        actor_guidance: actorGuidance,
       };
       return {
         ok: false,
@@ -653,7 +653,7 @@ export function claimWorkUnits(bundleDir, {
           inputIssues: malformed.input_issues,
           rerun: repair.rerun,
         }),
-        recommended_action: recommendedAction,
+        actor_guidance: actorGuidance,
         ...repair,
         queue: previewQueue,
       };
@@ -673,7 +673,7 @@ export function claimWorkUnits(bundleDir, {
     requested_execution_actor_class: decision.execution_actor_class,
     observation: decision.observation,
     actor_observation_contract: actorObservationContract,
-    recommended_action: decision.recommended_action,
+    actor_guidance: decision.actor_guidance,
   };
   if (decision.verdict !== 'allow_claim') {
     if (decision.verdict === 'no_claim') {
@@ -710,7 +710,7 @@ export function claimWorkUnits(bundleDir, {
       prompt_refs: [],
       actor_preflight: actorPreflight,
       actor_observation_contract: actorObservationContract,
-      recommended_action: decision.recommended_action,
+      actor_guidance: decision.actor_guidance,
       ...repair,
       queue: previewQueue,
     };
@@ -853,7 +853,7 @@ export function claimWorkUnits(bundleDir, {
         actor_execution: record.actor_execution,
       })),
       actor_preflight: { ...actorPreflight, verdict: 'allow_claim' },
-      recommended_action: decision.recommended_action,
+      actor_guidance: decision.actor_guidance,
     };
     const continuation = continuationForClaimedWork({ claimedWorkIds: response.claimed_work_ids });
     if (continuation) response.continuation = continuation;
@@ -1224,6 +1224,7 @@ export function closeWorkUnitAttempt(bundleDir, {
       force_reason: reason,
       preflight_timeout_eligible: Boolean(timeoutPreflight?.timeout_eligible),
       preflight_recommended_action: timeoutPreflight?.recommended_action || null,
+      preflight_candidate_projection: timeoutPreflight?.candidate_projection ?? null,
       default_timeout_would_refuse: !timeoutPreflight?.timeout_eligible,
       effective_timeout_at: timeoutPreflight?.effective_timeout_at || null,
       latest_engine_observed_progress_at: timeoutPreflight?.progress?.latest_engine_observed_progress_at || null,

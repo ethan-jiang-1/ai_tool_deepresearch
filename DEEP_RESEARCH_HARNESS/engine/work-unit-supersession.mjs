@@ -220,7 +220,6 @@ function collectDirectDriftRoots(bundleDir, index, record, row, parent) {
     const normalizations = [];
     const receipt = validateSubmitRuntimeReceipt(bundleDir, record, {
       normalizations,
-      allowNonceNormalization: false,
     });
     if (normalizations.length > 0 || !receipt.events.some((entry) => entry.event === 'work_done')) {
       throw new Error(`runtime receipt is not the exact accepted lifecycle shape for ${record.work_id}`);

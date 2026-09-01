@@ -37,6 +37,19 @@ export const RECOVERY_ACTION_CLI_VERB = Object.freeze({
   [WORK_UNIT_RECOVERY_ACTION.semanticBoundary]: null,
 });
 
+// Attempt-disposition vocabulary: the schema-owned closed set for the
+// attempt_disposition coverage root (CHI-004 five-surface feedback shape),
+// re-exported here so emission code and tests have one import site.
+import { WORK_UNIT_ATTEMPT_DISPOSITIONS, WorkUnitAttemptDispositionSchema } from '../schema/contracts/work-unit.mjs';
+export { WORK_UNIT_ATTEMPT_DISPOSITIONS, WorkUnitAttemptDispositionSchema };
+export const WORK_UNIT_ATTEMPT_DISPOSITION = Object.freeze({
+  unsupportedCurrentContract: 'unsupported_current_contract',
+  notSubmitted: 'not_submitted',
+  historical: 'historical',
+  unresolved: 'unresolved',
+  current: 'current',
+});
+
 // Backward-compatibility aliases during transition
 export const WORK_UNIT_REPAIR_KIND = WORK_UNIT_RECOVERY_ACTION;
 export const WORK_UNIT_REPAIR_KINDS = WORK_UNIT_RECOVERY_ACTIONS;

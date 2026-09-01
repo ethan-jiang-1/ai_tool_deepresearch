@@ -141,8 +141,19 @@ export const WorkUnitOutputContractSchema = z.object({
   }
 });
 
+// Schema-owned closed vocabulary for dry-submit candidate projections. Hoisted
+// as a frozen export (gate-definition pattern) so governance tooling can derive
+// the value set without reaching into a superRefine'd schema object.
+export const WORK_UNIT_CANDIDATE_PROJECTION_ACTIONS = Object.freeze([
+  'submit',
+  'repair_same_candidate',
+  'return_to_actor',
+  'fail_and_replace',
+  'inspect_contract',
+]);
+
 export const WorkUnitCandidateProjectionSchema = z.object({
-  recommended_action: z.enum(['submit', 'repair_same_candidate', 'return_to_actor', 'fail_and_replace', 'inspect_contract']),
+  recommended_action: z.enum(WORK_UNIT_CANDIDATE_PROJECTION_ACTIONS),
   primary_root_code: z.string().min(1).nullable(),
 }).strict().superRefine((data, ctx) => {
   if (data.recommended_action === 'submit' && data.primary_root_code !== null) {
@@ -152,6 +163,19 @@ export const WorkUnitCandidateProjectionSchema = z.object({
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['primary_root_code'], message: 'rejection requires primary_root_code' });
   }
 });
+
+// Schema-owned closed vocabulary for the attempt_disposition coverage root
+// (CHI-004 five-surface feedback shape). Single emission surface:
+// engine/work-unit-attempt-disposition.mjs; locked by its unit test.
+export const WORK_UNIT_ATTEMPT_DISPOSITIONS = Object.freeze([
+  'unsupported_current_contract',
+  'not_submitted',
+  'historical',
+  'unresolved',
+  'current',
+]);
+
+export const WorkUnitAttemptDispositionSchema = z.enum(WORK_UNIT_ATTEMPT_DISPOSITIONS);
 
 export const ExecutionActorClassSchema = z.enum(['delegated_subagent', 'phase_agent_fallback']);
 export const ActorObservationOutcomeSchema = z.enum(['available', 'unavailable', 'unknown']);

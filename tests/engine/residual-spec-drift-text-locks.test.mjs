@@ -138,6 +138,25 @@ test('Purpose/guidance/catalog prose fixes', () => {
   assert.ok(!cat.includes('No deterministic owner; Node does not judge claim interpretation.'));
 });
 
+test('C2 residue: engine sources carry no superseded leniency tokens', () => {
+  for (const token of ['allowNonceNormalization', 'receipt_binding_identity_autofilled', 'nonce_normalized_from_record']) {
+    for (const rel of [
+      'DEEP_RESEARCH_HARNESS/engine/work-unit-validation.mjs',
+      'DEEP_RESEARCH_HARNESS/engine/work-unit-submit.mjs',
+      'DEEP_RESEARCH_HARNESS/engine/work-unit-supersession.mjs',
+    ]) {
+      assert.ok(!read(rel).includes(token), `${token} must be absent from ${rel}`);
+    }
+  }
+  // strict rejection paths and the surviving schema-version fill must remain
+  const validation = read('DEEP_RESEARCH_HARNESS/engine/work-unit-validation.mjs');
+  assert.ok(validation.includes('runtime receipt missing exact attempt binding'));
+  assert.ok(validation.includes('receipt_schema_defaulted'));
+  // A7: recover-declaration write_to names the submit/late-submit/new-attempt boundary
+  const submit = read('DEEP_RESEARCH_HARNESS/engine/work-unit-submit.mjs');
+  assert.ok(submit.includes('the submit/late-submit/new-attempt boundary'));
+});
+
 test('delta blocks are verbatim-synced with main spec requirement blocks', () => {
   const C = 'openspec/changes/archive/2026-08-31-repair-residual-spec-drift/specs';
   const pairs = [

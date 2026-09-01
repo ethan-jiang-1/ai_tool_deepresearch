@@ -1,0 +1,113 @@
+schema_version: verification-routing/v1
+change: 2026-08-31-lock-closed-vocabularies-and-clear-residue
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      词汇锁（frozen array + zod enum + 常量替换 + 零裸字面量源扫描）、死代码
+      清除（engine 源内禁用 token 的 grep 断言）、actor_guidance 改名回归、
+      preflight_candidate_projection 字段断言、checker 自检（fixture 违例
+      检测 + 全树零误报）均为 in-process node:test 可锁定的确定性事实。
+  integration:
+    status: selected
+    rationale: >-
+      forced-timeout 的 durable diagnostics 走 `operate-work-unit timeout`
+      CLI 边界（exit status + 结构化 JSON），以既有 integration 测试文件
+      mirror 一处字段断言。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      零 lifecycle/gate 链路行为变化；work-unit 既有 e2e 回归由全量
+      npm test 覆盖，不新增端到端场景。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      不声称任何真实 Agent 行为变化；`actor_guidance` 改名面无 Agent 契约。
+claims:
+  - id: disposition-vocabulary-locked
+    statement: >-
+      `WORK_UNIT_ATTEMPT_DISPOSITIONS` 恰为 5 值（current/historical/
+      not_submitted/unresolved/unsupported_current_contract），zod schema
+      round-trip 每值，`work-unit-attempt-disposition.mjs` 零裸 disposition
+      字面量，四个发射面输出集合不变。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-repair-vocabulary.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: dead-code-cleared
+    statement: >-
+      engine 全域 grep `allowNonceNormalization` / 
+      `receipt_binding_identity_autofilled` / `nonce_normalized_from_record`
+      零命中；strict throw 与 `receipt_schema_defaulted` 路径保留且既有
+      submit/dry-submit/supersession 测试全绿。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/residual-spec-drift-text-locks.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: preflight-projection-field-implemented
+    statement: >-
+      forced-timeout durable diagnostics 携带 `preflight_candidate_projection`：
+      无候选例为 null；违规候选例 deep-equality dry-submit 投影对
+      （recommended_action + primary_root_code），trace 事件携带同值。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-work-unit.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: actor-guidance-rename-regression
+    statement: >-
+      claim no-claim 结果携带非空 `actor_guidance`（prose 指导）且无顶层
+      `recommended_action` key；timeout-preflight 与 dry-submit 的封闭集
+      `recommended_action` 不受影响。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-actor.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: enum-restatement-checker-calibrated
+    statement: >-
+      `check-spec-enum-restatements.mjs` 对当前树 exit 0（0 FAIL 0 误报）；
+      自检 fixture 违例（集合外成员、5-of-10 闭合复述）被检出；check-all
+      自动发现并入列（治理 16→17）。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/governance/spec-enum-restatements-checker.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

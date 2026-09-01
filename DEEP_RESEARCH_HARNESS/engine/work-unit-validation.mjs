@@ -226,31 +226,12 @@ export function readAndValidateResult(bundleDir, resultPath, record, { normaliza
       });
     }
   }
-  const strictAttemptBinding = record.submission_contract_version === WORK_UNIT_SUBMISSION_CONTRACT_VERSION;
   if (normalized.receipt_nonce !== undefined && normalized.receipt_nonce !== record.receipt_nonce) {
-    const hasCompleteBinding = normalized.work_id === record.work_id
-      && normalized.queue_item_id === record.queue_item_id
-      && normalized.kind === record.kind;
-    const insideAssignedDir = isPathInsideDir(resultPath, path.join(bundleDir, record.paths.work_unit_dir));
-    if (strictAttemptBinding || !hasCompleteBinding || !insideAssignedDir) {
-      validationIssues.push({
-        code: 'result_binding_mismatch',
-        path: ['receipt_nonce'],
-        message: `result/index mismatch for ${record.work_id}: receipt_nonce; expected ${record.receipt_nonce} got ${normalized.receipt_nonce}`,
-      });
-    } else {
-      recordSubmitNormalization(normalizations, {
-        kind: 'nonce_normalized_from_record',
-        work_id: record.work_id,
-        queue_item_id: record.queue_item_id,
-        surface_ref: record.paths.result_ref,
-        candidate_result_path: path.resolve(resultPath),
-        field: 'receipt_nonce',
-        from: String(normalized.receipt_nonce),
-        to: record.receipt_nonce,
-      });
-      normalized.receipt_nonce = record.receipt_nonce;
-    }
+    validationIssues.push({
+      code: 'result_binding_mismatch',
+      path: ['receipt_nonce'],
+      message: `result/index mismatch for ${record.work_id}: receipt_nonce; expected ${record.receipt_nonce} got ${normalized.receipt_nonce}`,
+    });
   }
 
   const parsed = WorkUnitResultSchema.safeParse(normalized);
@@ -298,7 +279,7 @@ export function readAndValidateResult(bundleDir, resultPath, record, { normaliza
   return parsed.data;
 }
 
-export function validateSubmitRuntimeReceipt(bundleDir, record, { normalizations = [], allowNonceNormalization = false } = {}) {
+export function validateSubmitRuntimeReceipt(bundleDir, record, { normalizations = [] } = {}) {
   assertCompleteCurrentWorkUnitProfile(bundleDir, record);
   const receiptPath = path.join(bundleDir, record.paths.runtime_receipt_ref);
   if (!existsSync(receiptPath)) throw new Error(`Missing runtime receipt: ${record.paths.runtime_receipt_ref}`);
@@ -331,53 +312,19 @@ export function validateSubmitRuntimeReceipt(bundleDir, record, { normalizations
       throw new Error(`runtime receipt schema_version mismatch for ${record.work_id} line ${index + 1}`);
     }
 
-    const strictAttemptBinding = record.submission_contract_version === WORK_UNIT_SUBMISSION_CONTRACT_VERSION;
-    const autofilled = [];
     for (const field of ['work_id', 'queue_item_id', 'kind']) {
       if (eventCandidate[field] === undefined) {
-        if (strictAttemptBinding) {
-          throw new Error(`runtime receipt missing exact attempt binding for ${record.work_id} line ${index + 1}: ${field}`);
-        }
-        eventCandidate[field] = record[field];
-        autofilled.push(field);
-      } else if (eventCandidate[field] !== record[field]) {
+        throw new Error(`runtime receipt missing exact attempt binding for ${record.work_id} line ${index + 1}: ${field}`);
+      }
+      if (eventCandidate[field] !== record[field]) {
         throw new Error(`runtime receipt mismatch for ${record.work_id} line ${index + 1}: ${field}`);
       }
     }
     if (eventCandidate.receipt_nonce === undefined) {
-      if (strictAttemptBinding) {
-        throw new Error(`runtime receipt missing exact attempt binding for ${record.work_id} line ${index + 1}: receipt_nonce`);
-      }
-      eventCandidate.receipt_nonce = record.receipt_nonce;
-      autofilled.push('receipt_nonce');
-    } else if (eventCandidate.receipt_nonce !== record.receipt_nonce) {
-      const receiptHasCompleteBinding = parsed.work_id === record.work_id
-        && parsed.queue_item_id === record.queue_item_id
-        && parsed.kind === record.kind;
-      if (strictAttemptBinding || !allowNonceNormalization || !receiptHasCompleteBinding) {
-        throw new Error(`runtime receipt mismatch for ${record.work_id} line ${index + 1}: receipt_nonce`);
-      }
-      recordSubmitNormalization(normalizations, {
-        kind: 'nonce_normalized_from_record',
-        work_id: record.work_id,
-        queue_item_id: record.queue_item_id,
-        surface_ref: record.paths.runtime_receipt_ref,
-        line: index + 1,
-        field: 'receipt_nonce',
-        from: String(eventCandidate.receipt_nonce),
-        to: record.receipt_nonce,
-      });
-      eventCandidate.receipt_nonce = record.receipt_nonce;
+      throw new Error(`runtime receipt missing exact attempt binding for ${record.work_id} line ${index + 1}: receipt_nonce`);
     }
-    if (autofilled.length > 0) {
-      recordSubmitNormalization(normalizations, {
-        kind: 'receipt_binding_identity_autofilled',
-        work_id: record.work_id,
-        queue_item_id: record.queue_item_id,
-        surface_ref: record.paths.runtime_receipt_ref,
-        line: index + 1,
-        fields: autofilled,
-      });
+    if (eventCandidate.receipt_nonce !== record.receipt_nonce) {
+      throw new Error(`runtime receipt mismatch for ${record.work_id} line ${index + 1}: receipt_nonce`);
     }
 
     const eventResult = WorkUnitRuntimeReceiptEventSchema.safeParse(eventCandidate);

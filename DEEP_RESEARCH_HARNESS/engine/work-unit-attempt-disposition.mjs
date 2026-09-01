@@ -10,7 +10,7 @@ import {
   resolveWorkUnitSupersessionLineage,
 } from './work-unit-supersession.mjs';
 import { classifyCompleteCurrentWorkUnitProfile } from './work-unit-current-profile.mjs';
-import { WORK_UNIT_RECOVERY_ACTION, WORK_UNIT_REPAIR_KIND } from './work-unit-repair-vocabulary.mjs';
+import { WORK_UNIT_RECOVERY_ACTION, WORK_UNIT_REPAIR_KIND, WORK_UNIT_ATTEMPT_DISPOSITION } from './work-unit-repair-vocabulary.mjs';
 import { CLI_OPERATE_WORK_UNIT } from './work-unit-constants.mjs';
 
 // attempt-disposition rerun builder: the dry-submit command (predictive,
@@ -42,7 +42,7 @@ export function projectWorkUnitAttemptDisposition(bundleDir, record, {
       identity,
       transaction: null,
       coverage: {
-        disposition: 'unsupported_current_contract',
+        disposition: WORK_UNIT_ATTEMPT_DISPOSITION.unsupportedCurrentContract,
         ledger_record_hash: null,
         supersession_relation: null,
         root_code: profile.reason_code,
@@ -66,21 +66,21 @@ export function projectWorkUnitAttemptDisposition(bundleDir, record, {
     rerun: rerun || submitRerun(bundleDir, record),
   });
 
-  let coverage = { disposition: 'not_submitted', ledger_record_hash: null, supersession_relation: null };
+  let coverage = { disposition: WORK_UNIT_ATTEMPT_DISPOSITION.notSubmitted, ledger_record_hash: null, supersession_relation: null };
   let submittedRecovery = null;
   if (record.status === 'submitted') {
     if (record.supersession_relation) {
       try {
         const lineage = resolveWorkUnitSupersessionLineage(bundleDir, { predecessorWorkId: record.work_id });
         coverage = {
-          disposition: 'historical',
+          disposition: WORK_UNIT_ATTEMPT_DISPOSITION.historical,
           ledger_record_hash: record.supersession_relation.accepted_ledger_record_hash,
           supersession_relation: record.supersession_relation,
           current_lineage_leaf: lineage.leaf,
         };
       } catch (error) {
         coverage = {
-          disposition: 'unresolved',
+          disposition: WORK_UNIT_ATTEMPT_DISPOSITION.unresolved,
           ledger_record_hash: null,
           supersession_relation: record.supersession_relation,
           root_code: 'supersession_integrity_invalid',
@@ -93,21 +93,21 @@ export function projectWorkUnitAttemptDisposition(bundleDir, record, {
         submittedRecovery = evaluateWorkUnitSupersessionEligibility(bundleDir, { work_id: record.work_id });
         coverage = submittedRecovery.eligible || ![WORK_UNIT_REPAIR_KIND.semanticBoundary].includes(submittedRecovery.reason_code)
           ? {
-              disposition: 'unresolved',
+              disposition: WORK_UNIT_ATTEMPT_DISPOSITION.unresolved,
               ledger_record_hash: submitted.ledger_record_hash,
               supersession_relation: null,
               root_code: submittedRecovery.root_code || submittedRecovery.reason_code,
               missing_fact: submittedRecovery.missing_fact || null,
             }
           : {
-              disposition: 'current',
+              disposition: WORK_UNIT_ATTEMPT_DISPOSITION.current,
               ledger_record_hash: submitted.ledger_record_hash,
               supersession_relation: null,
             };
       } catch (error) {
         submittedRecovery = evaluateWorkUnitSupersessionEligibility(bundleDir, { work_id: record.work_id });
         coverage = {
-          disposition: 'unresolved',
+          disposition: WORK_UNIT_ATTEMPT_DISPOSITION.unresolved,
           ledger_record_hash: null,
           supersession_relation: null,
           root_code: error.reason_code || 'submitted_integrity_invalid',

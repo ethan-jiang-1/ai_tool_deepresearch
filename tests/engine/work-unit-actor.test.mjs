@@ -40,6 +40,14 @@ describe('work-unit actor decision', () => {
     assert.throws(() => evaluateActorDecision({ observation: { ...unavailable, raw_error: 'secret' }, executionActorClass: 'delegated_subagent', plannedRoleKey: 'dpt-source-intake', actorPolicy: policy }), /unrecognized_keys/);
   });
 
+  it('carries prose guidance under actor_guidance with no colliding recommended_action key', () => {
+    const noClaim = evaluateActorDecision({ observation: unavailable, executionActorClass: 'delegated_subagent', plannedRoleKey: 'dpt-source-intake', actorPolicy: policy });
+    assert.equal(typeof noClaim.actor_guidance, 'string');
+    assert.ok(noClaim.actor_guidance.length > 0);
+    assert.equal('recommended_action' in noClaim, false);
+    assert.equal('recommended_action' in noClaim.observation, false);
+  });
+
   it('does not mutate queue or allocate authority for unavailable normal actor', () => {
     const dir = mkdtempSync(path.join(os.tmpdir(), 'wu-actor-no-claim-'));
     try {

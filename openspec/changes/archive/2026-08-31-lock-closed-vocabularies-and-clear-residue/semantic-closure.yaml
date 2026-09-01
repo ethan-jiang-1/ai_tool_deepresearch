@@ -1,0 +1,14 @@
+schema_version: semantic-closure/v1
+change: 2026-08-31-lock-closed-vocabularies-and-clear-residue
+status: not_applicable
+reason: >-
+  本 change 不改变任何 cataloged semantic fact family 的 resolver、establishing
+  surface 结论内容或 verdict consumer。①disposition 五值仅由散落字面量改为
+  schema-owned 常量（值集与发射面逐一不变，`work-unit.attempt-identity-and-actor`
+  family 的 bounded question 与结论不变）；②candidate 枚举提升是同一值集的
+  导出重排（zod 校验行为逐值相同）；③死代码删除移除的是不可达分支（C1 已证
+  strict-attempt-binding 下永假），可达行为集合不变；④`preflight_candidate_
+  projection` 是 DEW-014 既有 SHALL 的实现补齐，诊断面新增一个已 schema 验证
+  的字段，verdict 无变化；⑤`actor_guidance` 改名发生在无 spec 契约、无既证
+  family 的建议性 prose 面（该面从未进入 semantic-fact-families.yaml）。
+  无新 fact、无 resolver 变更、无 family 增补需求。

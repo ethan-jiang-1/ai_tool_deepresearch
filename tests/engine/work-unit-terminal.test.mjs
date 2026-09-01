@@ -987,6 +987,7 @@ describe('work-unit terminal attempts', () => {
       assert.equal(forced.forced_timeout, true);
       assert.equal(forced.preflight_timeout_eligible, false);
       assert.equal(forced.preflight_recommended_action, 'wait');
+      assert.equal(forced.preflight_candidate_projection, null);
       assert.equal(forced.default_timeout_would_refuse, true);
       assert.equal(Array.isArray(forced.progress_sources), true);
       assert.equal(forced.progress_sources.some((source) => source.source_type === 'receipt_file'), true);
@@ -996,11 +997,58 @@ describe('work-unit terminal attempts', () => {
       const forcedEvent = traceRows.find((row) => row.event === 'work_unit_forced_timeout');
       assert.equal(forcedEvent?.forced_timeout, true);
       assert.equal(forcedEvent?.default_timeout_would_refuse, true);
+      assert.equal(forcedEvent?.preflight_candidate_projection ?? null, null);
       assert.equal(Array.isArray(forcedEvent?.progress_sources), true);
 
       const late = submitWorkUnit(dir, { work_id: record.work_id, resultPath: writeLateResult(dir, record) });
       assert.equal(late.ok, false);
       assert.equal(late.status, 'timed_out');
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('force timeout records the evaluated candidate projection when an assigned candidate result exists', () => {
+    const dir = tempBundle();
+    try {
+      saveSeedQueue(dir, [delegated('queue-a')]);
+      claimWorkUnits(dir, { phase: 'wave0', count: 1 });
+      const record = loadWorkUnitIndex(dir).work_units['wu-w0-b000-src-i0001'];
+      const observedMs = Date.parse(record.claimed_at) + 1000;
+      // candidate result at the assigned path with a stale nonce: the preflight's
+      // read-only dry-submit evaluates it and the forced audit must carry the
+      // exact evaluated projection (DEW-014 preflight_candidate_projection)
+      const assignedResult = path.join(dir, record.paths.result_ref);
+      mkdirSync(path.dirname(assignedResult), { recursive: true });
+      writeFileSync(assignedResult, `${JSON.stringify({
+        schema_version: 'work-unit.result.v1',
+        work_id: record.work_id,
+        queue_item_id: record.queue_item_id,
+        kind: record.kind,
+        receipt_nonce: `stale-${record.receipt_nonce}`,
+        summary: 'candidate',
+        output_files: [],
+        cache_trails: [],
+      })}\n`);
+
+      const preflight = timeoutPreflightWorkUnit(dir, { work_id: record.work_id, nowMs: observedMs + 1000 });
+      const forced = closeWorkUnitAttempt(dir, {
+        work_id: record.work_id,
+        status: 'timed_out',
+        reason: 'operator-forced-after-inspection',
+        force: true,
+        nowMs: observedMs + 1000,
+      });
+      assert.equal(forced.ok, true);
+      assert.ok(forced.preflight_candidate_projection !== null);
+      assert.deepEqual(forced.preflight_candidate_projection, preflight.candidate_projection);
+      assert.ok(['submit', 'repair_same_candidate', 'return_to_actor', 'fail_and_replace', 'inspect_contract']
+        .includes(forced.preflight_candidate_projection.recommended_action));
+
+      const traceRows = readFileSync(path.join(dir, 'rb_trace.jsonl'), 'utf-8')
+        .trim().split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line));
+      const forcedEvent = traceRows.find((row) => row.event === 'work_unit_forced_timeout');
+      assert.deepEqual(forcedEvent?.preflight_candidate_projection, forced.preflight_candidate_projection);
     } finally {
       cleanup(dir);
     }
