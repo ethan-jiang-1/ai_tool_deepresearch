@@ -152,11 +152,11 @@
 **C1 `sync-return-map-spec-truth`**（R1–R4；含 `return-map.mjs:1` 幽灵注释一行修正）✅ 2026-09-01 归档（finalizer 19/19，npm test 2935/2935）
 - [x] P propose　- [x] H polish　- [x] A apply　- [x] V verify　- [x] R archive　- [x] C commit
 
-**C2 `resync-wave-phase-content-coordinates`**（P1–P4）
-- [ ] P propose　- [ ] H polish　- [ ] A apply　- [ ] V verify　- [ ] R archive　- [ ] C commit
+**C2 `resync-wave-phase-content-coordinates`**（P1–P4）✅ 2026-09-01 归档（finalizer 19/19，npm test 2939/2939）
+- [x] P propose　- [x] H polish　- [x] A apply　- [x] V verify　- [x] R archive　- [x] C commit
 
-**C3a `slim-rrm-requirements`**（依赖 C1：先同步再拆；587 行 RRM-007 等拆为常规 requirement + 主题分群）
-- [ ] P propose　- [ ] H polish　- [ ] A apply　- [ ] V verify　- [ ] R archive　- [ ] C commit
+**C3a `slim-rrm-requirements`**（依赖 C1：先同步再拆；587 行 RRM-007 等拆为常规 requirement + 主题分群）✅ 2026-09-01 归档（finalizer 19/19，全量 0 fail；1→8 拆分：13/109/87/51/87/153/50/50 行，行集守恒 100%，59 场景全保留）
+- [x] P propose　- [x] H polish　- [x] A apply　- [x] V verify　- [x] R archive　- [x] C commit
 
 **C3b `slim-cts-requirements`**（L48/326 两条巨无霸；顺手 M1 可选）
 - [ ] P propose　- [ ] H polish　- [ ] A apply　- [ ] V verify　- [ ] R archive　- [ ] C commit
