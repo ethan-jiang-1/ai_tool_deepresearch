@@ -1,6 +1,6 @@
 # 第二波打扫：engine 第二梯队切缝、测试守护网与账本清扫（cleanup-wave2-carving-test-guards-and-ledger）
 
-> 状态: **active（审计回填期）** | 创建: 2026-08-31 | 上游: CLS-082 `drift-resync-locks-hygiene-and-work-unit-deepening`（已完成）的成功模式复用
+> 状态: **active（调查期——四路审计 3/4 完成，AUD-2 死代码清查进行中；全部回填并经用户确认前不开工）** | 创建: 2026-08-31 | 上游: CLS-082 `drift-resync-locks-hygiene-and-work-unit-deepening`（已完成）的成功模式复用
 > 定位: `_backlog` 上游分析与决策记录，非运行时真相；落地一律走 OpenSpec change 生命周期。
 > 执行协议: 沿用 CLS-082 §9——每个 change propose → `/polish-openspec-change` 打磨至 ready for apply → 不停顿直通 apply → governed archive → git commit → 快照复测；合法停靠点仅限三项（open question 需裁决 / 未预见语义冲突 / change 外部 blocker）。
 > 意图（用户原话精神）: "非常有效的打扫卫生"——把 C1–C4 验证过的打法（不变量先行 + 深模块切缝 + 指针化 + 账本增补）推广到第二梯队，**每一步都先让机器可验证**。
@@ -58,6 +58,8 @@ CLS-082 波次验证了三件事：①工作单元深水区可以零行为变化
 
 > 回填规则：审计结论逐条对照本计划的 change 分解（§5）；与计划冲突的发现（如某文件判定"合并而非切分"）以审计为准并在此登记修正。
 
+> **铁律（用户裁定，2026-08-31）**：调查先行，动手在后。本波所有 W1–W5 change 在①四路审计全部回填、②§5 分解落成终稿、③逐项 value÷risk 评估通过、④用户审阅确认"值得做"之前，**一个都不开工**。不允许"边动手边调查"，也不允许"动手了再评估值不值"。任何审计发现与计划假设冲突的条目，先修正计划再谈执行。
+
 ---
 
 ## 4. 思路：为什么这样排
@@ -74,7 +76,7 @@ CLS-082 波次验证了三件事：①工作单元深水区可以零行为变化
 
 ## 5. 渐进式 change 分解（预估 4–6 个，串行，一次一个 active）
 
-> 编号预留给本波：W1–W5。每个 change 的 proposal 前置 = 对应审计结果 + polish 打磨。审计若推翻分解（如 canonical-topic-state 判定"不切"），本节按审计修正。
+> **状态：草案，待 AUD-2 回填后落成终稿；终稿经用户确认前不立项。** 编号预留给本波：W1–W5。每个 change 的 proposal 前置 = 对应审计结果 + polish 打磨。审计若推翻分解（如 canonical-topic-state 判定"不切"），本节按审计修正。
 
 ### W1 `harden-test-guards-before-carving`（测试守护网，先做；小代码=纯测试）
 
