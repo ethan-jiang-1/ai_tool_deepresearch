@@ -330,4 +330,85 @@ semantic-closure 预期：`not_applicable` 或 `affected`（按触碰 family 定
 | work-unit-* 模块数 | 22 | — | — | 预期 +4~5（文件数上升是刻意的：max-size 下降、层内无环） |
 | 测试文件 / test() 数 | 301 / 123 | — | — | 预期显著上升（+S1–S12 +checker 自测 +disposition +改名/补齐回归）；npm test 全绿为硬前置 |
 
+### 10.5 Post-C1 快照（2026-08-31，commit 266553455，finalizer 19/19）
+
+变化 vs Baseline：spec 总行数 30958→30948（-10）；测试 301→302 文件 / 123→132 test()；**C1 探针 `semantic_boundary` 残渣 CLEARED**；台账 A1–A14、C1 项关闭（B/C2 归属项待 C2）；governance 16 check 全 PASS；npm test 2889/2889。其余指标持平（符合预期——C1 是 doc-only 重同步）。
+
+## 度量快照（机器口径，重复运行可比）
+
+| # | 指标 | 值 |
+|---|---|---|
+| 1 | spec 文件数 | 83 |
+| 2 | spec 总行数 | 30948 |
+| 3 | requirement 总数 | 654 |
+| 4 | scenario 总数 | 2881 |
+| 5 | guidance md 文件数 | 7 |
+| 6 | Top-10 最重 spec 合计行数 | 11429 |
+| 7 | 单 requirement ≥20 场景的"场景墙"数 | 12（合计 339 场景） |
+| 8 | engine .mjs 文件数 / 总行数 | 87 / 35683 |
+| 9 | work-unit-* 模块数 | 22 |
+| 10 | 最大 engine 文件行数 | DEEP_RESEARCH_HARNESS/engine/work-unit-submit.mjs = 2448 |
+| 11 | schema z.enum 数 / 冻结数组数（词汇锁广度） | 59 / 57 |
+| 12 | governance check 数 | 16 |
+| 13 | tests/**/*.test.mjs 文件数 / test() 调用数 | 302 / 132 |
+
+### Top-10 最重 spec
+
+| spec | 行 | req | scen |
+|---|---|---|---|
+| agent/delegated-work-units/spec.md | 2488 | 29 | 254 |
+| research/research-wave-gate-implementation/spec.md | 1425 | 24 | 128 |
+| research/research-wave-phase-content/spec.md | 1167 | 22 | 114 |
+| agent/agentic-queue/spec.md | 1072 | 28 | 95 |
+| research/research-return-map/spec.md | 963 | 8 | 89 |
+| research/canonical-topic-state/spec.md | 959 | 12 | 101 |
+| engine/gate-skeleton/spec.md | 899 | 19 | 104 |
+| bundle/reference-flat-format/spec.md | 854 | 12 | 65 |
+| research/content-delivery-phase-content/spec.md | 844 | 8 | 62 |
+| engine/cli-phase-transition/spec.md | 758 | 8 | 72 |
+
+### 场景墙（单 requirement ≥20 场景）
+
+| spec / requirement | 场景数 |
+|---|---|
+| research/research-return-map/spec.md → Return-map inspection SHALL verify current-round projection  | 59 |
+| research/canonical-topic-state/spec.md → Canonical topic mutation SHALL atomically materialize plan a | 38 |
+| agent/delegated-work-units/spec.md → Work-unit dry-submit SHALL preflight submit validation witho | 29 |
+| research/canonical-topic-state/spec.md → Topic-state operations SHALL preserve scope and authority bo | 28 |
+| research/post-final-recovery/spec.md → Post-final recovery SHALL expose one direct eligibility and  | 27 |
+| agent/delegated-work-units/spec.md → Work-unit envelope SHALL carry binding surfaces | 25 |
+| agent/subagent-node-contract/spec.md → Generated result schema and submit enforcement SHALL match k | 25 |
+| agent/delegated-work-units/spec.md → Timeout terminalization SHALL be guarded by progress-aware p | 23 |
+| research/research-wave-gate-implementation/spec.md → Blocking judgment contracts SHALL close across producer, aut | 23 |
+| research/wave1-intake/spec.md → Wave1 gate checks deepening artifacts | 22 |
+| research/research-wave-phase-content/spec.md → Wave phase docs SHALL teach canonical gate-consumable refs a | 20 |
+| engine/runtime-reentry-debuggability/spec.md → Reentry diagnostics SHALL summarize incident-shaped recovery | 20 |
+
+### Top-5 最大 engine 文件
+
+| 文件 | 行 |
+|---|---|
+| DEEP_RESEARCH_HARNESS/engine/work-unit-submit.mjs | 2448 |
+| DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs | 1880 |
+| DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-core.mjs | 1444 |
+| DEEP_RESEARCH_HARNESS/engine/helpers/wave-depth-contracts.mjs | 1359 |
+| DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-checks.mjs | 1295 |
+
+### 计划进度探针
+
+| 探针 | 状态 |
+|---|---|
+| C1: spec 复述 `semantic_boundary` 作 gate-hint kind | CLEARED/ABSENT |
+| C2: WORK_UNIT_ATTEMPT_DISPOSITIONS 导出存在 | ABSENT |
+| C2: WORK_UNIT_CANDIDATE_PROJECTION_ACTIONS 提升存在 | ABSENT |
+| C2: 新治理 checker 存在 | ABSENT |
+| C2: 死代码 allowNonceNormalization 残留 | PRESENT(死代码未清) |
+| C2: 死代码 receipt_binding_identity_autofilled 残留 | PRESENT(死代码未清) |
+| C2: forcedTimeoutAudit 携带 preflight_candidate_projection | ABSENT(未实现) |
+| C2/B4: actor 自由文本字段已改名 actor_guidance | NOT-YET |
+| C4: snapshot 模块已提取 | NOT-YET |
+| C4: late-retry 模块已提取 | NOT-YET |
+| C4: declaration-recovery 模块已提取 | NOT-YET |
+| C4: transaction-primitives/projection 已分层 | NOT-YET |
+
 **"显著改善"的裁定标准（计划关闭时逐条打勾）**：① 台账 30/30 归零且无新增 MEDIUM；② 死代码与双代真相清零；③ 三个新锁 + 一个 checker 生效（未来词表漂移由机器拦截）；④ 场景墙 ≤9 且 Top-10 无增长；⑤ C4 后 work-unit 域最大文件 ≤1030 行且全部既有测试绿。①②③ 任何一条未达即计划不得关闭（可部分关闭并在台账注明 residual）。
