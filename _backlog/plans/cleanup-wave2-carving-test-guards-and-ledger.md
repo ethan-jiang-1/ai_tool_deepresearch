@@ -169,3 +169,47 @@ W1 → W2 → W3 → W4 → W5 → W6。W1 是 W2/W3 的安全带；W4 需在 W2
 - 复用：S 网不变量方法、codemod 搬动 + 逐文件 diff 复核、export-face grep 对照、快照度量、执行协议（§头部）。
 - 差异：本波目标多为 `helpers/` 下的 gate 评估器族（上一波是 work-unit 域）——确定性裁决密集，搬动纪律要更严（D4 move-only 红线 + 宪法 Helper-Oriented 检查）。
 - 继承遗留：§2.2 六项中本波吸收 4 项（`.mjs` 清扫、CHI-004 测试、check-all flakiness、死代码第二轮），缓期 2 项（场景墙、exit-code 锁）。
+
+---
+
+## 10. 渐进式执行阶梯（Progressive Ladder）
+
+> 每一级：准入 → 执行 → 退出门（gates）→ 提交 → 快照。上一级的退出门是下一级的准入。任何一级的门不满足，停在原地修复，不跳级。
+
+```
+M0 审计回填 ──✅──▶ M1 用户确认 ──✅──▶ W1 测试守护网 ──▶ W2 canonical-topic-state 切缝
+                                             │
+                                             ▼
+            W6 R3 退休 + DE-EXPORT ◀── W5 spec 引用清扫 ◀── W4 第二轮死代码 ◀── W3 gate-helpers 切缝
+                                             │
+                                             ▼
+                                      M-终局 统计表 + plan 关闭（CLS-083）
+```
+
+### 里程碑门（gates）
+
+| 级 | 准入 | 退出门（全部满足才进下一级） |
+|---|---|---|
+| M0 | — | 四路审计全部回填 ✅ |
+| M1 | — | 用户确认分解与排序（2026-08-31 ✅） |
+| W1 | propose+polish ready；AUD-3 清单在案 | S1/S2/S3 三缺陷修复断言绿；check-all 并发竞态不再复现（fixture hermetic + 并发限流）；canonical-topic-state 行为基线在案；全量绿 ×2 |
+| W2 | W1 退出；AUD-1 §1 切缝地图在案 | 4 新模块落地、主文件 ≤~560、导出面 grep 不变、W1 基线+全量绿 ×2 |
+| W3 | W2 退出；AUD-1 §2/§3 地图在案 | 两文件 facade 化、桶/消费面 grep 不变、源文本锁重指、全量绿 ×2 |
+| W4 | W3 退出；AUD-2 R1/R2/DEAD-FLEX 清单在案 | 全部删除 + absence-lock；全量绿 ×2 |
+| W5 | W4 退出；AUD-4 CLASS-B 清单在案 | CLASS-B 清零、三处小修、absence-lock；全量绿 ×2 |
+| W6 | W5 退出；AUD-2 E 类清单终版 | 127 项 de-export 逐文件 load 验证；R3 两符号退休（spec delta 先行）；全量绿 ×2 |
+| M-终局 | W6 退出 | 终局 Δ 统计表（§6 指标）+ plan 关闭（CLS-083）+ 复盘登记 |
+
+### 进度勾选
+
+- [x] M0 审计回填（AUD-1/2/3/4）
+- [x] M1 用户确认
+- [ ] W1 测试守护网（propose → polish → apply → archive → commit → 快照）
+- [ ] W2 canonical-topic-state 切缝
+- [ ] W3 gate-helpers-core + wave-depth-contracts 切缝
+- [ ] W4 第二轮死代码清除
+- [ ] W5 spec 引用与 prose 清扫
+- [ ] W6 R3 退休 + DE-EXPORT
+- [ ] M-终局 统计表 + plan 关闭
+
+> 快照节奏：每级 archive 后跑 `drift-resync-metrics-snapshot.mjs`，增量记入本节。终局统计表沿用 CLS-082 §10.8 三列格式。
