@@ -1,0 +1,8 @@
+schema_version: semantic-closure/v1
+change: 2026-09-01-resync-wave-phase-content-coordinates
+status: not_applicable
+reason: >-
+  纯 spec 文本坐标/指称同步：不改任何 deterministic fact 的 resolution、conclusion
+  或 consumer 集；openspec/governance/semantic-fact-families.yaml 的 22 个 family
+  中不存在 wave-phase-content 相关 family，两个 requirement 块的修正不向任何
+  family 添加或改写 statement。

@@ -1,0 +1,30 @@
+schema_version: verification-routing/v1
+change: 2026-09-01-resync-wave-phase-content-coordinates
+test_classes:
+  unit:
+    status: selected
+    rationale: 主 spec 两处 requirement 的坐标/指称同步由静态文本锁（node:test 文本断言）直接证明。
+  integration:
+    status: not_applicable
+    rationale: 无 CLI/子进程行为变更。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: 无 workflow 级状态链变更。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: 无 Agent/Markdown 流程行为变更。
+claims:
+  - id: rwp-dead-coordinates-removed
+    statement: 主 spec 不再包含死段名 Rerun-Aware Behavior、错坐标 §3.3/§3.2.3（seed projection 语境）与 changelog 式 SHALL add a §3.0；修正后的 §3.4/§3.2 指称与 wave2 documentation-token 语义存在；delta 与主 spec 块逐字同步。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/rwp-coordinate-resync-text-locks.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

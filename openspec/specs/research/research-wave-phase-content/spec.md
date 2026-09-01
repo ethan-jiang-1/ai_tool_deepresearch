@@ -431,7 +431,7 @@ Since each wave phase's `requires` includes `shared/shared-anti-cheating-rules`,
 
 ### Requirement: Wave2 rerun full re-synthesis on topic addition
 
-The `phase-wave2.md` Rerun-Aware Behavior section SHALL include a scenario table distinguishing `action: add` (full re-synthesis) and `action: supplement` (delta/append).
+The `phase-wave2.md` rerun guidance SHALL distinguish `action: add` (full re-synthesis) and `action: supplement` (delta/append): the shared direction resolver and the Engine-owned rerun add policy own the deterministic distinction, and `phase-wave2.md` pair-coverage guidance SHALL state that only an activated rerun `action:add` requires the exact complete canonical pair universe while an ordinary first run or `action:supplement` may remain below `pair_count_expected`.
 
 `action: add` behavior SHALL align with Wave0 and Wave1 `action: add` semantics: full execution, same as first run.
 
@@ -478,18 +478,19 @@ The wave2-complete Gate SHALL include a rerun add check that forbids `## Delta S
 - **AND** resulting pair entries and counts SHALL remain structurally self-consistent
 - **AND** the supplement path SHALL NOT be upgraded to full-pair coverage unless another accepted contract explicitly requires it
 
+
 ### Requirement: Rerun action:add SHALL include full cache trail
 
-Phase-wave0 §3.3、Phase-wave1 §3.3、and Phase-wave2 §3.2.3 SHALL instruct the Agent to update seed projection sections from current-round submitted authority. When a `__BACKFILL_*__` token is present (first materialization), the Agent SHALL replace it with return-map entries. When no token is present (rerun), the Agent SHALL:
+Phase-wave0 §3.4（Seed Projection Update）、Phase-wave1 §3.3（Seed Projection Update）、and Phase-wave2 §3.2 Execution Loop SHALL instruct the Agent to update seed projection sections from current-round submitted authority. In Phase-wave0 and Phase-wave1, when a `__BACKFILL_*__` token is present (first materialization), the Agent SHALL replace it with return-map entries through the existing projection writer. In Phase-wave2, `__BACKFILL_WAVE2_JUDGMENT__` and `__BACKFILL_PENDING_QUESTIONS__` are documentation tokens replaced only by the existing projection writer, not Agent-edit targets. When no token is present (rerun), the Agent SHALL:
 
 1. Read current-round submitted rows via `operate-work-unit inspect --eligible-rows` for the topic/wave. Eligible rows are those whose work unit index record `rerun_count` matches the current `rb_profile.yaml` value, validated through ledger/index/manifest/queue-snapshot/canonical-topic binding by the Engine.
 2. Read submitted outputs at the returned `result_path` locations. Derive return-map entries with the canonical entry fields owned by the research-return-map contract, by reading the outputs — NOT by mechanically extracting fields from ledger rows.
 3. For Wave0, obtain each new `<work_id>/<n>` entry ID from the existing submitted contribution reader: `n` is the exact global source-array ordinal owned by that accepted work unit's contribution, not a per-work-unit local index or a mutable-array re-read. For Wave1, retain the existing positive ordinal unique within the submitted work unit. For Wave2, retain the exact current-round W2F identity. Use the existing Projection Packet writer to upsert the returned identity; do not append raw Markdown or infer a historical ordinal split.
 4. For entries that should not appear in the projection (intermediate outputs, process-only, not consumer-facing), write an explicit no-projection disposition entry with `relationship: defers`, `status: deferred`, and `next_hop` containing a limitation reason.
 
-Wave1 and Wave2 SHALL add a §3.0 “Classify Direct Facts” section implementing the existing RWP-014 classification. Classification SHALL use the shared direction resolver (`resolveRerunDirection`) to determine whether the `## 本轮重跑方向` section's intent is current. Only `matching` or `future` states SHALL activate supplement intent. `stale`/`legacy_unbound`/`invalid` SHALL be treated as no supplement intent.
+The Wave1 and Wave2 `§3.0 Classify Direct Facts` sections implement the existing RWP-014 classification. Classification SHALL use the shared direction resolver (`resolveRerunDirection`) to determine whether the `## 本轮重跑方向` section's intent is current. Only `matching` or `future` states SHALL activate supplement intent. `stale`/`legacy_unbound`/`invalid` SHALL be treated as no supplement intent.
 
-`phase-wave0.md` 和 `phase-wave1.md` 的 Rerun-Aware Behavior SHALL 明确要求：当 rerun 触发 `action: add`（新增 topic）时，该 topic 的 source intake 流程 SHALL 与首次运行一致——Sub-agent MUST 写入 `_cache/` 目录（含 `websearch.json`/`page.md`/`meta.json`），Phase Agent MUST 在 spawn 前创建 cache 目录，queue task card 的 `action` 字段 MUST 包含 cache 路径指令。
+`phase-wave0.md` 与 `phase-wave1.md` 的 rerun-added-Topic 指引（§3.0 Classify Direct Facts 中 first-run 与 rerun-added 同一分类的规则，以及 §3.1 task card 的常规 `_cache/` leaf cache trail 生产要求）SHALL 明确要求：当 rerun 触发 `action: add`（新增 topic）时，该 topic 的 source intake/deepening 流程 SHALL 与首次运行一致——Sub-agent MUST 写入 `_cache/` 目录（含 `websearch.json`/`page.md`/`meta.json`），Phase Agent MUST 在 spawn 前创建 cache 目录，queue task card 的 `action` 字段 MUST 包含 cache 路径指令。
 
 Rerun SHALL classify current demand but SHALL NOT own a separate execution path: an existing topic with valid historical coverage SHALL reuse that coverage, a new topic without coverage SHALL enter the normal Wave0/Wave1 topic pipeline, and supplement intent SHALL create the normal supplementary demand. After classification, the same queue/work-unit/submit/reference-materialization/gate contracts used by first-run execution SHALL apply. No rerun-only gate exception, provenance path, reference namespace, or lifecycle state SHALL be introduced.
 
@@ -563,6 +564,7 @@ Rerun 场景表的 `action: add` 行 SHALL 新增一行说明：`_cache/ 写入�
 - **THEN** the Phase Agent SHALL use the generated task/beacon/result starter rather than inventing binding fields
 - **AND** it SHALL run side-effect-free dry-submit and repair the same candidate before formal submit
 - **AND** only formal submit SHALL create ledger coverage
+
 
 ### Requirement: Wave phases SHALL teach the work-unit drain loop
 
