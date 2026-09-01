@@ -1,0 +1,38 @@
+schema_version: verification-routing/v1
+change: 2026-08-31-carve-wave-depth-contracts
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      既有 wave-depth-contracts.test.mjs（697 行，in-process + fixture bundle）
+      与 focus-coverage 套件在切缝后全绿（26/26），作为 move-only 搬动的行为
+      锁；本 change 无新增断言（纯布局搬动）。
+  integration:
+    status: not_applicable
+    rationale: >-
+      本 change 无 subprocess/CLI 边界断言；既有 CLI 面由全量 npm test 覆盖。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      既有 e2e 环由全量 npm test 覆盖；无新增端到端场景。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      纯内部布局搬动，不声称 Agent 行为变化。
+claims:
+  - id: wave-depth-carve-behavior-neutral
+    statement: >-
+      切缝后 facade 保持 11 公开名 re-export；11 消费者零改动；wave-depth
+      全族测试（contract 697 行 + focus-coverage 218 行 + CLI 面）全绿。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/wave-depth-contracts.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

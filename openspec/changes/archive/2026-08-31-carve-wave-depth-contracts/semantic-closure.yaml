@@ -1,0 +1,7 @@
+schema_version: semantic-closure/v1
+change: 2026-08-31-carve-wave-depth-contracts
+status: not_applicable
+reason: >-
+  纯 move-only 布局搬动（+3 个索引原语下沉至共享 verdicts 模块，等价实现）：
+  facade re-export 保持 11 公开名不变，不改任何 cataloged semantic fact
+  family 的 resolver、establishing surface 结论内容或 verdict consumer。
