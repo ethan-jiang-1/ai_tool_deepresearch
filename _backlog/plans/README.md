@@ -1,6 +1,6 @@
 # Active Plans — 活跃 plan/分析文档列表
 
-> 最后更新: 2026-08-31（`test-signal-and-guidance-wording-hygiene` 完成关闭（CLS-081）。此前：`control-surface-drift-density-and-module-boundaries` 已完成关闭；spec-semantic-drift-remediation 于 2026-08-31 完成关闭（CLS-079）） | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
+> 最后更新: 2026-08-31（`drift-resync-locks-hygiene-and-work-unit-deepening` 完成关闭（CLS-082）。此前：`test-signal-and-guidance-wording-hygiene` 完成关闭（CLS-081）。此前：`control-surface-drift-density-and-module-boundaries` 已完成关闭；spec-semantic-drift-remediation 于 2026-08-31 完成关闭（CLS-079）） | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
 >
 > **plan 没有编号，文件名即标识。完成后文件名不变，位置即状态。**
 
@@ -17,7 +17,6 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
-| `drift-resync-locks-hygiene-and-work-unit-deepening` | 两轮 coding-agent 评审 + 八份并行只读深挖（约 50 个机检点，46 匹配）：确认系统性漂移未发生、迭代残渣真实可定位。四 change 序列——C1 `repair-residual-spec-drift`（14 项 spec 侧残渣 re-sync，doc-only）、C2 `lock-closed-vocabularies-and-clear-residue`（disposition 五值锁 + `check-spec-enum-restatements.mjs` 新 checker + 死代码清除 + `preflight_candidate_projection` 补齐 + `actor_guidance` 改名）、C3 `hygiene-pointer-rewrite-and-tableization`（D 类指针化 + 三处巨型场景块表格化 + registry 账本手术）、C4 `deepen-work-unit-submit-seams`（T1 S1-S12 不变量测试先行 → 四缝切分 submit.mjs 2447→~1030 行 + transaction 三层拆分，外部接口零变化）。已裁定 6 个决策点，5 个 open questions 留 propose 期。**§10 追踪机制已启用**：Baseline 快照（2026-08-31，13 项机器指标 + 12 探针 + 30 项漂移台账）已钉死；每 change archive 后复测，关闭时出终局 Δ 统计。**§9 执行协议**：每 change propose 后立即 `/polish-openspec-change` 打磨至 ready for apply，随后不停顿直通 apply/archive + 复测快照，四 change 一杆到底。 | 计划就绪，待 C1 `/opsx:propose` |
 
 ### 参照资料（非 plan，供后续 change 引用）
 
@@ -25,6 +24,12 @@
 - `machine-checks-catalog.md` 与 `midrun-reading-burden-audit.md` 已随 `midrun-burden-reduction-and-residual-drift` plan 归档至 `../_done/_closed_plans/`，C3 触发时取用。
 
 ---
+
+## 最近关闭 (2026-08-31)
+
+| Plan | 关闭依据 |
+|------|----------|
+| `drift-resync-locks-hygiene-and-work-unit-deepening` | CLS-082：四个有界 OpenSpec change 全部归档（C1 残渣 re-sync doc-only、C2 词汇锁+checker+死代码清除+preflight 字段+actor_guidance、C3 指针化+registry 账本、C4 engine 切缝+不变量网）；八份深挖 + 用户评审确立"spec prose 不点名实现 .mjs"规则；配套度量快照工具随行归档；终局统计见 plan §10.8（30/30 台账归零、词汇锁+checker 生效、submit 2439→1048）。遗留 6 项登记于 plan §10.9。 |
 
 ## 最近关闭 (2026-08-31)
 
