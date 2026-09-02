@@ -51,6 +51,8 @@
 
 仓库常态：中位 26 行、p90 100 行（CLS-084 实测 657 条 requirement）。
 
+> **深挖更新（同日）**：按用户指示对 F4 逐块深挖后，≥190 行块实测为 **10 块**（原表漏计 hitl-ux 195 与 artifact-persistence-recovery 190），且各块散文/场景结构、主题分界、逐块处置（分割 ×N / 清理候选）已逐一设计完毕——完整处置表与执行约束见参照资料 [`spec-lean-f4-megablock-deepdive.md`](spec-lean-f4-megablock-deepdive.md)，并已并入 §3 R2 批次设计。
+
 ### F5. 整 spec 体量：DWU 是第二名 1.7 倍，且含复述段
 
 - `agent/delegated-work-units/spec.md` **2360 行**（第二名 research-wave-gate-implementation 1380）。粒度已修（37 块、最大 ~160），但含"generated task / task.md / spawn / Generated guidance / Generated actor guidance / Generated work-unit task"类**复述 prompt 职责的散文**——【复现】`grep -c 'generated task\|task\.md\|spawn\|Generated guidance\|Generated actor\|Generated work-unit task' openspec/specs/agent/delegated-work-units/spec.md` ≈ 30 行命中（指针化候选锚点）。
@@ -109,9 +111,9 @@
 **清理思路**：复述的生成 guidance 细节 → 指向 `workflows/nodes/templates/*` 与 `command_playbook/*`（owner 已存在且被 doc-lock 锁定）；Engine 侧 normative（transaction/receipt/ledger 规则）保留原文。
 **边界**：`delegated-queue-spec-text-locks` 的 DEW body 计数断言（37）会变——同 change 更新并注明（CLS-084 AGQ 先例）。
 
-### R2（3-4 change，可合并）——pointerization 第二波 + 长尾扫尾
+### R2（3-4 change，可合并）——pointerization 第二波 + 长尾扫尾（设计已深挖定稿）
 
-`research/content-delivery-phase-content`（257 块）+ 五条 190-240 行长尾（cli-phase-transition / workflow-directory-contract / seed-topic-materialization / hitl-ux / semantic-fact-closure）+ research-wave-phase-content 残留 234。
+逐块处置设计已定稿于参照资料 [`spec-lean-f4-megablock-deepdive.md`](spec-lean-f4-megablock-deepdive.md)：**10 块 → 分割为 25 个子块**（post-final-recovery ×4、content-delivery-phase-content ×3、cli-phase-transition ×3、research-wave-phase-content ×3、semantic-fact-closure ×3、workflow-directory-contract ×2、seed-topic-materialization ×2、hitl-ux ×2、runtime-reentry-debuggability ×2、artifact-persistence-recovery ×2），全部 ≤ ~170 行；含 1 处清理候选（HITL2 确认语义疑似重复，需逐字比对后定夺）与 1 处指针化候选（post-final-recovery CLI 复述段 → `command_playbook/post-final-recovery.md`）。
 **清理思路**：同 R1；其中 phase-content 系的 owner 就是各 phase 节点（指针目标天然存在）。
 
 ### R3（1 change）——registry 卫生（用户点名项）

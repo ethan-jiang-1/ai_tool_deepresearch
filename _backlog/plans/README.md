@@ -27,6 +27,7 @@
 
 ### 参照资料（非 plan，供后续 change 引用）
 
+- `spec-lean-f4-megablock-deepdive.md` — 活跃 plan `spec-lean-pointerization-and-registry-hygiene` 的 F4 深挖参照：10 块 ≥190 行 requirement 的逐块处置设计（分割/清理候选/执行约束），R2 批次执行与复核以此为据。
 - `user-intent-carry-through-design-analysis.md`、`rerun-feedback-carry-through-design-analysis.md`、`user-intent-carry-through-implementation-plan.md` — 已随 `strengthen-user-intent-carry-through` 完成并移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
 - `machine-checks-catalog.md` 与 `midrun-reading-burden-audit.md` 已随 `midrun-burden-reduction-and-residual-drift` plan 归档至 `../_done/_closed_plans/`，C3 触发时取用。
 
