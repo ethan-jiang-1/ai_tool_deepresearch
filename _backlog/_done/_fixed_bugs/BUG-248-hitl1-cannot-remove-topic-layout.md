@@ -1,5 +1,7 @@
 # Bug: HITL1/seed-topics 初始建 topic 阶段无法物理移除 topic 或改 slug
 
+> **已修复并归档（2026-09-02）**：OpenSpec change `extend-mutate-layout-to-hitl1` 落地——`mutate_layout` 完整 target 在 legal HITL1 pre-gate window 获得授权（与 rerun 同护栏），inspect baseline context 按窗口派生。归档记录：`openspec/changes/archive/2026-09-02-extend-mutate-layout-to-hitl1/`；提交：`bb145ccab`。下方「修复计划」节为 propose 前的研究底稿，方案 C（扩 window）即最终采用方案。
+
 ## 发现场景
 
 在 `dpt_rb_glm-5-3-deepseek-v4-domestic-chips` 的 HITL1 阶段（初始建 topic 阶段，**不是 rerun**），用户要求将一个已创建的合并 topic（"H200 & MI308 参照基线"）拆为两个独立 topic（"H200 参照基线"、"MI308 参照基线"）。拆完后旧的合并 topic 应被移除，但 HITL1 阶段**无法物理删除 topic**，也无法修改其 slug/stem。
