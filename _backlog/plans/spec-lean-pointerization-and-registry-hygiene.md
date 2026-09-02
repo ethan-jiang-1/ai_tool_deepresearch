@@ -74,7 +74,20 @@
 
 ### 2.0 分割的分层与 openspec 触点（复核重点）
 
-**分层：只做 requirement 级分割，不做 capability 级拆分。** capability 身份（`domain/capability` 两段路径，ADR 0005）零变化——不建新目录、不加 prefixes、不改 Capability Catalog。依据：巨无霸体量来自单条 requirement 吸积而非能力边界错误；capability 级复议标准（CLS-084 plan §5）均未触发。
+**分层决策（用户 2026-09-01 拍板）：DWU 做 capability 级拆分**——requirement 级重组不改变 OpenSpec 的治理单元（发现/变更/评审都以 capability 为单位），对 2360 行的 DWU 而言只是文本重组。故 R1 改为 **capability 身份迁移**（详见 §3.5 设计）：`agent/delegated-work-units` 瘦身为 assignment & briefing 母体，新设 3 个 capability 承载 submission / preflight / correction。
+
+触碰 `openspec/` 的完整清单（迁移批）：
+
+| 动作 | 文件/检查 |
+|---|---|
+| 建 | 3 个新 capability：`openspec/specs/agent/{work-unit-submission,work-unit-preflight,work-unit-correction}/spec.md` + 各自 change delta + requirement-reservation（新前缀 WSU/WUP/WUC + 新 ID） |
+| 改 | `openspec/specs/agent/delegated-work-units/spec.md`（瘦身为 assignment & briefing，迁移块整块搬出）+ engine 代码 `@impl DEW-xxx` → 新 ID + registry（迁移 DEW 行加 `[DEPRECATED]`、新 ID 注册——符合"只增不删"）+ `openspec/specs/README.md` catalog（3 新行 + DWU Purpose 改写 + Related entries 重织） |
+| 过 | check-project-specs / check-project-reqs（reservation→live 转换）/ taxonomy / discovery / semantic-closure / verification-routing / finalizer 19 项 / 全量 npm test |
+| 不碰 | engine 模块文件位置（ADR 0005：taxonomy 非代码目录层级）、已归档 change 历史文本、非迁移能力的 spec |
+
+其余 spec 的 requirement 级拆分/指针化维持（capability 单一聚焦、块为吸积的场景，见 F4 深挖）。
+
+**requirement ID 策略（迁移批专用）**：迁移 requirement 换发新 ID（旧 DEW 编号 `[DEPRECATED]` 留档，永不复用）；母体保留块沿用原 DEW ID；engine `@impl` 同 change 换新 ID（旧 ID 仍注册，`check-code-impl-ids` 不断）。
 
 每批触碰 `openspec/` 的完整清单：
 
@@ -111,8 +124,9 @@
 
 ### 2.3 红线
 
-- 不删任何注册 ID；不改"只增不删"政策；不改已归档 change 的历史文本。
-- 每批 REMOVED/ADDED 内容多重集合全等（结构类）；指针化批以"normative 语义等价 + 复述段删除"为准，逐段在 tasks 留 diff 证据。
+- 不删任何注册 ID；"只增不删"政策保持（R1 迁移 DEW 行加 `[DEPRECATED]` 留档 + 新前缀/新 ID 注册，均为追加操作）。
+- 迁移块整块逐字节搬移；指针化批以"normative 语义等价 + 复述段删除"为准，逐段在 tasks 留 diff 证据。
+- 身份迁移原子执行：DWU 瘦身、新 capability、registry、catalog 必须同一 change 落地，不得出现半迁移状态。
 - 每批全量 `npm test` + `governance:check` 绿才算完成；文本锁失配同 change 更新并注明（CLS-084 先例：AGQ 28→30、DEW 29→37 计数锁、residual DEW pair 退休）。
 
 ---
@@ -125,14 +139,15 @@
 **清理思路**：扫描器只做"候选定位"，判定权在人——这是对"误伤 normative"风险的结构性防御。
 **验收**：扫描器对 DWU 的候选表与 §1.2 的 ~30 行命中锚点交叉一致；通用工具在 R1 首用即零返工。
 
-### R1（主力，2 change）——pointerization 第一波
+### R1（主力）——DWU capability 身份迁移（三步，迁移 change 原子）
 
-- `agent/delegated-work-units`（2360 行）：复述段指针化（锚点 = F5 的 ~30 行命中），重点块：generated task/guidance 家族段落。
-- `research/post-final-recovery`：357 行块拆分（27 场景，按 inspect/apply/recover/lineage 散文缝，同 C3 系方法）+ 指针化。
-**清理思路**：复述的生成 guidance 细节 → 指向 `workflows/nodes/templates/*` 与 `command_playbook/*`（owner 已存在且被 doc-lock 锁定）；Engine 侧 normative（transaction/receipt/ledger 规则）保留原文。
-**边界**：`delegated-queue-spec-text-locks` 的 DEW body 计数断言（37）会变——同 change 更新并注明（CLS-084 AGQ 先例）。
+**R1a 测绘（工具产出，人审定稿）**：37 块逐一判定新家（母体 / work-unit-submission / work-unit-preflight / work-unit-correction）+ 新 ID 分配表（WSU/WUP/WUC 前缀，requirement-reservation 申请）+ 交叉引用清单（catalog Related entries、RUN.md、其他 spec 的 `capability:agent/delegated-work-units` 引用、doc-lock、`@impl` 标签）。
+**R1b 迁移 change（原子，单 change 多 delta）**：3 个新 capability spec（迁移块逐字节整块搬入 + 新 header/新内联 ID）+ DWU 瘦身 delta + registry（迁移 DEW 行 `[DEPRECATED]` + 新 ID 注册）+ catalog（3 新行 + DWU Purpose 改写为 assignment & briefing + Related entries 重织）+ engine `@impl` 更新 + doc-lock 更新（`delegated-queue-spec-text-locks` DEW body 37→母体新计数、inline 1:1 锁按新家重写；`dwu-slim-structure-locks` 退休并由各新家的结构锁接管）。
+**R1c 迁移后指针化**：在新家的真实基线上做复述段指针化（原 R1 的指针化目标顺延），before/after 度量随提交。
+**首例声明**：全库无 capability 级拆分先例（CLS-083 的 extract 是 engine 模块级）——本批为首例操作，finalizer/checker 的每个反应按首跑对待；proposal 须显式声明 DWU catalog Purpose（"…submit transaction and provenance"）被本 change 修订为 assignment 定位，submit transaction 职责迁往 `work-unit-submission`。
+**边界**：迁移是整块搬移（逐字节），不重写文本；文本改写只在指针化步（R1c）发生。
 
-### R2（3-4 change，可合并）——pointerization 第二波 + 长尾扫尾（设计已深挖定稿）
+### R2（3-4 change，可合并）——pointerization 第二波 + 长尾扫尾（设计已深挖定稿；不含 DWU——DWU 走 R1 capability 迁移）
 
 逐块处置设计已定稿于参照资料 [`spec-lean-f4-megablock-deepdive.md`](spec-lean-f4-megablock-deepdive.md)：**10 块 → 分割为 25 个子块**（post-final-recovery ×4、content-delivery-phase-content ×3、cli-phase-transition ×3、research-wave-phase-content ×3、semantic-fact-closure ×3、workflow-directory-contract ×2、seed-topic-materialization ×2、hitl-ux ×2、runtime-reentry-debuggability ×2、artifact-persistence-recovery ×2），全部 ≤ ~170 行；含 1 处清理候选（HITL2 确认语义疑似重复，需逐字比对后定夺）与 1 处指针化候选（post-final-recovery CLI 复述段 → `command_playbook/post-final-recovery.md`）。
 **清理思路**：同 R1；其中 phase-content 系的 owner 就是各 phase 节点（指针目标天然存在）。
@@ -175,10 +190,11 @@
 
 ## 6. 非目标
 
-- 不删任何注册 ID、不改"只增不删"政策、不改已归档 change 历史文本。
+- 不删任何注册 ID、不改"只增不删"政策（迁移 = 旧行 `[DEPRECATED]` + 新行注册，均为追加）、不改已归档 change 历史文本。
 - 不做裸段名引用的正则化（自然语言对齐留人审）。
-- 不重开 CLS-084 已关闭议题（capability 级拆分维持挂起，复议标准见其 §5）。
-- 本 plan 仅事实与思路；**执行（含第一批 propose）待用户明确指令**。
+- capability 拆分**仅限 DWU 一处**（用户拍板）；其余九条 ≥190 行块维持 requirement 级处置（capability 单一聚焦、块为吸积）； capability 级复议不再扩大。
+- engine 模块文件不做目录移动（taxonomy 是发现结构，不是代码目录层级——ADR 0005）。
+- 本 plan 事实与思路已定稿；**执行（R0 起）待用户明确指令**。
 
 ## 7. 与历史工作的关系
 
