@@ -147,7 +147,25 @@
 **首例声明**：全库无 capability 级拆分先例（CLS-083 的 extract 是 engine 模块级）——本批为首例操作，finalizer/checker 的每个反应按首跑对待；proposal 须显式声明 DWU catalog Purpose（"…submit transaction and provenance"）被本 change 修订为 assignment 定位，submit transaction 职责迁往 `work-unit-submission`。
 **边界**：迁移是整块搬移（逐字节），不重写文本；文本改写只在指针化步（R1c）发生。
 
+### R1 附：副作用清单与消解（2026-09-01 深化）
+
+引用网实测：`delegated-work-units` 身份的外部引用 **53 处**，分布于 catalog（约 10 行 Related/Boundaries）、`RUN.md` 委派表（2 行 spec 路径）、3 个其他 spec 的 capability 引用、governance 1 处、tests 5 处、engine/schema `@impl` 文件 5+ 个。逐项副作用与消解：
+
+| # | 副作用 | 消解 |
+|---|---|---|
+| S1 | **引用网重织**：53 处引用中 `capability:agent/delegated-work-units` 形态的语义指向变模糊（指向母体还是新家？） | R1a 产出 53 处全清单、逐条定新家；R1b 全量重织；R1b 验收断言加一条：主 specs 内对旧路径的外部 capability 引用 = 0 |
+| S2 | **发现粒度 trade-off**：跨生命周期问题（"work unit 如何完成"）从读 1 个 spec 变为跳 4 个 | 母体保留一段 capability map 导航（指向 3 子能力的导航指针，非行为）；catalog 的 Keywords/Boundaries 精写使每个问题映射到唯一主能力；四能力 Related entries 互相交叉链接 |
+| S3 | **`@impl` 语义迁移**：一个 engine 模块可能实现分属不同新能力的 requirement（如 work-unit-lifecycle 同时涉 preflight 与 correction） | R1a 产出 `@impl` 全清单（抽样已见 schema/contracts ×3 + engine ×2+）；R1b 逐条改新 ID；`check-code-impl-ids` 全程绿（旧 ID 仍注册） |
+| S4 | **doc-lock 双文件重写 + 一锁退休**：`delegated-queue-spec-text-locks` 的 timeout-note 测试按标题在 dew 文件内搜索——迁走后须改读新文件；inline/body 计数全重写；`dwu-slim-structure-locks` 的"15 标题在 MAIN"断言失效 | R1b 同 change：前者改读新家文件路径，后者文件内注释退休并指向各新家结构锁；residual DEW pair 已于 C3e 退休 ✓ |
+| S5 | **registry 导航成本**：29 行 `[DEPRECATED]` + ~29 新 ID，old→new 考古需要映射 | 弃用行描述统一带后继指针（"migrated to WUP-00X (agent/work-unit-preflight)"）；R3 对账表收录全量 old→new |
+| S6 | **首例操作的 checker 未知反应**：19 项 finalizer 检查可能对 DWU 有隐含假设（surface inventory / entry chain 等） | `governance:check` 在送 finalizer 前先跑（预算一轮首跑诊断）；每个反应按首跑对待，逐个定性 |
+| S7 | **迁移与指针化的顺序耦合**：先迁移后指针化 = R1b 载荷大（整块搬移）但校验简单；先指针化 = 载荷小但改写落在即将搬走的文件里（白费 diff） | 维持先迁移后指针化（R1b→R1c）；搬运以脚本 + 逐字节回验兜底，R1c 在缩小的真实基线上做 |
+
+**半迁移态禁止**已列入 §2.3 红线：DWU 瘦身、3 新 spec、registry、catalog 必须同一 change 落地。
+
 ### R2（3-4 change，可合并）——pointerization 第二波 + 长尾扫尾（设计已深挖定稿；不含 DWU——DWU 走 R1 capability 迁移）
+
+
 
 逐块处置设计已定稿于参照资料 [`spec-lean-f4-megablock-deepdive.md`](spec-lean-f4-megablock-deepdive.md)：**10 块 → 分割为 25 个子块**（post-final-recovery ×4、content-delivery-phase-content ×3、cli-phase-transition ×3、research-wave-phase-content ×3、semantic-fact-closure ×3、workflow-directory-contract ×2、seed-topic-materialization ×2、hitl-ux ×2、runtime-reentry-debuggability ×2、artifact-persistence-recovery ×2），全部 ≤ ~170 行；含 1 处清理候选（HITL2 确认语义疑似重复，需逐字比对后定夺）与 1 处指针化候选（post-final-recovery CLI 复述段 → `command_playbook/post-final-recovery.md`）。
 **清理思路**：同 R1；其中 phase-content 系的 owner 就是各 phase 节点（指针目标天然存在）。
