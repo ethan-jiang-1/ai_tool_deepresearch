@@ -165,6 +165,7 @@ Logical `actor_execution` plus exact `work_id` and `receipt_nonce` guides which 
 | validate-phase-templates.mjs | cli/validate-phase-templates.mjs | 校验 phase MD 模板保持 controller + delegates 合约 |
 | validate-work-unit-hygiene.mjs | cli/validate-work-unit-hygiene.mjs | 静态阻止旧 delegated relay/slot authority、旧 gate check 名、queue demand `work_id`、以及 filesystem/index pass-coverage wording 回到 active production surface |
 | inspect-bundle.mjs | cli/inspect-bundle.mjs | bundle 目录结构完整性 |
+| audit-phase-status.mjs | cli/audit-phase-status.mjs | 生命周期完整性审计（诊断式、fail-closed、不写任何文件）：对照 `rb_status.json`/`rb_trace.jsonl`/`rb_plan.md## Progress`/`final/` canonical inventory 输出封闭 outcome——`passed`、`premature_final_present`、`plan_progress_tamper_suspected`、`status_drift`、`manual_bypass_suspected`、`missing_witness`、`failed_gate_downstream_status`、`bootstrap_exception` 与 post-final 各 stage；一条命令读取"研究是否真的在轨"的真相 |
 
 ## Phase Handoff
 | 工具 | 文件 | 说明 |

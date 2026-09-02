@@ -16,6 +16,7 @@ import {
   tryLoadGateDefinition,
   writeGateAttempt,
 } from '../../engine/helpers/gate-helpers.mjs';
+import { evaluatePrematureFinalPresence } from '../../engine/helpers/phase-status-audit.mjs';
 import { WAVE_FATIGUE_PHASE_NODES, FATIGUE_ATTEMPT_THRESHOLD } from '../../engine/helpers/gate-degradation-policy.mjs';
 import { evaluateWave0Contract } from '../../engine/helpers/wave-contract-evaluators.mjs';
 import { evaluateWaveDegradationEligibility } from '../../engine/helpers/wave-degradation-eligibility.mjs';
@@ -65,6 +66,32 @@ if (!handoffPreflight.ok) {
     attemptNumber: args.attempt ?? 0,
   });
   writeGateAttempt(args.bundle, result, { strictTrace: result.check?.passed === true && result.check?.next != null });
+  emitGateResult(result);
+}
+// @impl RWG-023 — fail-closed premature canonical Final presence root.
+// Runs before contract evaluation; never mutates the premature file; advice
+// names the single legal relocation and never suggests bypass or surfacing.
+const prematurePresence = evaluatePrematureFinalPresence(args.bundle);
+if (prematurePresence.hit) {
+  const result = buildGateResult({
+    passed: false,
+    gate: definition.gate,
+    currentNodeRef: args.currentNode,
+    routing: resolveRouting(args.transitions, args.currentNode, 'failed'),
+    inspect: [
+      '[premature_final_present] final/ contains canonical primary-series file(s) without any legal Final-entry admission, prior-lineage delivery, accepted post-final stage, or legacy compatibility coverage.',
+      ...prematurePresence.surfaces.map((surface) => `[premature_final_present] ${surface.kind}: ${surface.name} — ${surface.detail}`),
+    ],
+    advice: [
+      ...prematurePresence.remediation,
+      'Do not bypass the phase, hand-edit status, or surface to the user; relocate the file and rerun this gate.',
+    ],
+    findings: [],
+    bundlePath: args.bundle,
+    extraCheck: { premature_final_present: false },
+    attemptNumber: args.attempt ?? 0,
+  });
+  writeGateAttempt(args.bundle, result, { strictTrace: false });
   emitGateResult(result);
 }
 

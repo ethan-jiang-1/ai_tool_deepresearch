@@ -156,7 +156,7 @@ describe('audit-phase-status CLI', () => {
     assert.equal(readFileSync(join(bundle, 'rb_status.json'), 'utf-8'), before);
   });
 
-  it('reports premature final-adjacent status as diagnostic-only without mutating status', () => {
+  it('treats non-canonical final files as supplementary: unwitnessed window stays status_drift without premature classification', () => {
     const bundle = makeBundle('phase-audit-premature-final-status', { current_gate: 'readiness_passed', next_gate: 'none', current_node: 'phases/phase-final.md' });
     writeTrace(bundle, witnessed());
     writeFileSync(join(bundle, 'final/report.md'), '# Premature final report\n');
@@ -165,19 +165,54 @@ describe('audit-phase-status CLI', () => {
     const { output } = runAudit(bundle);
     assert.equal(output.outcome, 'status_drift');
     assert.equal(output.diagnostic_only, true);
-    assert.match(output.inspect.join('\n'), /readiness-to-final handoff|premature final output/);
+    assert.match(output.inspect.join('\n'), /does not match latest witnessed legal window/);
     assert.match(output.advice.join('\n'), /do not hand-edit rb_status\.json/);
     assert.equal(readFileSync(join(bundle, 'rb_status.json'), 'utf-8'), before);
   });
 
-  it('reports premature final output as diagnostic-only non-delivery', () => {
+  it('reports premature canonical final output as premature_final_present with single remediation', () => {
     const bundle = makeBundle('phase-audit-final', { current_gate: 'wave0_complete', next_gate: 'wave1_complete' });
     writeTrace(bundle, witnessed());
-    writeFileSync(join(bundle, 'final/report.md'), '# Premature report\n');
+    writeFileSync(join(bundle, 'final/final.md'), '# Premature report\n');
+    const before = readFileSync(join(bundle, 'final/final.md'), 'utf-8');
     const { output } = runAudit(bundle);
-    assert.equal(output.outcome, 'status_drift');
+    assert.equal(output.outcome, 'premature_final_present');
     assert.equal(output.diagnostic_only, true);
-    assert.match(output.inspect.join('\n'), /premature final output|premature terminal output/);
+    assert.match(output.inspect.join('\n'), /canonical primary-series file\(s\) without any legal Final-entry admission/);
+    assert.match(output.advice.join('\n'), /final\/attic-<original-name>/);
+    assert.ok(Array.isArray(output.premature_final_present?.surfaces));
+    assert.equal(output.premature_final_present.surfaces[0].kind, 'final_file');
+    // Canonical presence takes precedence over an otherwise matching window.
+    assert.notEqual(output.outcome, 'passed');
+    // Engine never mutates the premature file.
+    assert.equal(readFileSync(join(bundle, 'final/final.md'), 'utf-8'), before);
+  });
+
+  it('reports both integrity outcomes on the bug-shaped bundle with single remediations', () => {
+    const bundle = makeBundle('phase-audit-bug-shape', { current_gate: 'wave0_complete', next_gate: 'wave1_complete' });
+    writeTrace(bundle, witnessed());
+    writeFileSync(join(bundle, 'final/final.md'), '# Hand-written final\n');
+    writeFileSync(join(bundle, 'rb_plan.md'), [
+      '# plan',
+      '## Progress',
+      '',
+      '- [x] wave0-complete',
+      '- [x] wave1-complete',
+      '- [x] wave2-complete',
+      '',
+    ].join('\n'));
+    const { output } = runAudit(bundle);
+    assert.equal(output.outcome, 'premature_final_present');
+    assert.ok(output.integrity, 'expected integrity object attached');
+    assert.deepEqual(output.integrity.outcomes, ['premature_final_present', 'plan_progress_tamper_suspected']);
+    const kinds = output.integrity.surfaces.map((surface) => surface.kind);
+    assert.ok(kinds.includes('final_file'));
+    assert.ok(kinds.includes('plan_progress_line'));
+    const tamperSurfaces = output.integrity.surfaces.filter((surface) => surface.kind === 'plan_progress_line');
+    assert.deepEqual(tamperSurfaces.map((surface) => surface.name).sort(), ['wave1-complete', 'wave2-complete']);
+    assert.match(output.integrity.remediation.join('\n'), /final\/attic-<original-name>/);
+    assert.match(output.integrity.remediation.join('\n'), /Engine-owned presentation/);
+    assert.equal(output.diagnostic_only, true);
   });
 
   it('accepts legal readiness-to-final handoff with final files', () => {

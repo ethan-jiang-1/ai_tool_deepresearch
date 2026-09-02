@@ -410,6 +410,7 @@ CPT-005: cli-phase-transition — Phase-boundary terminology separates status tr
 CPT-006: cli-phase-transition — Phase status drift audit detects impossible current_gate/next_gate windows and manual bypass suspicion
 CPT-007: cli-phase-transition — current_node records active loaded lifecycle control surface without replacing gate window authority
 CPT-008: cli-phase-transition — Failed or missing source-gate handoffs cannot authorize downstream status or final lifecycle state
+CPT-009: cli-phase-transition — Route-bound entry output surfaces a bounded lifecycle-integrity summary (diagnostic-only, closed vocabulary)
 
 # engine/framework-engine
 FRE-001: framework-engine — DEEP_RESEARCH_HARNESS/engine/ as canonical directory for 6 production engine modules
@@ -589,6 +590,7 @@ CDP-005: content-delivery-phase-content — Final artifacts count as delivery ev
 CDP-006: content-delivery-phase-content — Final guidance declares bounded evidence backing and uses submitted-backing admission without changing terminal semantics
 CDP-007: content-delivery-phase-content — Final regrounds in current research intent and current-lineage composition intent
 CDP-008: content-delivery-phase-content — Final guidance binds auxiliary detail archives to their version and maintains the final/README.md series index
+CDP-009: content-delivery-phase-content — Premature canonical Final presence is surfaced and blocked until relocated without becoming delivery evidence
 
 # research/evidence-extraction
 EEX-001: evidence-extraction — isCountable reference判定（authority-selected reference 的 accepted status + parseable source URL；不重复内容/表现启发式）
@@ -610,6 +612,7 @@ PHS-006: plan-hostfile-sections — "Engine writes ## Progress on gate pass (ide
 PHS-007: plan-hostfile-sections — Canonical template-owned host-file sections exclude the bounded user research-controls snapshot from heading, progress, and required-fill interpretation
 PHS-008: plan-hostfile-sections — Progress write reports actual committed/no-change outcome and never claims a checkbox mutation that was not committed
 PHS-009: plan-hostfile-sections — Decisions retains accepted rerun intent revisions newest-first
+PHS-010: plan-hostfile-sections — Progress checkbox states are Engine-owned and tamper-evident (checked without passed witness is tamper evidence)
 
 # research/post-final-recovery
 POF-001: post-final-recovery — Terminal Final eligibility, retained post-final rerun request, owner precedence, and accepted-lineage replay
@@ -722,6 +725,7 @@ RWG-019: research-wave-gate-implementation — Wave gates aggregate current and 
 RWG-020: research-wave-gate-implementation — Wave1 normalizes carried-target declarations and Wave2 verifies receipt-bound finding coverage through existing disposition routes
 RWG-021: research-wave-gate-implementation — Wave adapters project minimal independent evaluator roots and consume shared fail-closed degradation eligibility
 RWG-022: research-wave-gate-implementation — Wave0 shared-reference convergence evaluates submitted backing before a floor verdict
+RWG-023: research-wave-gate-implementation — Wave gates fail closed on premature canonical Final presence with the single relocation remediation
 
 # research/research-wave-phase-content
 RWP-001: research-wave-phase-content — Wave0 phase body completeness (9-section, foundation shared reference collection, ReferenceMetadata schema)
@@ -904,6 +908,7 @@ SWE-003: silent-wave-execution — Positive continuation contract and terminal d
 SWE-004: silent-wave-execution — Autonomous silent execution has no implicit human co-runner outside HITL1/HITL2
 SWE-005: silent-wave-execution — Stop:no surfacing intent is recorded as trace before any prohibited user-facing pause
 SWE-006: silent-wave-execution — Stop:no delegated phases actively poll work-unit readiness after background spawn
+SWE-007: silent-wave-execution — Fatigue-path final synthesis and completion claims consume lifecycle-integrity facts with terminal-fact backing
 
 # workflow/workflow-directory-contract
 WDC-001: workflow-directory-contract — Read-only framework assets boundary (DEEP_RESEARCH_HARNESS/ = read-only, dpt_rb_*/ = mutable runtime truth)

@@ -127,6 +127,41 @@ describe('enter-phase CLI', { concurrency: false }, () => {
     assert.equal(load.handoff_source_attempt_index, 0);
   });
 
+  it('surfaces the bounded lifecycle integrity summary when premature final and tampered Progress exist, without changing entry facts', () => {
+    mkdirSync(join(dir, 'final'), { recursive: true });
+    writeFileSync(join(dir, 'final/final.md'), '# Hand-written final\n');
+    writeFileSync(join(dir, 'rb_plan.md'), [
+      '# plan',
+      '## Progress',
+      '',
+      '- [x] wave2-complete',
+      '',
+    ].join('\n'));
+
+    const out = run(['--bundle', dir, '--node', 'phases/phase-wave1.md']);
+
+    assert.match(out, /DPT_LIFECYCLE_INTEGRITY_START/);
+    assert.match(out, /outcome: premature_final_present/);
+    assert.match(out, /outcome: plan_progress_tamper_suspected/);
+    assert.match(out, /audit-phase-status\.mjs/);
+    // Entry verdict and witnesses are unchanged.
+    assertLeadingCue(out, {
+      interaction: 'do_not_initiate',
+      next_action: 'execute_loaded_node',
+      node_ref: 'phases/phase-wave1.md',
+    });
+    const status = JSON.parse(readFileSync(join(dir, 'rb_status.json'), 'utf8'));
+    assert.equal(status.current_node, 'phases/phase-wave1.md');
+    const events = readFileSync(join(dir, 'rb_trace.jsonl'), 'utf8').trim().split('\n').map(line => JSON.parse(line));
+    assert.ok(events.find(e => e.event === 'load_complete' && e.entry === 'phases/phase-wave1.md'));
+  });
+
+  it('adds no integrity block on a clean entry', () => {
+    const out = run(['--bundle', dir, '--node', 'phases/phase-wave1.md']);
+    assert.match(out, /DPT_CONTINUATION_CUE_START/);
+    assert.doesNotMatch(out, /DPT_LIFECYCLE_INTEGRITY_START/);
+  });
+
   it('keeps the full dependency closure behind explicit --full while retaining the bounded entry first', () => {
     const out = run(['--bundle', dir, '--node', 'phases/phase-wave1.md', '--full']);
     assertLeadingCue(out, {

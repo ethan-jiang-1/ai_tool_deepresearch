@@ -74,6 +74,8 @@ research_profile: <profile>
 
 Execution handoff：`hitl1` 和 `hitl2` 是仅有的 interactive in-run checkpoints，Agent 各自先给一个可修正推荐并承接用户决定。其余非终端 `stop: no` phase 由 Agent 静默自主推进，不主动提问、确认、汇报或等待 acknowledgement；用户主动的 current turn 可得到事实回答，但不改变 lifecycle/permission/route/mutation authority 或既有 next action。Final 是 terminal lifecycle delivery，deliver-first、接受 presentation feedback，但不是第三个 checkpoint：entry 后先完成 Readiness status sync；admitted empty bundle 发布 base，admitted post-ReopenResearchPass zero-append return 发布 next global version；已有 current-lineage report 才留在 Final 等待/处理 presentation refinement。满意不写 state；仅新增证据/研究才走 accepted ReopenResearchPass recovery。
 
+完成宣告 backing（SWE-007/CPT-006）：向用户宣告"研究完成"前必须持有 terminal lifecycle 事实——`rb_status.json` 的 terminal status 加上 `node DEEP_RESEARCH_HARNESS/cli/audit-phase-status.mjs --bundle <bundle>` 的 integrity `passed` 判定。任何 integrity drift outcome（`premature_final_present`、`plan_progress_tamper_suspected`、`status_drift`、`manual_bypass_suspected`、`missing_witness`、`failed_gate_downstream_status`）都指向具名 repair，不构成完成；疲劳阈值、换策略、合成 final 内容前同样先消费该判定。
+
 ## 如果已有 Current Run Bundle
 
 不要重新创建。此 playbook 不处理 existing bundle：入口选择的完整规则只有一处 canonical 表述——`continue-run-bundle.md` 的 "Entry Selection (canonical)" 节（含 `unsupported_current_entry_contract`）。将显式提供的 candidate 交给该节。continuation route 才读 `rb_status.json`、`rb_queue.json`、`rb_trace.jsonl`。若 `rb_status.json.current_node` 非空，把它作为当前应加载的 phase Markdown coordinate；`current_gate` / `next_gate` 只是 gate window，不要只凭 `current_gate` 推断当前 phase。若 `current_node` 为 `null` 或缺失，先运行 reentry/trace 诊断再继续。

@@ -23,6 +23,9 @@ import {
   validateEnterPhaseTarget,
 } from '../engine/helpers/handoff-helpers.mjs';
 import {
+  evaluateLifecycleIntegrity,
+} from '../engine/helpers/phase-status-audit.mjs';
+import {
   extractExecutionBrief,
   renderPhaseEntryPresentation,
 } from '../engine/helpers/phase-entry-presentation.mjs';
@@ -180,12 +183,21 @@ try {
 }
 
 const statusSyncCommand = `node DEEP_RESEARCH_HARNESS/cli/advance-status.mjs --bundle ${bundlePath} --to ${handoff.sourceGateEnum}`;
+// @impl CPT-009 — bounded integrity summary on non-passed projections only;
+// diagnostic-only and never an entry verdict (entry legality is decided above).
+let lifecycleIntegrity = null;
+try {
+  lifecycleIntegrity = evaluateLifecycleIntegrity(bundlePath);
+} catch {
+  lifecycleIntegrity = null;
+}
 const bounded = renderPhaseEntryPresentation({
   continuation,
   status_sync_command: statusSyncCommand,
   action_core: actionCore.action_core,
   load_plan: result.plan,
   target_node: targetNode,
+  integrity: lifecycleIntegrity,
 });
 
 const fullClosure = invocation.values.full

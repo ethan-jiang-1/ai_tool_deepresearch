@@ -1,0 +1,125 @@
+schema_version: verification-routing/v1
+change: close-lifecycle-bypass-detection-gap
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      Closed outcome vocabulary, premature-final classification truth table
+      (current-lineage admission, prior-lineage admitted delivery, post-final
+      intermediate stage, legacy compatibility), and Progress
+      tamper/staleness classification are focused deterministic tables over
+      fixture bundle state.
+  integration:
+    status: selected
+    rationale: >-
+      audit-phase-status CLI, enter-phase integrity summary, and the three
+      wave gate blocking roots cross real CLI/helper/filesystem boundaries in
+      isolated temporary bundles; doc-lock tests assert the guidance duties.
+  deterministic_e2e:
+    status: selected
+    rationale: >-
+      A JS-led production-CLI chain must prove the self-defeating bypass loop
+      (premature file blocks gate, dual audit outcomes, entry summary,
+      relocation restores clean projection) without claiming any Agent
+      understood anything.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      No real-actor behavior claim is made. Agent-side duties (integrity
+      consumption, completion-claim backing) are locked by static guidance
+      validation; chat-side behavior stays outside Engine proof permission.
+claims:
+  - id: integrity-projection-unit
+    statement: >-
+      CPT-006/CDP-009/PHS-010: the integrity projection emits only closed
+      vocabulary outcomes; a canonical primary-series file uncovered by any
+      accepted admission/lineage evidence chain yields premature_final_present;
+      prior-lineage admitted files, post-final intermediate stages, and legacy
+      loads never do; a checked Progress line without a passed-gate witness
+      yields plan_progress_tamper_suspected while Engine-flipped lines and
+      write-failure staleness do not.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/phase-status-audit-integrity.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: audit-cli-reclassification
+    statement: >-
+      CPT-006: on a bug-shaped bundle the audit reports premature_final_present
+      (no longer status_drift) and plan_progress_tamper_suspected together,
+      each with its single remediation; all return paths carry the integrity
+      object; the audit never mutates bundle files.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/audit-phase-status.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: enter-phase-integrity-summary
+    statement: >-
+      CPT-009: successful entry output carries the bounded integrity summary
+      only for non-passed projections; passed entries add no field; entry
+      verdict, load_complete, and current_node are unchanged by the summary.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/enter-phase.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave-gate-premature-root
+    statement: >-
+      RWG-023: each wave gate fails with premature_final_present and the single
+      relocation remediation when an uncovered canonical final file exists;
+      relocation clears the root; covered files (post-final stage, prior
+      lineage, legacy) never fail; gate evaluation never mutates the file;
+      advice never suggests bypass or surfacing.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/wave-gate-premature-final.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: bypass-loop-e2e
+    statement: >-
+      CPT-006/CPT-009/RWG-023/CDP-009/PHS-010: real production CLIs on a
+      disposable bundle reproduce the bug shape and prove the loop — gate
+      block, dual audit outcomes, entry summary, relocation plus checkbox
+      cleanup restore a clean projection — with no Engine-side file mutation
+      at any step.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/lifecycle-bypass-detection.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

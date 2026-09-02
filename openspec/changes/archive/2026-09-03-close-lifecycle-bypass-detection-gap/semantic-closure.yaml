@@ -1,0 +1,138 @@
+schema_version: semantic-closure/v1
+change: close-lifecycle-bypass-detection-gap
+status: affected
+catalog_additions:
+  - id: lifecycle.plan-progress-presentation-integrity
+    bounded_question: >-
+      Which canonical `rb_plan.md## Progress` checkbox states are Engine-owned
+      projections of trace-verified passed gates, and which checked lines are
+      tamper evidence lacking a passed gate witness?
+affected:
+  - family: lifecycle.gate-status-trace-handoff
+    fact: >-
+      Phase status audit outcomes extend to a read-only lifecycle-integrity
+      projection computed only from current bundle truth: status windows and
+      trace witnesses as today, plus canonical `final/` primary-series presence
+      versus legal Final-entry/post-final admission evidence, plus canonical
+      `rb_plan.md## Progress` checked lines versus passed-gate witnesses. New
+      closed outcomes `premature_final_present` and
+      `plan_progress_tamper_suspected` name those two mismatch classes. The
+      projection never mutates state, never re-adjudicates a gate verdict, and
+      never infers Agent intent; legal post-final recovery/entry stages keep
+      their existing `post_final_*` classifications.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/helpers/phase-status-audit.mjs
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/phase-status-audit.mjs
+      - DEEP_RESEARCH_HARNESS/cli/audit-phase-status.mjs
+    consumers:
+      - DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs
+      - DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave0-complete.mjs
+      - DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave1-complete.mjs
+      - DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave2-complete.mjs
+      - DEEP_RESEARCH_HARNESS/command_playbook/continue-run-bundle.md
+      - DEEP_RESEARCH_HARNESS/command_playbook/start-research.md
+    overlap:
+      - coordinate: openspec/specs/engine/cli-phase-transition/spec.md
+        relation: authoritative
+        detail: >-
+          CPT-006 owns the audit surface and its closed outcome vocabulary;
+          this change extends that vocabulary and the audit's read inputs and
+          does not create a second audit.
+      - coordinate: openspec/specs/engine/cli-inspect-output-conventions/spec.md
+        relation: authoritative
+        detail: >-
+          Bounded diagnostic presentation of the integrity summary follows the
+          existing inspect-output conventions; the summary is not a second
+          state authority.
+      - coordinate: openspec/specs/workflow/silent-wave-execution/spec.md
+        relation: authoritative
+        detail: >-
+          SWE owns when the Agent must consume the integrity verdict (fatigue
+          path, final-content synthesis, completion claims); the verdict itself
+          stays an Engine fact.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave1.md
+        relation: derived
+        detail: >-
+          Phase guidance presents the surfaced integrity summary and the repair
+          route; prose never establishes lifecycle truth.
+    verification:
+      truth_table: tests/engine/helpers/phase-status-audit-integrity.test.mjs
+      cross_surface: tests/e2e/lifecycle-bypass-detection.test.mjs
+  - family: final.primary-report-series
+    fact: >-
+      Premature-final detection consumes, and does not reconstruct, the safe
+      direct-root primary-series classification: a file matching canonical
+      primary-series names that exists without coverage by any accepted Final
+      admission/lineage evidence chain (current-lineage entry admission,
+      prior-lineage admitted delivery evidence, accepted post-final
+      recovery/entry stage, or legacy compatibility) is
+      `premature_final_present` and blocks wave gates until the Agent relocates
+      it out of canonical naming; relocated bytes remain non-authoritative and
+      the classification never judges report content.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/helpers/final-report-series.mjs
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/phase-status-audit.mjs
+    consumers:
+      - DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave0-complete.mjs
+      - DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave1-complete.mjs
+      - DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave2-complete.mjs
+      - DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs
+    overlap:
+      - coordinate: openspec/specs/research/content-delivery-phase-content/spec.md
+        relation: authoritative
+        detail: >-
+          CDP-003..006 own premature-final non-authority and Final admission;
+          this change adds blocking consequence and the single remediation
+          direction without changing admission semantics.
+      - coordinate: openspec/specs/research/post-final-recovery/spec.md
+        relation: authoritative
+        detail: >-
+          POF-001..003 own legal post-final lineage/event evidence; the
+          projection consumes those conclusions so a legal rerun intermediate
+          state is never misreported as premature.
+      - coordinate: openspec/specs/research/research-wave-gate-implementation/spec.md
+        relation: authoritative
+        detail: >-
+          RWG owns wave gate rules; the new blocking root is one more
+          fail-closed rule with repair feedback, not a new gate state.
+    verification:
+      truth_table: tests/engine/helpers/phase-status-audit-integrity.test.mjs
+      cross_surface: tests/integration/cli/wave-gate-premature-final.test.mjs
+  - family: lifecycle.plan-progress-presentation-integrity
+    fact: >-
+      A canonical `- [x] <gate>` line in `rb_plan.md## Progress` is tamper
+      evidence when trace lacks that gate's passed `gate_attempt` with its
+      route-bound consumption; the audit reports
+      `plan_progress_tamper_suspected`. Engine remains the only legal flipper;
+      Progress stays presentation, so tamper evidence never substitutes for
+      trace truth in any gate verdict.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/helpers/phase-status-audit.mjs
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/phase-status-audit.mjs
+    consumers:
+      - DEEP_RESEARCH_HARNESS/cli/audit-phase-status.mjs
+      - DEEP_RESEARCH_HARNESS/cli/enter-phase.mjs
+    overlap:
+      - coordinate: DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-plan-progress.mjs
+        relation: authoritative
+        detail: >-
+          The canonical Progress writer owns Engine-side flip outcomes
+          (committed/unchanged/failed) that the tamper check compares against;
+          the audit consumes those outcomes and never writes Progress itself.
+      - coordinate: openspec/specs/research/plan-hostfile-sections/spec.md
+        relation: authoritative
+        detail: >-
+          PHS-005/PHS-009 own Engine-owned Progress flips and the bounded
+          writer outcomes; this change defines the tamper-evidence fact for the
+          audit without adding a gate rule or making Progress an authority.
+      - coordinate: openspec/specs/engine/cli-phase-transition/spec.md
+        relation: authoritative
+        detail: >-
+          The tamper outcome lives in the existing audit's closed vocabulary;
+          no separate checker surface is created.
+    verification:
+      truth_table: tests/engine/helpers/phase-status-audit-integrity.test.mjs
+      cross_surface: tests/integration/cli/audit-phase-status.test.mjs

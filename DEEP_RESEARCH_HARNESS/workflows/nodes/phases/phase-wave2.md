@@ -364,3 +364,6 @@ Do not stop for progress, idle/no-work, or partial-completion reporting. Phase c
 
 - 禁止 inventing references when targeted search fails; record limitation or route to HITL2.
 - 禁止 bypassing gate JSON `inspect`/`advice`; repair, refill, defer, or record limitation from real feedback.
+- Lifecycle-integrity 消费义务（SWE-007/CPT-006）：疲劳阈值、换策略、以及合成任何 final 报告内容之前，必须先获取并消费最新 lifecycle-integrity 判定（最近 checkpoint 输出中的 `DPT_LIFECYCLE_INTEGRITY` 块，或 `node DEEP_RESEARCH_HARNESS/cli/audit-phase-status.mjs --bundle <bundle>`）；判定含 `premature_final_present`、`plan_progress_tamper_suspected`、`status_drift`、`manual_bypass_suspected`、`missing_witness`、`failed_gate_downstream_status` 任一时，唯一去向是按具名 surface 做 repair，禁止转向 final 合成或任何绕过。
+- 完成宣告 backing：向用户宣告"研究完成"必须引用 terminal lifecycle 事实（terminal status + integrity `passed`）；无此 backing 的完成宣告属于禁止的 surfacing。
+- 本 phase 期间 `final/` 不得出现无 lineage 覆盖的 canonical primary-series 文件；premature 文件会以 `premature_final_present` 阻断 wave gate，唯一合法补救是移出 canonical 命名（`final/attic-<原名>`），Engine 不会代为移动或删除。

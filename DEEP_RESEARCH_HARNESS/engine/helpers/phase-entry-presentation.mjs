@@ -1,4 +1,4 @@
-// @impl CPT-003, WNC-010, WNC-011
+// @impl CPT-003, CPT-009, WNC-010, WNC-011
 // Pure action-core extraction and bounded entry presentation.
 
 import { renderContinuationBlock } from './continuation-cue.mjs';
@@ -49,8 +49,10 @@ export function renderPhaseEntryPresentation({
   action_core,
   load_plan,
   target_node,
+  integrity = null,
 } = {}) {
   const manifest = (Array.isArray(load_plan) ? load_plan : []).filter((fileRef) => fileRef !== target_node);
+  const integrityBlock = renderIntegrityBlock(integrity);
   const sections = [
     renderContinuationBlock(continuation),
     [
@@ -64,6 +66,26 @@ export function renderPhaseEntryPresentation({
       ...manifest.map((fileRef) => `- ${fileRef}`),
       '<!-- DPT_SHARED_FILE_MANIFEST_END -->',
     ].join('\n'),
+    integrityBlock,
   ];
   return sections.filter(Boolean).join('\n\n');
+}
+
+// @impl CPT-009
+// Bounded lifecycle-integrity summary. Rendered only when the projection
+// reports a non-passed outcome; diagnostic-only, never an entry verdict.
+export function renderIntegrityBlock(integrity) {
+  if (!integrity || !Array.isArray(integrity.outcomes) || integrity.outcomes.length === 0) {
+    return null;
+  }
+  const lines = [
+    '<!-- DPT_LIFECYCLE_INTEGRITY_START -->',
+    'Lifecycle integrity drift detected (diagnostic-only; it does not change this entry verdict):',
+    ...integrity.outcomes.map((outcome) => `- outcome: ${outcome}`),
+    ...(Array.isArray(integrity.surfaces) ? integrity.surfaces.map((surface) => `  - ${surface.kind}: ${surface.name} — ${surface.detail}`) : []),
+    ...(Array.isArray(integrity.remediation) ? integrity.remediation.map((line) => `- repair: ${line}`) : []),
+    'Full verdict: node DEEP_RESEARCH_HARNESS/cli/audit-phase-status.mjs --bundle <bundle>',
+    '<!-- DPT_LIFECYCLE_INTEGRITY_END -->',
+  ];
+  return lines.join('\n');
 }

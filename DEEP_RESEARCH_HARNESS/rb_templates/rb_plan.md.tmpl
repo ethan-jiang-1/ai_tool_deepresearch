@@ -50,6 +50,7 @@ topic_registry: []
 ## Progress
 
 <!-- 勾选顺序 = workflows/manifest.json 生命周期序。readiness 与 rerun 是 HITL2 的两个互斥出口，不是先后顺序。 -->
+<!-- Progress 是 Engine 独家写入的 presentation：仅 gate pass 时由 Engine 翻转对应行；Agent/人工手勾不构成完成，audit 会将无 passed witness 的勾选报告为 plan_progress_tamper_suspected。 -->
 - [ ] instantiation-complete
 - [ ] hitl1-recorded
 - [ ] setup-ready

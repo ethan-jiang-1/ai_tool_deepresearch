@@ -41,6 +41,11 @@ families:
     bounded_question: What is the authority of Wave2 findings, carried targets, synthesis, and cross-reference?
   - id: lifecycle.gate-status-trace-handoff
     bounded_question: Do Gate, status, trace, and handoff receipt constitute legal lifecycle evidence?
+  - id: lifecycle.plan-progress-presentation-integrity
+    bounded_question: >-
+      Which canonical `rb_plan.md## Progress` checkbox states are Engine-owned
+      projections of trace-verified passed gates, and which checked lines are
+      tamper evidence lacking a passed gate witness?
   - id: final.primary-report-series
     bounded_question: >-
       Given the safe direct-root Final inventory, which file is the modern or

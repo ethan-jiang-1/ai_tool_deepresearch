@@ -65,6 +65,15 @@ coordinate.
    directory layout.
 5. Read `DEEP_RESEARCH_HARNESS/COMMANDS.md` and select the command matching
    the user's stated intent.
+6. Lifecycle integrity truth on resume: any engine checkpoint output carrying a
+   `DPT_LIFECYCLE_INTEGRITY` block, or any doubt about whether earlier progress
+   claims are real, SHALL be resolved by running
+   `node DEEP_RESEARCH_HARNESS/cli/audit-phase-status.mjs --bundle <bundle>`
+   before continuing. Its closed outcomes (`premature_final_present`,
+   `plan_progress_tamper_suspected`, `status_drift`, `manual_bypass_suspected`,
+   `missing_witness`, `failed_gate_downstream_status`, post-final stages) name
+   the repair; bundle prose such as checked `rb_plan.md## Progress` boxes is
+   presentation, not completion evidence.
 
 ## Authority Boundary
 

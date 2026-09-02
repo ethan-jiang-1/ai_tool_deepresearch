@@ -61,7 +61,15 @@ The entry admission is already Engine-owned. It is either the bundle-wide empty
 primary baseline for the first Final load, or the exact ReopenResearchPass event-bound prior
 full inventory for a newer Final load. Do not reinterpret a report written
 after entry as a premature file, and do not treat an old report as delivery for
-a newer lineage.
+a newer lineage. Conversely, a canonical primary-series file that appears
+without any accepted admission/lineage coverage (no current-lineage entry
+admission, no prior-lineage admitted delivery, no accepted post-final stage, no
+legacy compatibility) is premature terminal output: it is not delivery
+evidence, it blocks every wave gate with `premature_final_present`, and the
+only legal remediation is relocating it out of canonical primary-series naming
+(`final/attic-<original-name>`); the Engine never deletes, moves, or rewrites
+it, and the relocated bytes remain historical non-authoritative material.
+Completion claims cannot cite a premature file.
 
 ## 2. Required Inputs
 
