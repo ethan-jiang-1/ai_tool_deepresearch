@@ -158,11 +158,11 @@
 **C3a `slim-rrm-requirements`**（依赖 C1：先同步再拆；587 行 RRM-007 等拆为常规 requirement + 主题分群）✅ 2026-09-01 归档（finalizer 19/19，全量 0 fail；1→8 拆分：13/109/87/51/87/153/50/50 行，行集守恒 100%，59 场景全保留）
 - [x] P propose　- [x] H polish　- [x] A apply　- [x] V verify　- [x] R archive　- [x] C commit
 
-**C3b `slim-cts-requirements`**（L48/326 两条巨无霸；顺手 M1 可选）
-- [ ] P propose　- [ ] H polish　- [ ] A apply　- [ ] V verify　- [ ] R archive　- [ ] C commit
+**C3b `slim-cts-requirements`**（L48/326 两条巨无霸；顺手 M1 可选）✅ 2026-09-01 归档（finalizer 19/19，npm test 2949/2949；2→7 拆分：55/100/85/70/146/49/98 行，行集守恒 100%，66 场景全保留）
+- [x] P propose　- [x] H polish　- [x] A apply　- [x] V verify　- [x] R archive　- [x] C commit
 
-**C3c `slim-rwg-requirements`**（三条 200–300 行巨无霸；顺手 M3 措辞精确化）
-- [ ] P propose　- [ ] H polish　- [ ] A apply　- [ ] V verify　- [ ] R archive　- [ ] C commit
+**C3c `slim-rwg-requirements`**（三条 200–300 行巨无霸；顺手 M3 措辞精确化）✅ 2026-09-01 归档（finalizer 19/19，npm test 2955/2955；3→7 拆分 + M3 glob 措辞对齐）
+- [x] P propose　- [x] H polish　- [x] A apply　- [x] V verify　- [x] R archive　- [x] C commit
 
 **C3d `slim-agq-requirements`**（`topic_deepening` producer rule 295 行等）
 - [ ] P propose　- [ ] H polish　- [ ] A apply　- [ ] V verify　- [ ] R archive　- [ ] C commit
