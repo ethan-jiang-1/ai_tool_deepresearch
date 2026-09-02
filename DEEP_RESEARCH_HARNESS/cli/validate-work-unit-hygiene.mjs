@@ -219,6 +219,14 @@ function isPastFailureHistory(rel, context) {
   return /(past|history|historical|removed design|retired|old|legacy|failure analysis|failed|brittle|broken|impassable|why .* grew complex|replacement|superseded|do not use|no longer current|bug-|drift|first failed|首次失败|废弃|已废弃|守卫存在但覆盖不到)/i.test(context);
 }
 
+function isHistoricalPlanFamilyEnumeration(rel, line) {
+  // Historical _backlog plan docs enumerate retired capability families and
+  // their DEPRECATED-ID counts as failure history; the tokens name retired
+  // families, not current work-unit authority surfaces.
+  if (!/^_backlog\/plans\//.test(rel)) return false;
+  return /(时代遗留|遗留家族|已退役|retired famil|DEPRECATED ID|死前缀)/i.test(line);
+}
+
 function isAllowedOccurrence(rel, line, context, { contextSensitive = false } = {}) {
   if (isCheckerSelfReference(rel)) return { allowed: true, reason: 'checker-self-reference' };
   if (isCleanupControl(rel)) return { allowed: true, reason: 'cleanup-control' };
@@ -226,6 +234,7 @@ function isAllowedOccurrence(rel, line, context, { contextSensitive = false } = 
   if (isReleaseHistoryMinimized(rel, line)) return { allowed: true, reason: 'release-history-minimized' };
   if (isNegativeContext(rel, context)) return { allowed: true, reason: 'negative' };
   if (isPastFailureHistory(rel, context)) return { allowed: true, reason: 'past-failure-history' };
+  if (isHistoricalPlanFamilyEnumeration(rel, line)) return { allowed: true, reason: 'historical-plan-family-enumeration' };
   if (contextSensitive && isCurrentWorkUnitContext(rel, context)) return { allowed: true, reason: 'current-work-unit-context' };
   return { allowed: false, reason: null };
 }

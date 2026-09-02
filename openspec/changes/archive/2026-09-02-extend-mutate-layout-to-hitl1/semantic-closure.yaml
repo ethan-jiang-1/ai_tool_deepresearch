@@ -1,0 +1,40 @@
+schema_version: semantic-closure/v1
+change: extend-mutate-layout-to-hitl1
+status: affected
+catalog_additions: []
+affected:
+  - family: research.scope-and-rerun-intent
+    fact: >-
+      The complete mutate_layout target is additionally authorized in the legal
+      HITL1 pre-gate window (current_node phases/phase-hitl1.md with
+      hitl1_recorded -> setup_ready): the same target shape, safe-remove,
+      quiescence, expected_plan_sha256 and atomic prepared/recover checks apply
+      as in sanctioned rerun, and inspect emits a copy-ready layout_baseline
+      whose context reflects the currently legal window ('hitl1' there,
+      'rerun' otherwise, falling back to 'rerun' when rb_status.json is
+      unreadable). The baseline context value remains a template fact, not
+      mutation authority; authorization is computed at apply from lifecycle
+      facts. Rerun-side and seed_topics-side layout behavior is unchanged.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/helpers/canonical-topic-state.mjs#applyCanonicalTopicState
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/topic-state-plan-schema.mjs
+      - DEEP_RESEARCH_HARNESS/engine/helpers/topic-state-inspect.mjs#inspectCanonicalTopicState
+    consumers:
+      - DEEP_RESEARCH_HARNESS/cli/gates/check-gate-hitl1-recorded.mjs
+      - DEEP_RESEARCH_HARNESS/cli/gates/check-gate-seed-topics-ready.mjs
+    overlap:
+      - coordinate: DEEP_RESEARCH_HARNESS/command_playbook/operate-topic-state.md
+        relation: derived
+        detail: >-
+          The command playbook documents that rename/reorder/renumber/safe-remove
+          is available in the legal HITL1 window as well as sanctioned rerun; it
+          presents the resolved authorization without deciding it.
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-hitl1.md
+        relation: derived
+        detail: >-
+          HITL1 phase body carries the structural re-adjustment routing at the
+          point of use; it does not alter the writer contract or mint authority.
+    verification:
+      truth_table: tests/integration/cli/operate-topic-state-hitl1-readiness.test.mjs
+      cross_surface: tests/engine/helpers/canonical-topic-state.test.mjs

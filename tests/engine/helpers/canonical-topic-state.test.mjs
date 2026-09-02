@@ -388,10 +388,10 @@ describe('canonical topic state', () => {
     const dir = bundle('topic-layout');
     const two = { context: 'hitl1', actions: [input.actions[0], { ...input.actions[0], title: 'Topic B', slug_stem: 'topic-b', must_answer: ['B?'], scope_role: 'supporting' }] };
     applyCanonicalTopicState({ bundlePath: dir, input: two });
+    authorizeRerun(dir);
     const before = inspectCanonicalTopicState({ bundlePath: dir });
     const [topicA, topicB] = before.topics;
     writeFileSync(join(dir, 'rb_queue.json'), JSON.stringify({ active_window: [{ queue_item_id: 'q-b', status: 'queued', payload: { topic_uid: topicB.topic_uid, topic_slug: topicB.slug } }], refill_pool: [] }));
-    authorizeRerun(dir);
     const layout = { ...before.layout_baseline, topics: [
       { topic_uid: topicA.topic_uid, title: 'Topic A revised', slug_stem: 'topic-a-new' },
       before.layout_baseline.topics[1],
@@ -459,14 +459,14 @@ describe('canonical topic state', () => {
     assert.match(readFileSync(planPath, 'utf8'), /Custom prose stays\./);
   });
   it('blocks changed active UID, returns unchanged for a repeated target, and recovers mid-seed crash', () => {
-    const activeDir = bundle('topic-layout-active'); applyCanonicalTopicState({ bundlePath: activeDir, input });
-    let inspected = inspectCanonicalTopicState({ bundlePath: activeDir }); const topic = inspected.topics[0]; authorizeRerun(activeDir);
+    const activeDir = bundle('topic-layout-active'); applyCanonicalTopicState({ bundlePath: activeDir, input }); authorizeRerun(activeDir);
+    const inspectedActive = inspectCanonicalTopicState({ bundlePath: activeDir }); const topic = inspectedActive.topics[0];
     writeFileSync(join(activeDir, 'rb_queue.json'), JSON.stringify({ active_window: [{ queue_item_id: 'q-a', status: 'queued', payload: { topic_uid: topic.topic_uid, topic_slug: topic.slug } }], refill_pool: [] }));
-    const changed = { ...inspected.layout_baseline, topics: [{ topic_uid: topic.topic_uid, title: 'Changed', slug_stem: 'changed' }] };
+    const changed = { ...inspectedActive.layout_baseline, topics: [{ topic_uid: topic.topic_uid, title: 'Changed', slug_stem: 'changed' }] };
     assert.equal(applyCanonicalTopicState({ bundlePath: activeDir, input: changed }).reason_code, 'active_topic_work');
 
     const noOpDir = bundle('topic-layout-noop'); applyCanonicalTopicState({ bundlePath: noOpDir, input }); authorizeRerun(noOpDir);
-    inspected = inspectCanonicalTopicState({ bundlePath: noOpDir });
+    let inspected = inspectCanonicalTopicState({ bundlePath: noOpDir });
     assert.equal(applyCanonicalTopicState({ bundlePath: noOpDir, input: inspected.layout_baseline }).verdict, 'unchanged');
     assert.deepEqual(readdirSync(join(noOpDir, '_diagnostics/topic-state')), []);
 
@@ -499,6 +499,25 @@ describe('canonical topic state', () => {
     assert.equal(readFileSync(profilePath, 'utf8'), profileBefore);
     assert.equal(existsSync(join(dir, 'seed_topics/02_topic-b.md')), false);
     assert.equal(inspectCanonicalTopicState({ bundlePath: dir }).topics.length, 1);
+  });
+  it('authorizes one complete layout target in the hitl1 window with a context-derived inspect baseline', () => {
+    const dir = bundle('topic-hitl1-layout');
+    writeSelectedResearchProfile(dir);
+    const two = { context: 'hitl1', actions: [input.actions[0], { ...input.actions[0], title: 'Topic B', slug_stem: 'topic-b', must_answer: ['B?'], scope_role: 'supporting' }] };
+    applyCanonicalTopicState({ bundlePath: dir, input: two });
+    const inspected = inspectCanonicalTopicState({ bundlePath: dir });
+    assert.equal(inspected.layout_baseline.context, 'hitl1');
+    const remove = { ...inspected.layout_baseline, topics: [inspected.layout_baseline.topics[0]], remove_topic_uids: [inspected.topics[1].topic_uid] };
+    const applied = applyCanonicalTopicState({ bundlePath: dir, input: remove });
+    assert.equal(applied.verdict, 'committed');
+    assert.deepEqual(applied.style_projection?.checkpoint, { gate: 'hitl1-recorded', current_node: 'phases/phase-hitl1.md' });
+    assert.equal(existsSync(join(dir, 'seed_topics/02_topic-b.md')), false);
+    assert.equal(existsSync(join(dir, 'seed_topics/01_topic-a.md')), true);
+
+    writeFileSync(join(dir, 'rb_status.json'), 'not-json');
+    assert.equal(inspectCanonicalTopicState({ bundlePath: dir }).layout_baseline.context, 'rerun');
+    writeFileSync(join(dir, 'rb_status.json'), JSON.stringify({ current_mode: 'execution', state: 'in_progress', current_gate: 'setup_ready', next_gate: 'seed_topics_ready', current_node: 'phases/phase-setup.md' }));
+    assert.equal(applyCanonicalTopicState({ bundlePath: dir, input: remove }).reason_code, 'hitl1_not_authorized');
   });
   it('blocks safe remove for terminal queue history and inbound dependency before workspace', () => {
     const historyDir = bundle('topic-layout-remove-history');

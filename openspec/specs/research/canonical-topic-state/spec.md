@@ -2,7 +2,7 @@
 
 > req: CTS-001, CTS-002, CTS-003, CTS-004, CTS-005, CTS-006, CTS-007, CTS-008, CTS-009, CTS-010, CTS-011, CTS-012
 
-> delta-synced: document-wave0-deferred-all-or-nothing (CTS-011)
+> delta-synced: extend-mutate-layout-to-hitl1 (CTS-004, CTS-006)
 
 ## Purpose
 
@@ -212,11 +212,11 @@ Rerun apply SHALL render/replace exactly one canonical `## 本轮重跑方向` s
 
 For layout mutation, `affected_topic_uids` SHALL mean only removed UIDs and retained UIDs whose current id, slug or title differs in the final target. For an add/update/direction action plan it SHALL include every topic whose seed bytes are staged, including direction-only targets. For `enrich_seed` it SHALL contain exactly the selected current UID. Quiescence and seed mutation checks SHALL not block unrelated unchanged topics merely because a complete target lists them. If the rendered plan/current-seed bytes already match and no seed cleanup remains, apply SHALL return `unchanged` without workspace or follow-up. An unchanged `enrich_seed` result SHALL still return the selected UID/path and any observed-and-already-canonicalized binding repair shall be null.
 
-Before workspace creation, `apply` SHALL authorize mutation from existing lifecycle facts rather than a caller-declared context flag. HITL1 apply SHALL require `rb_status.json#/current_node: phases/phase-hitl1.md` with the existing `current_gate: hitl1_recorded` / `next_gate: setup_ready` pre-gate window. Normal rerun apply SHALL require `current_node: phases/phase-rerun.md`, the latest valid non-superseded route-bound HITL2 gate-to-rerun load witness, and the incoming `current_gate: hitl2_recorded` / `next_gate: rerun_ready` window. Seed enrichment apply SHALL require `current_node: phases/phase-seed-topics.md`, the latest valid non-superseded route-bound setup-to-seed-topics or rerun-to-seed-topics load witness, and respectively the incoming `setup_ready -> seed_topics_ready` or `rerun_ready -> seed_topics_ready` status window.
+Before workspace creation, `apply` SHALL authorize mutation from existing lifecycle facts rather than a caller-declared context flag. HITL1 apply SHALL require `rb_status.json#/current_node: phases/phase-hitl1.md` with the existing `current_gate: hitl1_recorded` / `next_gate: setup_ready` pre-gate window; that same window SHALL additionally authorize one complete `mutate_layout` target under the identical layout requirements. Normal rerun apply SHALL require `current_node: phases/phase-rerun.md`, the latest valid non-superseded route-bound HITL2 gate-to-rerun load witness, and the incoming `current_gate: hitl2_recorded` / `next_gate: rerun_ready` window. Seed enrichment apply SHALL require `current_node: phases/phase-seed-topics.md`, the latest valid non-superseded route-bound setup-to-seed-topics or rerun-to-seed-topics load witness, and respectively the incoming `setup_ready -> seed_topics_ready` or `rerun_ready -> seed_topics_ready` status window.
 
 Post-final rerun apply SHALL be authorized only after the accepted ReopenResearchPass operation has committed a valid non-superseded `post_final_reentry` event, current HITL2 profile semantics/hash still equal the event-bound after-profile, `enter-phase` has written a route-bound rerun `load_complete` referencing that exact recovery event, existing `advance-status --to hitl2_recorded` has written the matching exceptional `phase_transition`, `current_node` is `phases/phase-rerun.md`, and the incoming `hitl2_recorded -> rerun_ready` status window remains intact. A caller-declared `human-directed`, rerun, seed-topics or recovery context SHALL NOT substitute for any required witness class, the accepted profile, or the existing status-sync step.
 
-`set_rerun_direction` and `mutate_layout` SHALL be authorized only in a sanctioned normal or post-final rerun context. `enrich_seed` SHALL be authorized only after one accepted setup/rerun source route has entered Seed Topics. Other post-final, stale/missing-witness and arbitrary maintenance invocation SHALL reject without workspace or authority mutation. Only a current `seed_topic_materialize` queue completion and a final `seed-topics-ready` Gate that each establish that same legal Seed Topics window MAY project `enrich_seed` as an executable `engine_operation`; their bounded parse-repair feedback is likewise legal only in that window. Generic topic-state inspect SHALL remain read-only, report a direct mismatch with `repair_kind: missing_contract` that identifies its no-write inspection boundary and the current lifecycle owner (plus an absent authoring window when applicable), and SHALL NOT mint either an `enrich_seed` or raw-YAML repair route.
+`set_rerun_direction` SHALL be authorized only in a sanctioned normal or post-final rerun context. `mutate_layout` SHALL be authorized in that sanctioned rerun context and additionally in the legal HITL1 pre-gate window defined above; its complete-target semantics, safe-remove facts, quiescence checks, hash binding and atomic workspace requirements SHALL be identical in both windows. `enrich_seed` SHALL be authorized only after one accepted setup/rerun source route has entered Seed Topics. Other post-final, stale/missing-witness and arbitrary maintenance invocation SHALL reject without workspace or authority mutation. Only a current `seed_topic_materialize` queue completion and a final `seed-topics-ready` Gate that each establish that same legal Seed Topics window MAY project `enrich_seed` as an executable `engine_operation`; their bounded parse-repair feedback is likewise legal only in that window. Generic topic-state inspect SHALL remain read-only, report a direct mismatch with `repair_kind: missing_contract` that identifies its no-write inspection boundary and the current lifecycle owner (plus an absent authoring window when applicable), and SHALL NOT mint either an `enrich_seed` or raw-YAML repair route.
 
 `update_intent`, `set_rerun_direction` and `mutate_layout` SHALL reject before workspace creation when a touched existing topic has queued, delegated-in-flight or nonterminal work. The blocker SHALL identify the existing queue/work-unit owner and one nearest Agent action. Submitted historical work MAY remain and SHALL NOT be rewritten. `mutate_layout` removal SHALL additionally reject any UID with queue/work-unit/ledger/artifact/reference history or an inbound dependency. `enrich_seed` SHALL not apply this canonical-intent quiescence blocker because the current non-delegated `seed_topic_materialize` card is its legal caller work; it SHALL remain bounded by Seed Topics lifecycle authorization and SHALL NOT read, claim, complete or mutate queue/work-unit authority.
 
@@ -236,6 +236,16 @@ Post-final rerun apply SHALL be authorized only after the accepted ReopenResearc
 - **THEN** apply MAY prepare the approved initial canonical registry and seeds
 - **AND** a caller-declared context value SHALL NOT substitute for those lifecycle facts
 - **AND** HITL1 input SHALL NOT write rerun direction
+
+#### Scenario: Legal HITL1 window authorizes one complete layout target
+- **WHEN** one complete mutate-layout target is submitted with current node `phases/phase-hitl1.md` and the existing `hitl1_recorded -> setup_ready` status window
+- **THEN** apply MAY accept it subject to the same safe-remove, dependency, quiescence, `expected_plan_sha256` and atomic prepared/recover requirements as sanctioned rerun
+- **AND** the target SHALL NOT carry rerun direction and a caller-declared context value SHALL NOT substitute for those lifecycle facts
+
+#### Scenario: HITL1 layout request outside the window is unavailable
+- **WHEN** a complete mutate-layout target names context `hitl1` but the bundle is not in the `phases/phase-hitl1.md` `hitl1_recorded -> setup_ready` window
+- **THEN** apply SHALL reject before workspace creation with one lifecycle repair/boundary action
+- **AND** plan, seeds, status, trace and other authority surfaces SHALL remain byte-unchanged
 
 #### Scenario: Sanctioned rerun authorizes canonical mutation forms
 - **WHEN** current node is `phases/phase-rerun.md`, either the latest normal route-bound HITL2 gate-to-rerun witness or latest accepted route-bound post-final recovery-to-rerun witness is valid and non-superseded, and the incoming rerun status window is intact
@@ -287,7 +297,6 @@ Post-final rerun apply SHALL be authorized only after the accepted ReopenResearc
 - **WHEN** generic topic-state inspect detects a canonical binding mismatch, including after the Seed Topics lifecycle window has closed
 - **THEN** it SHALL retain the evaluator's direct diagnostic but SHALL NOT expose `enrich_seed` as an executable `engine_operation` or name a raw YAML coordinate as a repair surface
 - **AND** it SHALL report `missing_contract` with the current lifecycle owner or the absent legal Seed Topics authoring window rather than implying a callable repair
-
 ### Requirement: Topic-state operations SHALL NOT touch non-topic authority surfaces
 
 Topic-state operations SHALL NOT mutate queue state/schema, work-unit attempts,
@@ -559,10 +568,10 @@ projection.
 ### Requirement: Layout mutation and post-final reentry SHALL stay bounded sanctioned operations
 
 The only layout operation SHALL be `apply` action `mutate_layout`: one complete
-sanctioned-rerun target that may rename/reorder current registry coordinates,
-update current seed projections and safely remove a never-worked topic.
-Historical paths SHALL remain in place and previous slugs SHALL be provenance/
-read compatibility only.
+sanctioned-rerun or legal-HITL1-window target that may rename/reorder current
+registry coordinates, update current seed projections and safely remove a
+never-worked topic. Historical paths SHALL remain in place and previous slugs
+SHALL be provenance/read compatibility only.
 
 When a committed topic-state operation changes canonical registry length, its
 result SHALL expose one structured style-projection handoff identifying the
@@ -584,8 +593,8 @@ topic-state SHALL continue to own only plan/current seeds. Historical addendum c
   parallel success path
 
 #### Scenario: Bounded layout mutation uses the existing authority path
-- **WHEN** a sanctioned normal or post-final rerun submits a valid complete
-  mutate-layout target
+- **WHEN** a sanctioned normal or post-final rerun, or the legal HITL1
+  pre-gate window, submits a valid complete mutate-layout target
 - **THEN** the existing topic-state apply/recover path SHALL own
   registry/current-seed mutation
 - **AND** it SHALL NOT create a second CLI, workspace, filesystem migration
@@ -608,8 +617,8 @@ topic-state SHALL continue to own only plan/current seeds. Historical addendum c
 
 #### Scenario: Human-directed request does not bypass reentry
 - **WHEN** a user requests new scope, layout mutation, or projection mutation
-  from a lifecycle position without an accepted normal or post-final entry
-  witness
+  from a lifecycle position outside every legal mutation window (the legal
+  HITL1 pre-gate window or an accepted normal or post-final rerun entry)
 - **THEN** topic-state mutation SHALL remain unavailable without changing
   topic/status/trace state
 - **AND** `human-directed` SHALL NOT create permission or handoff authority
@@ -653,7 +662,6 @@ topic-state SHALL continue to own only plan/current seeds. Historical addendum c
   the committed topic count and exact rerun checkpoint
 - **AND** topic-state SHALL not write, normalize, or infer
   `research_style_params`
-
 ### Requirement: Wave0 deferred-contribution packets SHALL atomically expand exact retained source identities in the current direct source array
 
 The existing `context: wave_projection`, `action: apply_seed_projection` input SHALL additionally accept one strict Wave0 contribution-scoped deferred-disposition form: its sole `wave0_evidence` update SHALL contain `deferred_contribution` with `source_identity: { kind: submitted_work, work_id }`, one `evidence_meaning`, and one `next_hop`. The existing `submitted_work` value is a source-identity wire discriminator, not aggregate coverage. In this form it is a contribution selector, not a complete individual source identity: only the writer may pair the work ID with derived `<work_id>/<ordinal>` entry IDs. The form SHALL not accept a bare aggregate acknowledgement, a caller-selected ordinal range, file paths, raw Markdown, another Wave's identity form, or caller-selected relationship/status/refs values.
@@ -751,9 +759,9 @@ An explicitly topic-scoped historical record that cannot be uniquely resolved th
 
 ### Requirement: Complete layout target SHALL commit through the existing topic-state workspace
 
-`operate-topic-state apply` SHALL accept one `mutate_layout` target only in the sanctioned rerun authority window. The input SHALL carry `expected_plan_sha256` from inspect and enumerate every current UID exactly once across ordered `topics[]` and `remove_topic_uids[]`; ordered topics SHALL carry explicit title and slug stem, and Engine SHALL derive continuous current ids/slugs. Layout mutation SHALL NOT mix with migrate/add/update actions.
+`operate-topic-state apply` SHALL accept one `mutate_layout` target only in the sanctioned rerun authority window or the legal HITL1 pre-gate window (`rb_status.json#/current_node: phases/phase-hitl1.md` with `hitl1_recorded -> setup_ready`). The input SHALL carry `expected_plan_sha256` from inspect and enumerate every current UID exactly once across ordered `topics[]` and `remove_topic_uids[]`; ordered topics SHALL carry explicit title and slug stem, and Engine SHALL derive continuous current ids/slugs. Layout mutation SHALL NOT mix with migrate/add/update actions.
 
-`inspect` SHALL return current complete `rb_plan.md` SHA256 and a copy-ready ordered layout baseline containing current UID, title and a losslessly derived slug stem when available. For an accepted pre-TopicTreeEvolution coordinate that cannot be losslessly represented by the target stem grammar, inspect SHALL mark `slug_stem_required` rather than silently normalize it. This is a read-only projection, not persisted state, so the Agent can mechanically edit a complete target without reconstructing identifiers from multiple files or inventing a second registry hash rule.
+`inspect` SHALL return current complete `rb_plan.md` SHA256 and a copy-ready ordered layout baseline containing current UID, title and a losslessly derived slug stem when available. For an accepted pre-TopicTreeEvolution coordinate that cannot be losslessly represented by the target stem grammar, inspect SHALL mark `slug_stem_required` rather than silently normalize it. The baseline SHALL name in its `context` field the caller's currently legal layout window — `hitl1` in the legal HITL1 pre-gate window and `rerun` otherwise, falling back to `rerun` when lifecycle status is unreadable — so the template is directly submittable in the caller's own window. This field remains a read-only template fact and SHALL NOT constitute authorization; inspect SHALL NOT write a layout draft file. The Agent can mechanically edit a complete target without reconstructing identifiers from multiple files or inventing a second registry hash rule.
 
 The existing topic-state workspace SHALL remain bounded to complete `rb_plan.md` and affected current seed replacements. For layout targets its prepared manifest MAY additionally list hash-bound superseded/removed seed files for cleanup after the registry replacement; it SHALL NOT own artifact/reference/final paths, directory moves, link rewrites or generic delete operations. An accepted workspace SHALL block topic work and expose only exact `recover --operation-id`. Recovery SHALL roll forward the recorded seed/plan bytes and exact seed cleanup or block on direct drift; it SHALL NOT accept new semantics, auto-rollback, widen paths or invoke a hidden retry tree.
 
@@ -769,6 +777,11 @@ Before prepared publication, a new current seed target path SHALL be absent unle
 - **THEN** inspect SHALL return complete plan hash and ordered current layout fields, or one explicit `slug_stem_required` field where semantic input is genuinely missing
 - **AND** SHALL NOT write a layout draft file or ask the user to calculate UID/hash
 
+#### Scenario: Inspect baseline context reflects the legal window
+- **WHEN** inspect runs in the legal HITL1 pre-gate window
+- **THEN** the copy-ready baseline's `context` field SHALL be `hitl1`
+- **AND** it SHALL fall back to `rerun` in every other window and when lifecycle status is unreadable, without granting or implying mutation authority
+
 #### Scenario: Historical content remains outside mutation authority
 - **WHEN** rename or renumber targets a UID with accepted artifact, reference or submitted output paths under a previous slug
 - **THEN** layout apply SHALL leave those historical paths and immutable provenance bytes unchanged
@@ -779,11 +792,15 @@ Before prepared publication, a new current seed target path SHALL be absent unle
 - **THEN** apply SHALL reject before prepared publication with that path
 - **AND** SHALL NOT overwrite, adopt or delete the existing file
 
+#### Scenario: Layout request outside every legal window remains unavailable
+- **WHEN** a caller submits `mutate_layout` outside the legal HITL1 pre-gate window and outside the route-bound sanctioned rerun window
+- **THEN** apply SHALL reject before workspace creation and identify the missing legal layout authority boundary
+- **AND** caller context or `human-directed` wording SHALL NOT grant permission
+
 #### Scenario: Post-final request remains unavailable
 - **WHEN** a caller submits `mutate_layout` outside the route-bound sanctioned rerun window
 - **THEN** apply SHALL reject before workspace creation and identify the missing ReopenResearchPass authority boundary
 - **AND** caller context or `human-directed` wording SHALL NOT grant permission
-
 ### Requirement: Historical bindings SHALL resolve through one pure layout resolver
 
 The Engine SHALL expose one pure canonical resolver from registry UID/current/previous layout facts. Topic-state progress, queue/work-unit readers, submitted provenance, gates, file observability and reentry SHALL reuse it rather than maintain independent slug, id, or reference-metadata inference. New structured queue/work-unit topic records SHALL write UID plus current slug; immutable legacy slug-only records MAY resolve through unique previous layout. Historical ledger, receipt, trace and work-unit files SHALL remain byte-unchanged.

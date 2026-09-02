@@ -1,0 +1,100 @@
+schema_version: verification-routing/v1
+change: extend-mutate-layout-to-hitl1
+test_classes:
+  unit:
+    status: selected
+    rationale: helper 层（apply 授权路径、layout target 构建、inspect baseline 派生）是纯 deterministic 计算，用现有 canonical-topic-state 单元套件扩展回归，证明 rerun 语义不变且 hitl1 路径与集成面一致。
+  integration:
+    status: selected
+    rationale: context window 授权、hash CAS、safe-remove 历史拒绝、schema projection 与 inspect 输出都是 production CLI 可观察行为，需在 disposable bundle 上以真实 CLI 进程证明；phase-hitl1.md / operate-topic-state.md / COMMANDS.md 的指引同步是静态 Markdown 契约，由既有 MD 契约测试锁定。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: 不改 chain/transition/workflow 状态机；既有 rerun 轮次 e2e 消费 layout_baseline 时其 context 在 rerun window 派生值保持 'rerun'，结论不受影响，无需新 e2e 资产。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: 本 change 只改 Engine 授权边界与 Markdown 指引文本，不声称 Agent 会遵循 prose；无真实 Agent-flow 行为可证。
+claims:
+  - id: hitl1-layout-target-commits
+    statement: "在 current_node=phases/phase-hitl1.md 且 hitl1_recorded→setup_ready 的合法 window 中，一个完整 mutate_layout target（混合 remove、rename slug_stem、reorder/renumber）经 production operate-topic-state apply/recover 原子提交：verdict=committed、registry 连续重编号、被移除 topic 的 seed 文件消失、previous_layouts 血统正确、plan Topic Registry 表刷新。"
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-topic-state-hitl1-readiness.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: hitl1-layout-guards-fail-closed
+    statement: "护栏在 HITL1 window 全部保留：expected_plan_sha256 不符返回 plan_hash_mismatch；植入 reference/ 历史文件后 remove 返回 remove_has_history；window 外提交返回 hitl1_not_authorized；三种拒绝均不留 accepted workspace、不改 plan/seed/status/trace 字节。"
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-topic-state-hitl1-readiness.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: inspect-baseline-context-derives-window
+    statement: "inspect 的 layout_baseline.context 在合法 HITL1 window 返回 'hitl1'，其他 window 返回 'rerun'，rb_status.json 缺失/不可读时 fallback 'rerun' 且 inspect 不崩溃；该字段不产生任何授权（window 外提交仍被拒）。"
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-topic-state-hitl1-readiness.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: hitl1-schema-projection-exposes-layout-form
+    statement: "operate-topic-state schema --context hitl1 返回可被真实 TopicApplyPlanSchema 接受的 mutate_layout form/template；rerun 与 hitl1 的 direction 约束不变（hitl1 form 不含 direction）。"
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-topic-state-hitl1-readiness.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: canonical-topic-state-unit-regression
+    statement: "helper 层：hitl1 授权路径接受完整 layout target 的 buildMutation/commit 行为与 rerun 路径逐字节同规则；既有 rerun mutate_layout、remove blocker、crash/recover 回归全部保持绿色。"
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/canonical-topic-state.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: guidance-surfaces-lock-hitl1-layout-path
+    statement: "phase-hitl1.md 将首次 apply 后的结构再调整（拆分/删除/重排/改 slug）路由到同 window 内的完整 mutate_layout target 且不出现 direct-edit rb_plan.md/seed 指令；operate-topic-state.md 与 COMMANDS.md 把 rename/reorder/renumber/safe-remove 的合法 surface 扩到 HITL1 window；由扩展后的 MD 契约测试锁定（match 布局路由、doesNotMatch 绕过指令）。"
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/canonical-topic-state-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

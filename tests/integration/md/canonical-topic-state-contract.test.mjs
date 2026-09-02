@@ -65,4 +65,21 @@ describe('canonical topic-state scope', () => {
     assert.match(helper, /function renderPlan\(frontmatter, body\)[\s\S]{0,120}stringifyYaml\(frontmatter\)/);
     assert.match(helper, /const current = structuredClone\(parsedPlan\);/);
   });
+
+  it('routes post-first-apply hitl1 structural re-adjustment through the complete layout target', () => {
+    const playbook = read('DEEP_RESEARCH_HARNESS/command_playbook/operate-topic-state.md');
+    assert.match(helper, /context: z\.enum\(\['hitl1', 'rerun'\]\)/);
+    assert.match(helper, /layoutBaselineContext/);
+    assert.match(hitl1, /结构再调整（首次 apply 之后/);
+    assert.match(hitl1, /一个完整 `mutate_layout` target/);
+    assert.match(hitl1, /不得直接编辑 `rb_plan\.md`、`seed_topics\/` 或 seed frontmatter/);
+    assert.match(hitl1, /add 与 layout 两种 form 不得混在同一 input/);
+    assert.match(hitl1, /冒充删除/);
+    assert.match(hitl1, /caller context 或 `human-directed` 都不打开已关闭的窗口/);
+    assert.match(playbook, /during the legal HITL1 window or sanctioned rerun/);
+    assert.match(playbook, /template fact, not authority/);
+    assert.match(playbook, /a fresh inspect and one layout target/);
+    assert.match(commands, /legal HITL1-window or sanctioned-rerun `apply` accepts one complete `mutate_layout` target/);
+    assert.match(commands, /context` names the currently legal layout window/);
+  });
 });

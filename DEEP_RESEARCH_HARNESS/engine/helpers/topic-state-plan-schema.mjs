@@ -95,7 +95,7 @@ const LayoutTargetEntrySchema = z.object({
 }).strict();
 
 const LayoutPlanSchema = z.object({
-  context: z.literal('rerun'),
+  context: z.enum(['hitl1', 'rerun']),
   action: z.literal('mutate_layout'),
   expected_plan_sha256: z.string().regex(/^[0-9a-f]{64}$/),
   topics: z.array(LayoutTargetEntrySchema),

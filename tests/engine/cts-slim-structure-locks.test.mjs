@@ -1,6 +1,9 @@
 // tests/engine/cts-slim-structure-locks.test.mjs
 // 2026-09-01-slim-cts-requirements 的结构回归锁：
 // CTS 两条巨无霸（278+386 行）拆为 7 个主题 requirement 的行集守恒与结构不变量。
+// 2026-09-02 起组合已记录的后继 delta：主 spec 的 7 块期望值 = slim-cts ADDED 块
+// 被 extend-mutate-layout-to-hitl1 的 MODIFIED 块（active 或 archived 路径）覆盖，
+// 场景计数从组合块推导，不再硬编码。
 // @impl CTS-003
 // @impl CTS-004
 import { test } from 'node:test';
@@ -27,6 +30,10 @@ const deltaPath = ['openspec/changes/archive/2026-09-01-slim-cts-requirements/sp
   'openspec/changes/2026-09-01-slim-cts-requirements/specs/research/canonical-topic-state/spec.md']
   .find(existsSync);
 
+const successorDeltaPath = ['openspec/changes/archive/2026-09-02-extend-mutate-layout-to-hitl1/specs/research/canonical-topic-state/spec.md',
+  'openspec/changes/extend-mutate-layout-to-hitl1/specs/research/canonical-topic-state/spec.md']
+  .find(existsSync);
+
 function blockOf(lines, heading) {
   const start = lines.indexOf(heading);
   if (start === -1) return null;
@@ -36,6 +43,35 @@ function blockOf(lines, heading) {
   }
   while (end > start && lines[end - 1].trim() === '') end--;
   return lines.slice(start, end);
+}
+
+function addedBlocks(deltaFile) {
+  const d = read(deltaFile).split('\n');
+  const add = d.indexOf('## ADDED Requirements');
+  const blocks = {};
+  for (const h of NEW_HEADINGS) {
+    const b = blockOf(d.slice(add), h);
+    if (b) blocks[h] = b;
+  }
+  return blocks;
+}
+
+function modifiedBlocks(deltaFile) {
+  const d = read(deltaFile).split('\n');
+  const mod = d.indexOf('## MODIFIED Requirements');
+  const blocks = {};
+  for (const h of NEW_HEADINGS) {
+    const b = blockOf(d.slice(mod), h);
+    if (b) blocks[h] = b;
+  }
+  return blocks;
+}
+
+/** Composed accepted truth: slim-cts ADDED blocks overridden by later recorded MODIFIED deltas. */
+function expectedBlocks() {
+  const expected = addedBlocks(deltaPath);
+  if (successorDeltaPath) Object.assign(expected, modifiedBlocks(successorDeltaPath));
+  return expected;
 }
 const content = (arr) => arr.filter((l) => l.trim() !== '' && !l.startsWith('### Requirement: ') && !l.startsWith('## '));
 const count = (arr) => {
@@ -63,16 +99,15 @@ test('REMOVED and ADDED content multisets are identical in the delta', () => {
   for (const [l, c] of b) assert.equal(a.get(l) || 0, c, `ADDED line absent from REMOVED: ${l.slice(0, 60)}`);
 });
 
-test('main spec blocks match the delta ADDED blocks verbatim', () => {
+test('main spec blocks match the composed recorded delta blocks verbatim', () => {
   assert.ok(deltaPath, 'slim-cts delta must exist');
-  const d = read(deltaPath).split('\n');
-  const add = d.indexOf('## ADDED Requirements');
   const main = read(MAIN).split('\n');
+  const expected = expectedBlocks();
   for (const h of NEW_HEADINGS) {
-    const db = blockOf(d.slice(add), h);
+    const eb = expected[h];
     const mb = blockOf(main, h);
-    assert.ok(db, `delta block missing: ${h}`);
-    assert.deepEqual(mb, db, `main/delta drift at ${h}`);
+    assert.ok(eb, `composed delta block missing: ${h}`);
+    assert.deepEqual(mb, eb, `main/composed-delta drift at ${h}`);
   }
 });
 
@@ -84,8 +119,9 @@ test('every new requirement stays within the normal size envelope', () => {
   }
 });
 
-test('all 66 scenarios survive exactly once', () => {
+test('every composed scenario survives exactly once and stays unique', () => {
   const main = read(MAIN).split('\n');
+  const expected = expectedBlocks();
   const inScope = [];
   let capturing = false;
   for (const l of main) {
@@ -93,6 +129,9 @@ test('all 66 scenarios survive exactly once', () => {
     if (capturing && l.startsWith('### Requirement: ')) capturing = false;
     if (capturing && l.startsWith('#### Scenario: ')) inScope.push(l);
   }
-  assert.equal(inScope.length, 66, `expected 66 scenarios, found ${inScope.length}`);
-  assert.equal(new Set(inScope).size, 66, 'scenario headings must be unique');
+  const expectedScenarios = Object.values(expected)
+    .flat()
+    .filter((l) => l.startsWith('#### Scenario: '));
+  assert.equal(inScope.length, expectedScenarios.length, `expected ${expectedScenarios.length} scenarios, found ${inScope.length}`);
+  assert.equal(new Set(inScope).size, inScope.length, 'scenario headings must be unique');
 });

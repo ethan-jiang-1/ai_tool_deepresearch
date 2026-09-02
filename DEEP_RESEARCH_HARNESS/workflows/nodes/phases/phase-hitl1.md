@@ -74,6 +74,14 @@ topic_registry:
 
 用户接受、修正或明确委托后，Agent 只有在 §3b.1 已写入 alignment snapshot、§3b.2 已写入 separately rendered controls snapshot，且既有 status synchronization 已成功后，才把完整 approved topic set 写入 caller-owned retained JSON 并运行一次 `operate-topic-state.mjs apply`。Engine 在 legal HITL1 current-node/status window 中分配 immutable UID/ordinal/slug，并用一个 prepared manifest 提交最终 registry 与全部 UID-bound seed skeletons。若返回 accepted workspace，Agent 运行 exact recover command 后重试；不得直接编辑 registry/seed。提交成功后立刻读取结果；只有结果返回的 `style_projection` handoff 才决定后续是否需要 style writer。
 
+**结构再调整（首次 apply 之后，同一 `hitl1_recorded → setup_ready` 窗口内）：** 用户再调整 topic 结构——拆分已合并 topic、删除不要的 topic、重排/重编号、修正误导性 slug——一律走既有 canonical 路径；**不得直接编辑 `rb_plan.md`、`seed_topics/` 或 seed frontmatter**，也不得把废弃 topic 改成占位（title 加"已拆分"、scope_role 降级）来冒充删除：
+
+1. **新增替换 topic**：retained input 用 `context: hitl1` 的 `add_topic` actions，走与首次 materialization 相同的 apply。
+2. **删除/重排/重命名既有 topic**：先 `operate-topic-state inspect` 取 copy-ready `layout_baseline`（其 `context` 已按当前 window 派生为 `hitl1`），把用户决定的 title/order/remove 语义机械化为**一个完整 `mutate_layout` target**（ordered `topics[]` + 显式 `remove_topic_uids[]`，`expected_plan_sha256` 取自这次 fresh inspect）再 apply。add 与 layout 两种 form 不得混在同一 input：拆分 = 先 add 新 topic，再 fresh inspect 后以 layout target 移除旧 UID；陈旧 `expected_plan_sha256` 会被 `plan_hash_mismatch` 拒绝。Engine 自带 safe-remove 护栏（依赖、queue/work-unit/ledger/artifact/reference 历史任一存在 → `remove_has_history`）与原子 prepared/recover 提交；返回 accepted workspace 就跑 exact `recover`，不手动清理。
+3. **registry length 变化后**：按返回的 `style_projection` handoff 走 §3c，再跑 HITL1 Gate。
+
+窗口关闭（`hitl1-recorded` Gate 已过、bundle 进入 setup）后，同样的结构请求不再属于 HITL1：走既有 sanctioned rerun 路径（已研究 topic 的剔除 = 起新 bundle），caller context 或 `human-directed` 都不打开已关闭的窗口。
+
 **Gate 不判断 rewrite 质量。** 人类审查 topic semantics；Engine 验证 canonical identity/intent、UID-bound seed projection、workspace completion 与既有 profile/access contract。
 
 ### 3b. HITL1 问题收集

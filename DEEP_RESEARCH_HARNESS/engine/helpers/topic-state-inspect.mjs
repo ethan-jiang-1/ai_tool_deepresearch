@@ -221,6 +221,21 @@ export function withTopicStateFindings(result, bundlePath) {
   };
 }
 
+function layoutBaselineContext(bundle) {
+  // Inline window predicate (mirrors lifecycleAuthorization's hitl1 branch).
+  // Must NOT import canonical-topic-state.mjs (it imports this module).
+  try {
+    const status = JSON.parse(readFileSync(path.join(bundle, 'rb_status.json'), 'utf8'));
+    return status.current_node === 'phases/phase-hitl1.md'
+      && status.current_gate === 'hitl1_recorded'
+      && status.next_gate === 'setup_ready'
+      ? 'hitl1'
+      : 'rerun';
+  } catch {
+    return 'rerun';
+  }
+}
+
 export function inspectCanonicalTopicState({ bundlePath }) {
   const bundle = safeBundle(bundlePath);
   const workspaces = acceptedWorkspaces(bundle);
@@ -256,7 +271,7 @@ export function inspectCanonicalTopicState({ bundlePath }) {
     passed: blockers.length === 0,
     mode: 'canonical',
     plan_sha256: hashBytes(readFileSync(planPath)),
-    layout_baseline: { context: 'rerun', action: 'mutate_layout', expected_plan_sha256: hashBytes(readFileSync(planPath)), topics: layoutBaseline, remove_topic_uids: [] },
+    layout_baseline: { context: layoutBaselineContext(bundle), action: 'mutate_layout', expected_plan_sha256: hashBytes(readFileSync(planPath)), topics: layoutBaseline, remove_topic_uids: [] },
     blockers,
     topics: progress.topics,
   }, bundlePath);

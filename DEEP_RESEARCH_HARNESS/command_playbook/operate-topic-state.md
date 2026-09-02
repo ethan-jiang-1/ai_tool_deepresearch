@@ -27,7 +27,7 @@ node DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs recover --bundle <bundle>
 node DEEP_RESEARCH_HARNESS/cli/operate-topic-state.mjs inspect --bundle <bundle>
 ```
 
-For add/intent refinement, retain the approved semantic input outside `_diagnostics/topic-state/`, then apply. For rename/reorder/renumber/safe-remove during sanctioned rerun, edit the complete `layout_baseline` returned by inspect: keep every current UID exactly once in ordered `topics[]` or explicit `remove_topic_uids[]`; the user owns title/order/remove semantics, while the Agent owns mechanical drain/apply/recover.
+For add/intent refinement, retain the approved semantic input outside `_diagnostics/topic-state/`, then apply. For rename/reorder/renumber/safe-remove during the legal HITL1 window or sanctioned rerun, edit the complete `layout_baseline` returned by a fresh `inspect` in the same window — its `context` names the currently legal layout window (`hitl1` there, `rerun` otherwise) and stays a template fact, not authority; authorization is evaluated from lifecycle facts at apply. Keep every current UID exactly once in ordered `topics[]` or explicit `remove_topic_uids[]`; the user owns title/order/remove semantics, while the Agent owns mechanical drain/apply/recover. Apply forms do not mix: a structural split uses one add-topic change set, then a fresh inspect and one layout target whose `expected_plan_sha256` comes from that inspect.
 
 During a witnessed Seed Topics window only, retain a complete closed enrichment input and use the same apply command. The Engine derives the path and all canonical fields from `topic_uid`; the Agent supplies no canonical keys.
 
