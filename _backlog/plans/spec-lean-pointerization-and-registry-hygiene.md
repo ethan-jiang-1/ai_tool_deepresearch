@@ -72,6 +72,27 @@
 
 本轮主题一句话：**上一轮修"粒度"，这一轮做"减量（指针化）+ 堵盲区（guard 扩展）+ 清账本（registry 卫生）"。**
 
+### 2.0 分割的分层与 openspec 触点（复核重点）
+
+**分层：只做 requirement 级分割，不做 capability 级拆分。** capability 身份（`domain/capability` 两段路径，ADR 0005）零变化——不建新目录、不加 prefixes、不改 Capability Catalog。依据：巨无霸体量来自单条 requirement 吸积而非能力边界错误；capability 级复议标准（CLS-084 plan §5）均未触发。
+
+每批触碰 `openspec/` 的完整清单：
+
+| 动作 | 文件/检查 |
+|---|---|
+| 改 | `openspec/specs/<domain>/<capability>/spec.md`（主 spec 整块替换，唯一行为权威） |
+| 建 | `openspec/changes/<change>/` 全套：proposal（Capability Discovery 表，纯 token）+ design + tasks（双 marker、无自引用任务）+ semantic-closure.yaml + verification-plan.yaml + specs/ delta + requirement-reservation.yaml（仅选项 B 时） |
+| 过 | check-project-specs（delta 头禁入主 spec）/ check-project-reqs / taxonomy / discovery / semantic-closure / verification-routing / finalizer 19 项 |
+| 不碰 | specs/README.md catalog（capability 集合不变）、prefixes 映射、既有 ID |
+
+**requirement ID 策略（决策点，待复核确认）**：
+
+- 仓库规则：requirement 标题是稳定语义锚点（无 ID 无编号）；ID 存于 header `> req:`、内联 `> req:` 行、registry。
+- **事实**：`agent/delegated-work-units` 有特有惯例——每条 requirement 恰一条内联 `> req: DEW-xxx`，且有测试锁死 1:1（`delegated-queue-spec-text-locks` inline===29）。C3e 拆分后标题 37 个、内联行仍 29 → **8 个新标题无内联 ID**，计数测试通过但 1:1 语义不变量被稀释。
+- **选项 A**：header 子集语义承担（checker 全绿），新块无内联 ID。便宜；DWU 惯例被弱化。= RRM/CTS/RWG/AGQ 的既有做法（这些 spec 无内联惯例）。
+- **选项 B（推荐用于 DWU）**：为拆分出的无 ID 新块注册新 ID（DEW-030+）：change 根放 `requirement-reservation.yaml` → apply 时 reserved→live 同步 req-registry（"只增不删"允许增）→ 每新块一条内联 `> req: DEW-0xx` → 恢复 1:1，更新 inline 计数锁 29→37。成本：真碰 req-registry 的 ID 区 + 一项锁更新。
+- 复核问题：DWU 走 A 还是 B？（其余 spec 用 A 无争议。）
+
 ### 2.1 指针化判定规则（复核重点）
 
 一个段落被判为"复述"并指针化，当且仅当同时满足：
