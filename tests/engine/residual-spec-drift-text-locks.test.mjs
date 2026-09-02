@@ -165,7 +165,8 @@ test('delta blocks are verbatim-synced with main spec requirement blocks', () =>
   const C = 'openspec/changes/archive/2026-08-31-repair-residual-spec-drift/specs';
   const pairs = [
     [`${C}/engine/check-inspect-feedback/spec.md`, CIF],
-    [`${C}/agent/delegated-work-units/spec.md`, DEW],
+    // DEW pair retired: 2026-09-01-slim-dwu-requirements 重构了 DEW-012 块
+    // （文本守恒由 tests/engine/dwu-slim-structure-locks.test.mjs 接管）。
     [`${C}/agent/agentic-queue/spec.md`, AGQ],
     [`${C}/research/content-delivery-phase-content/spec.md`, CDP],
   ];

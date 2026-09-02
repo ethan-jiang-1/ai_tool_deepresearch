@@ -31,7 +31,7 @@ function headingBlocks(text) {
 
 test("DEW-009 duplicate scenario is a merge declaration, not an independent requirement", () => {
   const dupBlock = headingBlocks(dew).find((b) =>
-    b.heading.includes("Work-unit tasks SHALL expose bundle-root absolute paths"),
+    b.heading.includes("Work-unit tasks SHALL carry absolute bundle-root paths"),
   );
   assert.ok(dupBlock, "DEW-009 requirement block must exist");
   const body = dupBlock.body.join("\n");
@@ -81,7 +81,8 @@ test("spec req header indexes match requirement counts", () => {
   const dewIds = dewHeader.match(/DEW-\d{3}/g) ?? [];
   assert.equal(dewIds.length, 29, "DEW header must list 29 IDs");
   assert.equal(new Set(dewIds).size, 29, "DEW header IDs must be unique");
-  assert.equal(headingBlocks(dew).length, 29, "DEW body must have 29 requirements");
+  // 2026-09-01-slim-dwu-requirements: 七条巨无霸 7→15 拆分（文本逐字保留）
+  assert.equal(headingBlocks(dew).length, 37, "DEW body must have 37 requirements after mega splits");
 
   const agqHeader = agq.split("\n").find((l) => l.startsWith("> req: AGQ-"));
   assert.ok(agqHeader, "AGQ header req line must exist");
