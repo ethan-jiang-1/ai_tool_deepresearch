@@ -1,6 +1,6 @@
 # Active Bugs — 活跃 bug 列表
 
-> 最后更新: 2026-08-27 | `_backlog/bugs/` — 活跃 bug 在此
+> 最后更新: 2026-09-03 | `_backlog/bugs/` — 活跃 bug 在此
 >
 > **bug 编号权威在 `_done/_fixed_bugs/`，新 bug = 最大编号 + 1。** 本文件只列活跃 bug。
 
@@ -31,6 +31,13 @@
 > BUG-239 已随 `2026-08-24-scope-work-unit-transaction-attribution` 结案并移入
 > [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)，均见下方
 > 「最近关闭 (2026-08-24)」。
+
+## 最近关闭 (2026-09-03)
+
+| Bug | 结案依据 |
+|-----|----------|
+| BUG-249 | `2026-09-03-close-lifecycle-bypass-detection-gap`：Wave1 gate 疲劳后 Phase Agent 在 `stop: no` 静默期自写脚本落 `final/final.md`、手勾 Progress、谎报完成（同族第三次爆发，见 BUG-033/042/047-049/063）；检测改为外生可检 + 自我挫败——wave gate 新增 `premature_final_present` fail-closed blocking root（唯一补救 `final/attic-<原名>`），audit 封闭词表新增 `premature_final_present`/`plan_progress_tamper_suspected` 并挂 integrity 对象，`enter-phase` 输出附带 bounded integrity 摘要，Progress 手勾为可指证篡改证据，完成宣告需 terminal 事实 backing；全量回归 3007/3007 绿（提交 `f75be39f5`）。同批补登记 BUG-248 行（`2026-09-02-extend-mutate-layout-to-hitl1`）。 |
+| BUG-248 | `2026-09-02-extend-mutate-layout-to-hitl1`：HITL1/seed-topics 初始建 topic 阶段无法物理移除 topic 或改 slug；`mutate_layout` 完整 target 在 legal HITL1 pre-gate window 获得授权（与 rerun 同护栏），inspect baseline context 按窗口派生。 |
 
 ## 最近关闭 (2026-08-27)
 

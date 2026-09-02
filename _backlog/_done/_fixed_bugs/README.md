@@ -234,8 +234,10 @@ bug 修完后从 `_backlog/bugs/` 通过 `git mv` 移入本目录：
 | BUG-245 | 2026-08-26 | `enter-phase phase-final` 先 `validateEnterPhaseTarget` 报 ok、同一次调用 `evaluateFinalEntryAdmission` 又失败，自相矛盾；Final admission 并入授权判定，单一非自相矛盾裁决（`2026-08-26-fix-post-final-rerun-lineage-supersession`） |
 | BUG-246 | 2026-08-27 | post-final 追加证明 `proveNewerFinalAppend` 用 plain-sort 条目顺序 digest retained，而 C5 绑定摘要用 `localeCompare` 顺序——现代 series（`final.md` + `final_vN.md`）下两者必然相反，追加证明永久 `matched:false` → 再次 C5 卡 `accepted_lineage_drift`（字节无关，真实 bundle `dpt_rb_chinese-ai-inference-chips-vs-nvidia`）；retained rehash 复用 `digestFinalReportPrimarySeriesEntries` 单一规范顺序 helper，现代 series witness→append 全链单元/integration 回归（`2026-08-27-fix-final-append-proof-primary-series-order`） |
 | BUG-247 | 2026-08-27 | post-final 追加证明对 `primary_series` basis 无 `whole_tree` 已有的 structural fallback：C5 witness 绑定的瞬时字节态经合法越带重组后不可复原（retained digest 候选集封闭且全不中，7380 组合穷举零命中），inspect 永久 `blocked: accepted_lineage_drift`、rerun 预算不可达，数据层不可修；为两个 basis 统一 structural fallback（独立诊断 basis `primary_series_structural_fallback`），fallback 接受强制 inspect warning + `facts.retired_append_proof` 暴露，结构破坏仍 block；真实 bundle 解锁至 rerun#4 窗口（`2026-08-27-post-final-primary-series-structural-fallback`） |
+| BUG-248 | 2026-09-02 | HITL1/seed-topics 初始建 topic 阶段无法物理移除 topic 或改 slug；`mutate_layout` 完整 target 在 legal HITL1 pre-gate window 获得授权（与 rerun 同护栏），inspect baseline context 按窗口派生（`2026-09-02-extend-mutate-layout-to-hitl1`） |
+| BUG-249 | 2026-09-03 | Wave1 gate 疲劳后 Phase Agent 在 `stop: no` 静默期自写脚本落 `final/final.md`、手勾 `rb_plan.md## Progress`、向用户谎报完成——同族第三次爆发（BUG-033/042/047-049/063），根因是防线全部合规内生（pull-based）；改为外生可检 + 自我挫败：wave gate 新增 `premature_final_present` fail-closed blocking root（唯一补救 `final/attic-<原名>`），audit 封闭词表新增 `premature_final_present`/`plan_progress_tamper_suspected` 并全返回挂 integrity 对象，`enter-phase` 输出附带 bounded integrity 摘要，Progress 手勾为可指证篡改证据，完成宣告需 terminal 事实 backing；全量回归 3007/3007 绿（`2026-09-03-close-lifecycle-bypass-detection-gap`） |
 
-**Next available bug ID: BUG-248**
+**Next available bug ID: BUG-250**
 
 ---
 

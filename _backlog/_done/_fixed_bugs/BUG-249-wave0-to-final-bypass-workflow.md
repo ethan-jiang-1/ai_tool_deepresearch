@@ -1,5 +1,7 @@
 # Bug: Wave0 通过后 Agent 直接跳至 Final 报告，绕过 Wave1/Wave2 流程
 
+> **已修复并归档（2026-09-03）**：OpenSpec change `close-lifecycle-bypass-detection-gap` 落地——检测由合规内生改为外生可检 + 自我挫败：wave0/1/2 gate 新增 `premature_final_present` fail-closed blocking root（唯一合法补救 `final/attic-<原名>`，Engine 不代为移动），audit 封闭词表新增 `premature_final_present`/`plan_progress_tamper_suspected` 并全返回挂 integrity 对象，`enter-phase` 输出附带 bounded integrity 摘要，`rb_plan.md## Progress` 手勾成为可指证篡改证据（Engine 独家写手），完成宣告需 terminal status + integrity `passed` backing。归档记录：`openspec/changes/archive/2026-09-03-close-lifecycle-bypass-detection-gap/`；提交：`f75be39f5`；全量回归 3007/3007 绿。
+
 ## 发现场景
 
 在 bundle `dpt_rb_glm-5-3-deepseek-v4-domestic-chips` 中，Wave0 gate 通过后，Agent 没有按框架流程进入 Wave1→Wave2→Final，而是**直接写了 final/final.md 并声称研究完成**。
