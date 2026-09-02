@@ -1,6 +1,6 @@
 # Plan: spec-drift-audit-remediation-and-requirement-slimming
 
-> 创建: 2026-09-01 | 状态: **执行中**（Progressive 执行清单见 §8）
+> 创建: 2026-09-01 | 状态: **已完成关闭（CLS-084）**——8 个 OpenSpec change 全部归档（finalizer 均 19/19，全量 npm test 2967/2967 0 fail）
 > 来源: 六路 spec↔code 漂移审计（针对六个最大 spec，逐 requirement 对照 engine/cli/schema/workflows/tests 验证），用户确认推动落地。
 > 性质: 全部为 doc/governance 面修复 + spec 结构瘦身；**不含行为语义变更**。唯一的 engine 触点是一行级注释修正（随 C1 change 走 apply）。
 
@@ -164,14 +164,14 @@
 **C3c `slim-rwg-requirements`**（三条 200–300 行巨无霸；顺手 M3 措辞精确化）✅ 2026-09-01 归档（finalizer 19/19，npm test 2955/2955；3→7 拆分 + M3 glob 措辞对齐）
 - [x] P propose　- [x] H polish　- [x] A apply　- [x] V verify　- [x] R archive　- [x] C commit
 
-**C3d `slim-agq-requirements`**（`topic_deepening` producer rule 295 行等）
-- [ ] P propose　- [ ] H polish　- [ ] A apply　- [ ] V verify　- [ ] R archive　- [ ] C commit
+**C3d `slim-agq-requirements`**（`topic_deepening` producer rule 295 行等）✅ 2026-09-01 归档（finalizer 19/19，npm test 2960/2960；1→3 拆分，行集守恒 100%，16 场景全保留）
+- [x] P propose　- [x] H polish　- [x] A apply　- [x] V verify　- [x] R archive　- [x] C commit
 
-**C3e `slim-dwu-requirements`**（七条 123–260 行巨无霸按 engine 模块缝拆；顺手 M4/M5）
-- [ ] P propose　- [ ] H polish　- [ ] A apply　- [ ] V verify　- [ ] R archive　- [ ] C commit
+**C3e `slim-dwu-requirements`**（七条巨无霸按 engine 模块缝拆；顺手 M4/M5 登记）✅ 2026-09-01 归档（finalizer 19/19，npm test 2965/2965；7→15 拆分，142 场景守恒 100%，主 spec 2487→2360 行；DEW body 计数锁 29→37、residual DEW pair 退休由 dwu-slim 结构锁接管）
+- [x] P propose　- [x] H polish　- [x] A apply　- [x] V verify　- [x] R archive　- [x] C commit
 
-**C4 `spec-section-reference-guard`**（防复发 checker：spec 引用的 § 坐标/段名存在性 + retired 散语 `@deprecated` 强制；若 propose 阶段判成本超收益，降级为登记并需用户确认）
-- [ ] P propose　- [ ] H polish　- [ ] A apply　- [ ] V verify　- [ ] R archive　- [ ] C commit
+**C4 `spec-section-reference-guard`**（防复发 checker）✅ 2026-09-01 归档（finalizer 19/19，npm test 2967/2967；新增 `check-spec-section-references.mjs`（§ 坐标可达性 + 退役散文禁令，check-all 自动发现），首扫清零 autorun L120 现在时退役散文（M 系登记项）
+- [x] P propose　- [x] H polish　- [x] A apply　- [x] V verify　- [x] R archive　- [x] C commit
 
 ### 全局纪律（适用于每个 change）
 
