@@ -1,65 +1,45 @@
-# >1000 行 spec 的 capability 拆分研究（三份合一）
+# >1000 行 spec 的 capability 拆分研究（压缩版）
 
-> 日期: 2026-09-01 | 性质: 参照资料（按 `spec-lean-capability-split-dwu.md` 样板逐 spec 研究）
-> 范围: 用户划定的 >1000 行 spec 三个（800–1000 行组按用户指示"别贪心"不入 capability 拆分研究；其中的 ≥190 行块仍按 F4 深挖在 R2 以 requirement 级处置）。
-> 结论先行: **三个都不做 capability 级拆分**——它们的体量来自"并行实例的固有广度"（三个 wave / 整台 queue 机器），不是 DWU 那种"多个生命周期问题挤在一个 capability"。巨无霸已在 C3b/C3c/C3d 清零，最大块均 ≤160。
+> 日期: 2026-09-01（压缩自同日初版） | 性质: 参照资料 | 范围: 用户划定 >1000 行三份（800–1000 行组不入 capability 研究，其 ≥190 行块走 R2 requirement 级处置）
+> 样板: `spec-lean-capability-split-dwu.md`（DWU，唯一拆分案例）。
 
 ---
 
-## 研究 1: research/research-wave-gate-implementation（1380 行）
+## 判别式（四份研究共有的结论）
 
-| 维度 | 事实 |
+**拆 capability ⟺ capability 内含 ≥2 个互不重叠的任务问题**（不同 agent 在不同时刻分别消费，且各自可独立评审）。
+
+- DWU ✅ 拆：标识/briefing ‖ 完成记录 ‖ 无副作用预测 ‖ 纠正——四个问题、四组消费时刻、engine 模块缝一一对应。
+- 三个 >1000 ✗ 不拆：体积全部来自**单一任务问题的并行实例或组成面**，拆开只会把一次查询变成 N 次。
+
+**体量分解式**（复核用）：`spec 体积 = 声明广度 × 契约密度 + 复述噪声`。声明广度是 catalog 认可的（Purpose 逐字覆盖）；契约密度是仓库的刻意严格；**只有复述噪声是可清理项**。
+
+---
+
+## 三份判定（每份一段）
+
+**research-wave-gate-implementation（1380 行，28 块，max 146）——不拆。**
+三个 wave = 同一 gate 判定模式的三实例；复述噪声 0（grep 生成/prompt 类关键词零命中）→ 体积 = 声明广度 × 契约密度，无可清理项。拆则产出三个同构 capability，违背发现经济。C3c 已完成结构治理。
+
+**research/research-wave-phase-content（1165 行，22 块，max 234）——不拆，但 R2 带一件活。**
+三个 phase 节点的共同 body 契约权威；拆 = 与 workflows/nodes 的 per-wave 组织 1:1 镜像，且 batch-poll-submit / receipt-bound 路由等共享模式变三处复述。**复述噪声 12 行命中**（generated task / task.md 类）——R2 执行 234 行块 3-way 分割（F4 深挖已定稿）时一并甄别：真复述 → 指向 phase 节点；normative → 保留。
+
+**agent/agentic-queue（1059 行，30 块，max 135）——不拆。**
+一台 queue 机器的完整生命周期（schema / 四个 producer rule 实例 / claim-complete / repair / stop）；复述噪声 1 行。引用网三者最宽（20 文件）——拆分把最宽的网撕成四份。C3d 已完成结构治理。
+
+---
+
+## 重开触发条件（登记）
+
+| spec | 触发 |
 |---|---|
-| requirement 块 | 28（header 21 IDs，无内联行惯例） |
-| 最大块 | 146 / 133 / 132（C3c 拆分后，全部 ≤160 ✓） |
-| 引用网 | 5 个外部文件 |
-| catalog Purpose | "Deterministic gate rules for wave0, wave1, and wave2 completion." |
-| 任务问题 | **一个**：wave0/1/2 完成如何被确定性 gate 判定——三个 wave 是同一判定模式的三实例 |
-| engine 缝 | schema/gate_definitions/*.json、wave-contract-evaluators、wave0/1-reference-convergence、gate-helpers-* |
+| research-wave-gate-implementation | 某 wave 的 gate 模式与其他 wave 实质分叉（共享规则骨架消失） |
+| research-wave-phase-content | per-wave body 契约分叉到共享模式消失 |
+| agentic-queue | queue v3 引入全新机器面（持久化调度器、跨 bundle 队列等） |
 
-**判定: 不拆。** 按 wave 拆会产出三个同构 capability（gate-wave0/gate-wave1/gate-wave2），违背发现经济（做 wave gate 的 agent 需要同族规则，拆后要读三处）；catalog Purpose 精确覆盖现内容；巨无霸已清零。结构治理已由 C3c 完成（3 巨无霸→7）。
-**重开触发条件**: 若未来某 wave 的 gate 模式与其他 wave 实质分叉（不再共享规则骨架），再议。
+## 处置去向（并入既有批次）
 
----
-
-## 研究 2: research/research-wave-phase-content（1165 行）
-
-| 维度 | 事实 |
-|---|---|
-| requirement 块 | 22（header 21 IDs，1 内联行） |
-| 最大块 | 234 / 176 / 115（234 = Wave1 body completeness 残留，**F4 深挖已定稿 3-way 分割设计**，归 R2 执行） |
-| 引用网 | 3 个外部文件 |
-| catalog Purpose | "Complete Agent-readable bodies for the wave0, wave1, and wave2 phase nodes." |
-| 任务问题 | **一个**：wave0/1/2 phase 节点的 Agent 可读 body 契约——phase 节点本身就是三个文件，本 spec 是它们的共同契约权威 |
-| owner 对应 | `workflows/nodes/phases/phase-wave{0,1,2}.md`（指针化/引用的天然目标） |
-
-**判定: 不拆。** 按 wave 拆 = 3 个 per-wave capability 与 3 个 per-wave phase 节点 1:1 镜像——capability 层重复 workflows/nodes 的既有组织，且 wave 间共享的契约模式（batch-poll-submit 循环、receipt-bound 路由）会变成三处复述。体量的固有部分 = 三个 phase 的 body 契约；吸积部分（234 行块）已在 F4 深挖定稿处置。
-**重开触发条件**: 若 per-wave body 契约实质分叉到共享模式消失（目前 batch-poll-submit、receipt-bound 路由、anti-cheating 结构三族共享模式稳固），再议。
-
----
-
-## 研究 3: agent/agentic-queue（1059 行）
-
-| 维度 | 事实 |
-|---|---|
-| requirement 块 | 30（header 28 IDs，C3d 后；1 内联行） |
-| 最大块 | 135 / 120 / 90（C3d 拆分后，全部 ≤160 ✓） |
-| 引用网 | **20 个外部文件**（三者中最宽——queue 是被引用最多的机器面） |
-| catalog Purpose | "Structured queue state, task-card production, claim, completion, and refill behavior." |
-| 任务问题 | **一个**：queue 机器的完整生命周期——schema、四个 producer rule（实例）、claim/complete、repair、stop authorization |
-| engine 缝 | queue-manager-core/lifecycle/window/render、queue-demand-admission、queue-terminal-failure、phase-queue-drain |
-
-**判定: 不拆。** producer rules 是同一 queue 机器的四个实例（同一 schema、同一 claim/complete/repair 面）；按 producer 拆会把**最宽的引用网（20 文件）**撕成四份，且 queue 机器的"只增不删"式生命周期语义（active_window/terminal_history/StopAuthorizationState）跨 producer 共享。结构治理已由 C3d 完成（295 行 producer 巨无霸→3）。
-**重开触发条件**: 若 queue v3 引入全新的机器面（如持久化调度器、跨 bundle 队列），使"queue 生命周期"不再是单一任务问题时，再议。
-
----
-
-## 汇总与遗留
-
-| spec | 行数 | 拆分判定 | 实际处置去向 |
-|---|---|---|---|
-| research-wave-gate-implementation | 1380 | 不拆（三 wave = 同模式三实例） | 无遗留（C3c 已完成结构治理） |
-| research-wave-phase-content | 1165 | 不拆（三 phase 节点的共同契约权威） | 234 行块 3-way 分割 → R2（F4 深挖已定稿） |
-| agentic-queue | 1059 | 不拆（一台 queue 机器的完整生命周期） | 无遗留（C3d 已完成结构治理） |
-
-三条重开触发条件已登记；800–1000 行组不入 capability 拆分研究（用户指示），其中 content-delivery-phase-content 的 257 行块已由 F4 深挖定稿 3-way 分割（R2 执行）。
+- RWP 234 行块 3-way 分割 → R2（设计见 [`spec-lean-f4-megablock-deepdive.md`](spec-lean-f4-megablock-deepdive.md)）
+- RWP 12 行复述候选 → R2 指针化甄别（同批）
+- DWU → R1 capability 迁移（设计见 [`spec-lean-capability-split-dwu.md`](spec-lean-capability-split-dwu.md)）
+- 800–1000 行组（return-map 989 / CTS 903 / gate-skeleton 899 / reference-flat-format 853 / CDP 843）→ 不入 capability 研究；其中 CDP 257 行块 3-way 分割已定稿（R2），其余巨无霸已由 C3 清零
