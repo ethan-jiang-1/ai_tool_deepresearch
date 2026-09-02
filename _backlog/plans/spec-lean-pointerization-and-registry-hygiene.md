@@ -139,13 +139,15 @@
 **清理思路**：扫描器只做"候选定位"，判定权在人——这是对"误伤 normative"风险的结构性防御。
 **验收**：扫描器对 DWU 的候选表与 §1.2 的 ~30 行命中锚点交叉一致；通用工具在 R1 首用即零返工。
 
-### R1（主力）——DWU capability 身份迁移（三步，迁移 change 原子）
+### R1（主力）——DWU capability 身份迁移（设计已独立成文）
 
-**R1a 测绘（工具产出，人审定稿）**：37 块逐一判定新家（母体 / work-unit-submission / work-unit-preflight / work-unit-correction）+ 新 ID 分配表（WSU/WUP/WUC 前缀，requirement-reservation 申请）+ 交叉引用清单（catalog Related entries、RUN.md、其他 spec 的 `capability:agent/delegated-work-units` 引用、doc-lock、`@impl` 标签）。
-**R1b 迁移 change（原子，单 change 多 delta）**：3 个新 capability spec（迁移块逐字节整块搬入 + 新 header/新内联 ID）+ DWU 瘦身 delta + registry（迁移 DEW 行 `[DEPRECATED]` + 新 ID 注册）+ catalog（3 新行 + DWU Purpose 改写为 assignment & briefing + Related entries 重织）+ engine `@impl` 更新 + doc-lock 更新（`delegated-queue-spec-text-locks` DEW body 37→母体新计数、inline 1:1 锁按新家重写；`dwu-slim-structure-locks` 退休并由各新家的结构锁接管）。
-**R1c 迁移后指针化**：在新家的真实基线上做复述段指针化（原 R1 的指针化目标顺延），before/after 度量随提交。
-**首例声明**：全库无 capability 级拆分先例（CLS-083 的 extract 是 engine 模块级）——本批为首例操作，finalizer/checker 的每个反应按首跑对待；proposal 须显式声明 DWU catalog Purpose（"…submit transaction and provenance"）被本 change 修订为 assignment 定位，submit transaction 职责迁往 `work-unit-submission`。
-**边界**：迁移是整块搬移（逐字节），不重写文本；文本改写只在指针化步（R1c）发生。
+**完整设计见独立文件 [`spec-lean-capability-split-dwu.md`](spec-lean-capability-split-dwu.md)**（自包含：事实基线、一变四拆分设计、身份迁移机制、副作用 S1-S7 与消解、R1a/R1b/R1c 三步、验收断言、待复核决策点 4 项）。本节仅留摘要：
+
+- **一变四**：母体 `agent/delegated-work-units` 瘦身为 assignment & briefing；新设 `agent/work-unit-submission` / `agent/work-unit-preflight` / `agent/work-unit-correction`。
+- **身份迁移**：迁移 requirement 换发新 ID（WSU/WUP/WUC，reservation 申请），旧 DEW 行 `[DEPRECATED]`+后继指针；engine `@impl` 同 change 换新 ID（模块零移动）；catalog 3 新行 + DWU Purpose 改写。
+- **原子性红线**：母体瘦身、3 新 spec、registry、catalog 同一 change 落地，禁止半迁移态。
+- **执行序**：R1a 测绘（37 块新家判定 + 新 ID 分配表 + 53 处引用清单）→ R1b 迁移 change（原子）→ R1c 迁移后指针化。
+- **首例声明**：全库无 capability 级拆分先例；proposal 须显式声明 DWU catalog Purpose 被修订（submit transaction 职责迁出）。
 
 ### R1 附：副作用清单与消解（2026-09-01 深化）
 
@@ -185,6 +187,22 @@
 ### R5（1 change）——housekeeping 合并批
 
 本轮各批产生的纯文本小修 + mild 项（M1 `migrate_legacy` 显式化、M4 `journal_disposition` 并集措辞、M5 DEW L1102 场景标题注记）若前批未顺手处理，合并于此；避免"每条小修占一条管线"（上轮教训 2）。
+
+### >800 行 spec 的 capability 拆分候选队列（逐一研究，值得者各得独立 MD）
+
+| spec | 行数 | 状态 |
+|---|---|---|
+| agent/delegated-work-units | 2360 | ✅ 设计定稿 → [`spec-lean-capability-split-dwu.md`](spec-lean-capability-split-dwu.md)（R1 执行） |
+| research/research-wave-gate-implementation | 1380 | 待研究 |
+| research/research-wave-phase-content | 1165 | 待研究 |
+| agent/agentic-queue | 1059 | 待研究 |
+| research/research-return-map | 989 | 待研究（C3a 已拆巨无霸；研究主题=是否值得 capability 级拆分而非再拆块） |
+| research/canonical-topic-state | 903 | 待研究 |
+| engine/gate-skeleton | 899 | 待研究 |
+| bundle/reference-flat-format | 853 | 待研究 |
+| research/content-delivery-phase-content | 843 | 待研究 |
+
+研究产出格式同 DWU 样板：事实基线（体量/引用网/catalog 声明 Purpose/engine 模块缝）→ 拆或不拆的判定与理由 → 拆则一变 N 设计 + 迁移机制 + 副作用消解；不值得者记录理由（如"capability 单一聚焦，吸积已由 C3 处理"）。研究节奏：一个一个来，每份经用户复核后再定执行。
 
 ---
 
