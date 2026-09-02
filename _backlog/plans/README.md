@@ -17,7 +17,7 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
-| [`capability-split-dwu`](capability-split-dwu.md) | `agent/delegated-work-units` 一变四 capability 拆分（母体 assignment & briefing + submission/preflight/correction）：设计定稿，§6 四个决策点待用户复核；复核通过后 T1 测绘起跑 | 设计定稿；执行待指令 |
+| [`spec-lean-capability-split-dwu`](spec-lean-capability-split-dwu.md) | `agent/delegated-work-units` 一变四 capability 拆分（母体 assignment & briefing + submission/preflight/correction）：设计定稿，§6 四个决策点待用户复核；复核通过后 T1 测绘起跑 | 设计定稿；执行待指令 |
 | [`spec-lean-pointerization-and-registry-hygiene`](spec-lean-pointerization-and-registry-hygiene.md) | 第二轮打扫：R0 工具先行（复述扫描器+装配通用化）、R2 pointerization 减量（全部 >160 块；DWU 已剥离至独立 plan）、R3 registry 卫生（15 死前缀+61 条 DEPRECATED 核对）、R4 §-guard 扩展、R5 housekeeping | 事实与思路已成文；R1 已剥离至独立 plan；执行待用户指令 |
 
 ## 最近关闭 (2026-09-01)
