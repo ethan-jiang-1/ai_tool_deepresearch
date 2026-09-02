@@ -5,6 +5,29 @@
 
 ---
 
+## 三轴复核（全局视角判定标准，2026-09-01 用户给定）
+
+**任何 requirement（乃至任何 spec）的留否三轴**：
+1. **多个 requirement**——粒度是否回到常态（≤~160 行/条），主题是否单一；
+2. **落地的代码**——是否映射到真实实现面（engine 模块 / gate 定义 / CLI / phase 节点等 prompt 面）；
+3. **更加清楚全局了**——它的存在是否让导航更清楚，而不是复述或遮蔽。
+
+三轴全过 = 留；缺任一轴 = 候选噪声（复述→指针化；空转→删）。
+
+**三轴对照实测**：
+
+| spec | spec 行 | 落地面（实现/节点/CLI） | 轴1 粒度 | 轴2 代码映射 | 轴3 全局清晰 |
+|---|---|---|---|---|---|
+| research-wave-gate-implementation | 1380 | 1168 行（3 gate 定义 JSON + 6 wave 模块 + 3 gate CLI） | ✅ max 146 | ✅ 28 块全部映射到 definition/evaluator | ✅ 一个问题：wave 完成如何被判定 |
+| research-wave-phase-content | 1165 | 1743 行（3 phase 节点 + evidence-extractor + 3 inspect CLI） | ⚠️ max 234（F4 已定稿 3-way，R2 执行） | ✅ body 契约映射 phase 节点；12 行复述候选待甄别 | ✅ 一个问题：wave phase 的 Agent 可读契约 |
+| agentic-queue | 1059 | 2596 行（5 个 queue-manager 模块 + admission/terminal/drain + queue schema + operate-queue） | ✅ max 135 | ✅ 30 块全部映射 queue 机器 | ✅ 一个问题：queue 生命周期 |
+
+三轴复核结论与判定一致：**三者皆留、皆不拆 capability**；唯一待清项 = RWP 的 12 行复述候选（轴 3 局部失分），已并入 R2。
+
+---
+
+
+
 ## 判别式（四份研究共有的结论）
 
 **拆 capability ⟺ capability 内含 ≥2 个互不重叠的任务问题**（不同 agent 在不同时刻分别消费，且各自可独立评审）。
