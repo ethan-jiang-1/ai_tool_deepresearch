@@ -190,17 +190,19 @@
 
 ### >800 行 spec 的 capability 拆分候选队列（逐一研究，值得者各得独立 MD）
 
+> 范围更新（用户指示"别贪心"）：capability 拆分研究收窄至 **>1000 行**；研究已完成，三份结论合一见 [`spec-lean-capability-study-1000plus.md`](spec-lean-capability-study-1000plus.md)——**三个均不拆**（体量 = 并行实例固有广度 + 巨无霸已在 C3 清零），各自登记重开触发条件。800–1000 行组不入 capability 拆分研究。
+
 | spec | 行数 | 状态 |
 |---|---|---|
 | agent/delegated-work-units | 2360 | ✅ 设计定稿 → [`spec-lean-capability-split-dwu.md`](spec-lean-capability-split-dwu.md)（R1 执行） |
-| research/research-wave-gate-implementation | 1380 | 待研究 |
-| research/research-wave-phase-content | 1165 | 待研究 |
-| agent/agentic-queue | 1059 | 待研究 |
-| research/research-return-map | 989 | 待研究（C3a 已拆巨无霸；研究主题=是否值得 capability 级拆分而非再拆块） |
-| research/canonical-topic-state | 903 | 待研究 |
-| engine/gate-skeleton | 899 | 待研究 |
-| bundle/reference-flat-format | 853 | 待研究 |
-| research/content-delivery-phase-content | 843 | 待研究 |
+| research/research-wave-gate-implementation | 1380 | ✅ 研究完成 → 不拆（同模式三实例；触发条件已登记） |
+| research/research-wave-phase-content | 1165 | ✅ 研究完成 → 不拆（共同契约权威；234 行块归 R2 按 F4 深挖执行） |
+| agent/agentic-queue | 1059 | ✅ 研究完成 → 不拆（一台 queue 机器的完整生命周期；触发条件已登记） |
+| research/research-return-map | 989 | 不入 capability 拆分研究（≤1000；C3a 已拆巨无霸） |
+| research/canonical-topic-state | 903 | 不入（C3b 已拆巨无霸） |
+| engine/gate-skeleton | 899 | 不入（≤1000；最大块随 R2 长尾政策观察） |
+| bundle/reference-flat-format | 853 | 不入 |
+| research/content-delivery-phase-content | 843 | 不入 capability 拆分研究；其 257 行块 3-way 分割已定稿（R2 执行） |
 
 研究产出格式同 DWU 样板：事实基线（体量/引用网/catalog 声明 Purpose/engine 模块缝）→ 拆或不拆的判定与理由 → 拆则一变 N 设计 + 迁移机制 + 副作用消解；不值得者记录理由（如"capability 单一聚焦，吸积已由 C3 处理"）。研究节奏：一个一个来，每份经用户复核后再定执行。
 
