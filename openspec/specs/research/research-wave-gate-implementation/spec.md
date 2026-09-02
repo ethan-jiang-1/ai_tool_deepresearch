@@ -16,7 +16,7 @@ The Wave0 complete gate definition SHALL include work-unit provenance checks for
 - **THEN** Wave0 complete gate SHALL fail
 - **AND** the diagnostics SHALL report missing work-unit coverage
 
-### Requirement: Wave1 complete gate rule set
+### Requirement: Wave1 complete gate rule set SHALL validate provenance, depth contracts, and reference format
 
 The Wave1 complete gate definition SHALL include work-unit provenance checks
 for delegated Topic deepening outputs and SHALL validate per-Topic output
@@ -58,7 +58,7 @@ a set of closed candidates is materialization-exhausted.
 For each current canonical Topic, the gate SHALL obtain current reference-floor
 coverage only from `canonical_current` paths selected by the shared Wave1
 locator and convergence evaluator. The old target expression
-`reference/*{topic}*.md` SHALL not be a second success predicate. A recognized
+The old target expression `reference/*{topic}*.md` SHALL not act as a second success predicate: the gate definition still declares it as the `count_floor` target, and the convergence evaluator preempts that raw count whenever a materialization/backing root exists.
 legacy `NN-wave1-*` row/file remains readable/indexable but SHALL not count;
 nor shall an arbitrary filename containing a full slug. A current canonical
 path counts only after the existing submitted-backing, reference-format,
@@ -81,7 +81,6 @@ new-source/depth floors remain separately derived from their accepted direct
 authorities and are not replaced by reference-floor convergence.
 
 #### Scenario: full current slug counts and legacy layout does not
-
 - **WHEN** a current Topic has one canonical backed reference and one
   `NN-wave1-*` legacy reference for the same Topic
 - **THEN** only the canonical path SHALL contribute to that current Topic's
@@ -89,7 +88,6 @@ authorities and are not replaced by reference-floor convergence.
 - **AND** the legacy file may remain in the index as navigation history
 
 #### Scenario: true floor deficit becomes bounded supplementary work
-
 - **WHEN** the profile floor is `8`, current canonical backed count is `5`, no
   submitted backing can materialize another canonical reference, the index is
   synchronized, and no same-Topic supplementary demand is live
@@ -100,7 +98,6 @@ authorities and are not replaced by reference-floor convergence.
   `reference_floor_deficit: 3`
 
 #### Scenario: candidate closure cannot borrow generic submitted backing
-
 - **WHEN** a canonical-locator path for one manifest-bound submitted candidate
   has metadata URL or body backing refs that bind only to another submitted row
 - **THEN** convergence SHALL return that candidate's direct projection root
@@ -108,14 +105,12 @@ authorities and are not replaced by reference-floor convergence.
 - **AND** it SHALL not fall through to index synchronization or a floor deficit
 
 #### Scenario: existing supplementary demand prevents duplication
-
 - **WHEN** a true current reference-floor deficit exists and a canonical
   same-Topic supplementary Wave1 demand is already queued or in flight
 - **THEN** convergence SHALL return that existing demand as the next action
 - **AND** it SHALL not create a duplicate queue demand or second controller
 
 #### Scenario: Numeric count does not repeat content-format checks
-
 - **WHEN** an authority-backed canonical accepted reference has a parseable
   source URL but short prose or fewer than five Key Facts bullets
 - **THEN** the numeric count-floor evaluator SHALL still count it
@@ -123,7 +118,6 @@ authorities and are not replaced by reference-floor convergence.
   separate shared reference-format rule
 
 #### Scenario: Depth facts come from reviewed submitted rows
-
 - **WHEN** a depth review identifies submitted work-unit refs and omits copied
   source/cache/new-source fields
 - **THEN** Wave1 gate SHALL derive source claims, cache mapping, novelty,
@@ -131,20 +125,17 @@ authorities and are not replaced by reference-floor convergence.
 - **AND** omission of the retired duplicate fields SHALL not fail the review
 
 #### Scenario: Wave1 deepening coverage is ledger-first
-
 - **WHEN** a topic deepening file exists without a matching submitted Wave1
   work-unit ledger row
 - **THEN** Wave1 complete gate SHALL fail delegated provenance
 
 #### Scenario: Wave1 depth review is required
-
 - **WHEN** a Topic has `evidence-summary.md` and `question-list.md`
 - **AND** `artifacts/wave1/{topic}/depth-review.yaml` is missing or unparsable
 - **THEN** Wave1 complete gate SHALL fail with diagnostics naming the missing
   depth-review projection
 
 #### Scenario: Wave1 exact source novelty floor blocks shallow output
-
 - **WHEN** reviewed submitted Wave1 rows contain exact-new accepted source URLs
   below the profile-derived floor
 - **THEN** Wave1 complete gate SHALL fail
@@ -152,7 +143,6 @@ authorities and are not replaced by reference-floor convergence.
   count, and supplementary work-unit repair path
 
 #### Scenario: Wave1 missing floor parameter blocks hidden defaults
-
 - **WHEN** active profile/runtime data lacks a required parameter for deriving
   the Wave1 new-source floor
 - **THEN** Wave1 complete gate SHALL fail with a `missing_profile_parameter`
@@ -160,7 +150,6 @@ authorities and are not replaced by reference-floor convergence.
 - **AND** the gate SHALL NOT substitute an unstated default threshold
 
 #### Scenario: UID-only reference satisfies Wave1 topic binding
-
 - **WHEN** a historical or rerun-time reference has all common required
   metadata and exact `related_topic_uid` but omits legacy `related_topic`
 - **THEN** Wave1 reference-format evaluation SHALL bind it to the registered
@@ -168,12 +157,13 @@ authorities and are not replaced by reference-floor convergence.
 - **AND** it SHALL NOT fail solely because the legacy key is absent
 
 #### Scenario: Invalid reference index is one parent failure
-
 - **WHEN** `reference/_INDEX.md` is missing or contains a prose summary/list
   instead of the accepted eight-column table
 - **THEN** Wave1 SHALL fail with one parent index-table root
 - **AND** per-reference missing-row failures SHALL remain masked until the
   parent table is valid
+
+### Requirement: Wave1 focus-coverage limit SHALL stay inside the existing degradation partition
 
 When a current Topic declares the optional focus-coverage block, the Wave1
 complete gate SHALL evaluate that block through the same direct depth-review,
@@ -202,14 +192,12 @@ retain the existing `degraded`, `degraded_reason`, and `degraded_rules` facts
 rather than inventing a focus-specific status, trace event, or routing branch.
 
 #### Scenario: Covered focus preserves a clean Wave1 result
-
 - **WHEN** every declared focus commitment has current submitted backing and
   all existing Wave1 rules pass
 - **THEN** Wave1 SHALL retain its existing clean pass behavior
 - **AND** it SHALL not emit a focus-specific degraded result
 
 #### Scenario: Partial focus uses only the existing degraded partition
-
 - **WHEN** a structurally valid focus-coverage block is partial, every limited
   commitment has a visible limitation, and no non-eligible Wave1 root remains
 - **THEN** Wave1 SHALL expose the existing degraded-handoff facts only when the
@@ -218,7 +206,6 @@ rather than inventing a focus-specific status, trace event, or routing branch.
   route
 
 #### Scenario: Blocked focus remains visible without faking coverage
-
 - **WHEN** a structurally valid focus-coverage block is blocked with explicit
   limitations and no covered commitment
 - **THEN** Wave1 SHALL retain the blocked limitation in its direct diagnostic
@@ -227,12 +214,491 @@ rather than inventing a focus-specific status, trace event, or routing branch.
   report covered
 
 #### Scenario: Invalid coverage remains a normal repair failure
-
 - **WHEN** a focus-coverage block has a missing current binding, unknown
   submitted ref, or an invalid outcome/commitment combination
 - **THEN** Wave1 SHALL return a normal failed Gate root naming that direct fact
 - **AND** it SHALL mask `focus_coverage_limit`, not make the invalid structure
   degradation-eligible, or ask for a new HITL decision
+
+### Requirement: Wave1 gate CLI SHALL evaluate definition-owned rule families and typed semantic sections
+
+The Wave1 gate CLI SHALL evaluate work-unit provenance rule types, Wave1
+depth-contract rule types, and definition-owned direct output-contract
+descriptors from the active gate definition. It SHALL use work-unit helper
+diagnostics for ledger/index/manifest/result/receipt/beacon/hash/cache
+mismatches and deterministic readers for `depth-review.yaml`, Wave0 source URL
+sets, structured source claims, submitted cache-trail mappings, canonical
+reference Topic binding, and the reference-index table.
+
+`question_list_has_four_sections` SHALL use a typed
+`semantic_sections` descriptor whose parsed `required_sections` names Topic
+Investigation Targets, Question Reconciliation, Emergent Question Protocol,
+and Exploration / Exploitation Decision. Its evaluator SHALL dispatch on that
+descriptor type, normalize only equivalent heading presentation, and require
+each named section to be present and non-empty. It SHALL not dispatch by the
+rule ID, use an ordered regex, require `pattern`/`negate`, or make case,
+heading level, spacing, list style, or section order a blocking fact. Other
+active `pattern_match` rules retain their existing independently declared
+semantics.
+
+Wave1 semantic Markdown checks SHALL protect section/content availability while
+tolerating equivalent presentation. `question_list_has_four_sections` SHALL
+use its definition-owned semantic-section descriptor. `source_url_present`
+SHALL accept a parseable bare HTTP(S) URL or Markdown link.
+`key_findings_non_empty` SHALL accept common bullet, numbered, or non-empty
+paragraph content under the semantic Key Findings section. These tolerant
+evaluators, not historical regex presentation, SHALL own the blocking result.
+
+#### Scenario: Wave1 CLI ignores non-work-unit coverage
+- **WHEN** non-work-unit delegated directories contain Wave1-looking result
+  files and no submitted work-unit ledger rows cover the outputs
+- **THEN** Wave1 gate CLI SHALL fail delegated provenance
+- **AND** convergence SHALL not treat those files as materializable backing
+
+#### Scenario: Wave1 CLI evaluates depth review from definition
+- **WHEN** the Wave1 gate definition contains a depth-review rule
+- **THEN** the CLI SHALL parse the rule target from the current run bundle
+- **AND** the rule SHALL contribute to the overall pass/fail determination
+
+#### Scenario: Normal legacy reference remains valid
+- **WHEN** a normal first-run reference uses the existing valid
+  `related_topic` metadata form and an accepted index table
+- **THEN** the shared Wave1 evaluator SHALL continue to accept that reference
+  binding through the canonical Topic resolver
+- **AND** no rerun-only producer or gate branch SHALL be required, while a
+  legacy file path remains non-counting until canonical projection repair
+
+#### Scenario: Question-list descriptor tolerates equivalent presentation
+- **WHEN** all four required question-list semantic sections are present and
+  non-empty in an equivalent order, case, heading level, spacing, or list style
+- **THEN** the shared evaluator SHALL accept the structure through its parsed
+  semantic-section descriptor
+- **AND** the historical ordered regex SHALL not participate in the result
+
+#### Scenario: Question-list semantic section is missing or empty
+- **WHEN** one declared question-list semantic section is absent or has no
+  meaningful content
+- **THEN** the shared evaluator SHALL return one
+  `question_list_has_four_sections` direct root naming that section
+- **AND** Gate and inspect SHALL not add a second regex-derived failure for the
+  same artifact
+
+### Requirement: Wave1 inspect and gate SHALL consume one shared pure convergence result
+
+Formal gate and side-effect-free Wave1 inspect SHALL consume the same pure
+Wave1 reference-convergence result for current Topic identity, submitted
+backing, canonical consumer projections, index state, supplementary demand,
+and reference-floor judgment. The evaluator SHALL reuse the existing
+reference-format, backing, numeric-eligibility, Topic-layout, profile, index,
+and queue readers rather than copy their parsers or authority logic. The formal
+wrapper MAY retain its accepted gate-attempt/trace ownership only after
+evaluation; inspect remains read-only. Neither wrapper SHALL retain an
+independent broad `reference/*{topic}*.md` count, filename interpretation, or
+index/floor repair decision.
+
+Wave1 inspect composition SHALL keep the direct evaluator families separate:
+the shared Wave1 evaluator owns submitted output/artifact/reference/backing
+checks; the Seed Topic projection evaluator owns return-map entry shape,
+identity, and concrete-navigation checks. A generic return-map reader SHALL
+not scan `evidence-summary.md`, `question-list.md`, or rich reference files.
+The returned return-map classification SHALL derive from the Seed Topic
+projection evaluator alone, while independently invalid Wave1 artifacts retain
+their declared artifact rule IDs and direct repair coordinates.
+
+The convergence result SHALL return the earliest usable direct parent root or
+one per-Topic nearest action in this order:
+1. unusable canonical Topic/profile/submitted declaration/backing authority;
+2. canonical projection materialization for authenticated submitted backing,
+   including a legacy or misnamed current projection that has equivalent
+   backing;
+3. `reference/_INDEX.md` synchronization when canonical projections exist but
+   index parent/row coverage is stale;
+4. an existing same-Topic supplementary demand when one already owns the
+   remaining work;
+5. a true positive supplementary reference-floor deficit; or
+6. satisfied.
+
+For this purpose, submitted Wave1 backing SHALL come from one shared pure
+reader, not a broad declaration/file scan. For the current Topic it SHALL
+resolve `depth-review.yaml#/reviewed_work_unit_refs` to hash-valid submitted
+`wave1_topic_deepening` rows and verify each row's work-unit manifest embeds a
+hash-bound queue item whose `topic_uid` and current `topic_slug` resolve to the
+same canonical Topic. It SHALL reuse existing accepted source-claim, accepted
+URL, cache/degraded mapping, and URL-normalization rules to return a stable
+deduplicated set of backing candidates. Missing/invalid reviewed refs, ledger,
+manifest, snapshot, Topic binding, claim/cache/degraded mapping, or URL fact is
+a parent root. A filename, index row, reference body, unbound submitted row, or
+raw filesystem scan SHALL not be treated as materializable backing or as proof
+that backing is exhausted.
+
+When no submitted work-unit row can supply a reviewed ref, the depth contract
+SHALL return one submitted-evidence/binding root before source-claim mapping,
+source novelty, new-source comparison, `per_topic_ref_md_count_floor`, depth
+derivative, or provenance symptoms. The same Topic's reference-floor branch
+SHALL be masked rather than project a second submitted-backing root. It SHALL
+not advise the Agent to invent `reviewed_work_unit_refs[]`, treat a bare
+work-unit directory as submitted, or present an unassigned output as evidence.
+Feedback may name only an existing legal submitted-work or replacement owner;
+without one it SHALL state `missing_contract`/no-path and the same Wave1
+checkpoint.
+
+An invalid/missing index table SHALL produce exactly one
+`reference_index_table_invalid` parent root and mask row symptoms. A
+materializable projection, legacy/misnamed current projection, invalid index,
+or unresolved submitted backing SHALL not be reported as a degradable floor
+failure. A true floor deficit SHALL retain the existing
+`per_topic_ref_md_count_floor` rule identity and accepted degradation policy.
+
+All Wave0/Wave1/Wave2 shared evaluator roots SHALL expose the static contract
+lineage needed for one repair: `repair_kind`, `missing_fact`, and `write_to`;
+inspect and formal gate wrappers SHALL add their exact invoked checkpoint as
+`rerun`. These are read-only feedback coordinates, not a new authority or
+generic repair controller. `repair_kind` SHALL identify the legal next-action
+class, `missing_fact` SHALL identify the earliest direct failed fact and its
+owning contract, and `write_to` SHALL name the exact next-action coordinate
+interpreted by that kind. Existing inspect/advice strings MAY remain for
+compatibility but SHALL NOT be the sole repair information.
+
+#### Scenario: Inspect and gate share reference evaluation
+- **WHEN** Wave1 inspect and the formal Wave1 gate evaluate identical bundle
+  bytes for a current Topic
+- **THEN** both SHALL report the same parent/materialization/index/existing-work
+  /true-deficit/satisfied convergence class and repair coordinates
+- **AND** only the formal gate wrapper MAY perform accepted durable gate side
+  effects
+
+#### Scenario: Wave1 return-map inspection has one declared input family
+- **WHEN** valid `evidence-summary.md`, `question-list.md`, and rich reference
+  documents lack return-map fields while a Seed Topic slot is malformed
+- **THEN** Wave1 inspect SHALL emit return-map feedback only for the Seed Topic
+  coordinate
+- **AND** it SHALL preserve any independently applicable artifact or backing
+  finding with its existing rule ID
+
+#### Scenario: canonical materialization masks floor deficit
+- **WHEN** submitted, cache-backed Wave1 source facts can materialize a current
+  canonical reference but that reference is absent or only a legacy/misnamed
+  path exists
+- **THEN** inspect and gate SHALL report the canonical materialization root
+- **AND** they SHALL not report a supplementary floor deficit until that legal
+  projection repair is exhausted
+
+#### Scenario: invalid index masks dependent row findings
+- **WHEN** `_INDEX.md` is missing, empty, or has no accepted inventory table
+- **THEN** inspect and gate SHALL report one `reference_index_table_invalid`
+  root
+- **AND** they SHALL not enumerate missing index rows or use the index state as
+  a floor failure
+
+#### Scenario: Affected root carries contract-lineage repair coordinates
+- **WHEN** an in-scope Wave1 rule rejects a deterministic fact
+- **THEN** its primary structured diagnostic SHALL include non-empty
+  `repair_kind`, `missing_fact`, `write_to`, and `rerun`
+- **AND** the Agent SHALL not need to inspect Engine source to locate the
+  authorized repair surface or checkpoint
+
+#### Scenario: Missing declaration masks downstream Wave1 symptoms
+- **WHEN** a Wave1 work unit is submitted in index/status but its bundle ledger
+  row is absent
+- **THEN** inspect and gate SHALL report one `submitted_declaration_missing`
+  parent root for that work ID
+- **AND** they SHALL mask dependent missing-output, cache-mapping, count-floor,
+  and delegated-bypass symptoms
+
+#### Scenario: no submitted work can satisfy a depth review
+- **WHEN** a Wave1 depth review has no reviewed ref that resolves to a
+  submitted work-unit row for its current Topic
+- **THEN** inspect and Gate SHALL return one submitted-evidence/binding root
+- **AND** they SHALL mask source-claim mapping, source novelty, new-source
+  comparison, `per_topic_ref_md_count_floor`, and dependent depth-review
+  symptoms
+- **AND** feedback SHALL not authorize fabrication of a reviewed ref or an
+  unassigned output role, and SHALL return `missing_contract`/no-path when no
+  existing submitted-work or replacement owner is established
+
+### Requirement: Blocking Wave rules SHALL use one closed contract chain with truth-type authority
+
+Each blocking deterministic Wave gate/output contract SHALL use a closed and
+minimal executable chain: one direct runtime authority surface; one checker
+path that consumes that authority and returns a root-specific structured
+finding; one shared projection that exposes the smallest actionable root cause
+and repair coordinates; and focused changed-contract coverage that catches
+future drift. Agent producer guidance SHALL describe changed Agent-owned output
+contracts at the owning Phase/controller surface; it SHALL not be copied into a
+per-rule audit mapping. Engine-operation, user-decision, external-action, and
+missing-contract roots SHALL use their real operation or boundary.
+
+A specialized rule that can fail for multiple direct reasons, including
+provenance, reference/index, depth, cache, or finding-contract checks, SHALL
+use checker-owned findings and SHALL return the blocking basis and
+repair-kind/write coordinate on each concrete root. The definition SHALL not
+flatten those distinct roots into one static basis/repair. If a checker-owned
+blocking result lacks either part of the root contract, the standard projection
+SHALL fail as configuration integrity rather than infer it from rule metadata
+or prose. Formal gate and inspect SHALL reuse the same pure evaluator result
+and stable rule ID; their primary root object SHALL share `repair_kind`,
+`missing_fact`, and `write_to`, with only `rerun` checkpoint-specific.
+
+Blocking rules SHALL protect required structure, deterministic authority,
+provenance, consumer navigation, or explicit accepted floors. Presentation or
+maintenance preferences SHALL use tolerant parsing or advisory feedback unless
+they are necessary to locate/parse direct authority. If a prerequisite
+authority is absent or unparseable, the checker SHALL report that prerequisite
+first and short-circuit dependent symptoms. For reference inventory, an invalid
+or missing eight-column table SHALL mask row/source-layer symptoms until it
+parses. The implementation SHALL use local guards rather than a generalized
+dependency engine.
+
+#### Scenario: blocking rule has a closed contract chain
+- **WHEN** an active gate rule contributes to pass/fail
+- **THEN** its descriptor, declared finding source, and checker finding SHALL
+  identify direct authority, root-specific basis/repair, and diagnostic
+  projection without a second inventory row
+- **AND** in-scope Wave artifact/provenance rules SHALL use the shared evaluator
+  route consumed by formal and inspect
+- **AND** active-definition execution, unknown-check fail-closed coverage, or a
+  focused changed-rule regression SHALL fail when the executable path is absent
+
+#### Scenario: Specialized Wave rule does not flatten distinct roots
+- **WHEN** one work-unit/depth/reference rule can fail on an Agent-owned file,
+  an Engine-owned binding, or a missing legal capability
+- **THEN** the checker SHALL return a distinct structured finding with blocking
+  basis and repair coordinate for the observed root
+- **AND** no definition-level fallback basis/repair SHALL override or obscure
+  that root
+
+#### Scenario: presentation preference is not promoted to authority
+- **WHEN** direct structured authority proves a required fact and Markdown
+  differs only in harmless presentation
+- **THEN** the command SHALL accept tolerant equivalent parsing or emit
+  advisory feedback
+- **AND** it SHALL NOT create an independent blocking rule for that preference
+
+#### Scenario: authority conflict is resolved by truth type
+- **WHEN** producer docs, submitted ledger rows, return-map refs, helper
+  checks, or inspect wording disagree about the same deterministic fact
+- **THEN** implementation SHALL resolve the conflict using the Source of Record
+  for that fact's truth type
+- **AND** the lower-authority surface SHALL be updated or diagnosed rather than
+  silently broadening gate acceptance
+
+#### Scenario: Root feedback names one authorized repair loop
+- **WHEN** a blocking rule has one actionable direct root
+- **THEN** primary feedback SHALL name `repair_kind`, the fact in
+  `missing_fact`, its mutable or Engine-owned repair surface in `write_to`, and
+  the same checkpoint in `rerun`
+- **AND** it SHALL NOT provide competing repair branches or require the Agent to
+  infer contract lineage from opaque prose
+
+#### Scenario: Wave root projection feeds the standard Gate hint
+- **WHEN** a shared Wave blocking root reaches a formal Gate wrapper
+- **THEN** the standard top-level `hints[]` entry SHALL be projected from that
+  root rather than reconstructed from inspect/advice prose
+- **AND** matching inspect SHALL expose the same direct fact and authorized
+  repair surface without formal routing side effects
+
+### Requirement: Wave1 closeout classification and prerequisite masking SHALL own root short-circuit
+
+For Wave1 reference closeout, one pure convergence evaluator SHALL be the only
+owner of the cross-fact classification among current canonical Topic identity,
+profile floor, submitted/backed source facts, committed reference projections,
+index inventory, and existing supplementary demand. It SHALL call existing
+specialized readers/checkers for their direct facts; it SHALL not add a generic
+dependency engine, a second source catalog, a duplicate metadata parser, a new
+durable state, a watcher, retry tree, or generic repair controller. It SHALL
+replace the parallel broad-glob count/index/backing interpretations in Wave1
+inspect and formal gate, leaving `countReferences()` as the one narrow
+numeric-eligibility implementation with an exact selected-path mode.
+
+Formal lifecycle checks such as node binding, handoff preflight, routing,
+degraded eligibility, gate-attempt durability, checkpoint, and
+`trace_event_*` remain formal-only and SHALL not be duplicated in inspect.
+
+#### Scenario: convergence replaces parallel Wave1 interpretations
+- **WHEN** a current Wave1 Topic has the same submitted backing, reference
+  paths, index bytes, profile floor, and queue state in inspect and gate
+- **THEN** both commands SHALL obtain their reference/floor class from one
+  convergence result
+- **AND** no separate broad glob, index count, or queue-advice branch may
+  return a contradictory success/failure result
+
+#### Scenario: prerequisite root short-circuits derived symptoms
+- **WHEN** canonical Topic/profile/submitted backing authority is unavailable
+- **THEN** the checker SHALL report that parent root with one repair coordinate
+- **AND** it SHALL mask materialization, index, and floor symptoms derived from
+  that unavailable authority
+
+#### Scenario: quality-floor policy remains scoped
+- **WHEN** canonical materialization, index synchronization, or backing repair
+  is required before a reference can count
+- **THEN** that finding SHALL not inherit the degradation eligibility of
+  `per_topic_ref_md_count_floor`
+- **AND** only a true post-repair count shortfall SHALL retain the existing
+  quality-floor rule and policy
+
+#### Scenario: missing prerequisite masks dependent rules
+- **WHEN** a parent YAML object, required array, or required field cannot be
+  read
+- **THEN** the checker SHALL report the parent/field as the blocking root
+- **AND** dependent rules SHALL be recorded as masked or omitted rather than
+  failed independently
+
+#### Scenario: delegated bypass scan has one side-effect owner
+- **WHEN** inspect and formal gate evaluate delegated-bypass provenance for the
+  same bundle
+- **THEN** both SHALL consume the same pure scan result
+- **AND** only the formal wrapper MAY emit durable bypass trace/log evidence
+- **AND** one formal invocation SHALL emit that diagnostic at most once
+
+#### Scenario: Invalid index table masks row cascade
+- **WHEN** the reference index parent cannot be parsed as the accepted table
+- **THEN** the shared evaluator SHALL return one
+  `reference_index_table_invalid` or equivalent root and the index path as the
+  nearest repair target
+- **AND** it SHALL NOT return one primary `missing_index_row` failure for every
+  reference file in the same evaluation
+
+#### Scenario: Wave0 direct output exposes bounded cardinality only after validation
+- **WHEN** `wave0.source-metadata-array.v1` reads a schema-valid YAML array
+  containing two entries
+- **THEN** its successful result SHALL expose `validated_array_length: 2`
+- **AND** it SHALL expose neither parsed entries nor raw/decoded target bytes
+
+#### Scenario: unavailable snapshot masks direct symptoms without changing ownership
+- **WHEN** the target-level operation cannot obtain a safe bounded UTF-8
+  snapshot
+- **THEN** it SHALL emit one prerequisite root: semantic_content for a missing
+  target, or contract_integrity for unsafe/unreadable/oversized/invalid-UTF8
+  input
+- **AND** it SHALL not additionally claim missing YAML entries, Key Findings,
+  or question sections from unavailable bytes
+
+#### Scenario: Wave missing file keeps one existing rule identity
+- **WHEN** an admitted Wave0 or Wave1 target is missing or unreadable
+- **THEN** the target-level read root SHALL map to the existing earliest
+  file/authority rule and mask the dependent direct rule
+- **AND** Wave inspect/Gate SHALL not emit both an independent file-exists
+  failure and a second reader failure for that target
+
+### Requirement: Wave adapters SHALL share one target-level direct-output operation
+
+The existing Wave0 source-metadata array fact, Wave1 Key Findings availability
+fact, and Wave1 four-question-section availability fact SHALL remain owned by
+one neutral target-level direct-output module selected only by a closed
+direct_contract ID. Its interface SHALL accept the current run bundle root, one
+Engine-resolved concrete bundle-relative target, and that ID; it SHALL own
+bounded open/read, fatal UTF-8 plus single-BOM handling, tolerant parsing, and
+contract-local structured roots without reading queue, manifest, result,
+receipt, ledger, profile, phase state, or gate definition. Neutral roots SHALL
+use only `root_class: semantic_content|contract_integrity`: target missing and
+parse/schema/required-section failure are semantic_content, while
+unsafe/non-regular/escaping target, bounded-read/oversize failure and invalid
+UTF-8 are contract_integrity. Submit-specific mechanical classification,
+repair_scope and recommended_action remain candidate-adapter concerns. The
+interface SHALL return only bounded snapshot metadata and roots, not
+raw/decoded bytes or parsed entries that an adapter could independently
+reinterpret. For `wave0.source-metadata-array.v1` only, a successful validated
+top-level YAML array SHALL expose `validated_array_length`; a failed result
+shall expose no usable validated length. That scalar describes the current
+resolved target evaluation only: it neither hashes/freezes target bytes nor
+selects a target, contract, or work unit or mutates runtime state.
+
+The work-unit candidate adapter, Wave evaluator adapter, and Wave0 submitted
+candidate-projection reader SHALL remain the concrete consumers of that seam.
+Candidate validation maps neutral roots to submit violations and repair scope;
+Wave inspect/formal Gate map the same roots to existing rule IDs, findings,
+hints, and checkpoint-specific reruns. The Wave0 candidate-projection reader
+shall authenticate the current submitted declaration, exact required output
+tuple, and hash-bound result before calling the neutral operation; after
+success it may consume only `validated_array_length`, never parser output.
+Existing rule IDs, including `per_topic_reference_schema_valid`,
+`key_findings_non_empty`, and `question_list_has_four_sections`, remain
+stable. Source URL presence remains a separate Wave-only rule and does not
+enter the neutral candidate contract.
+
+All adapters SHALL call that same target-level operation. Identical target
+bytes under the same direct contract SHALL agree on pass/fail, missing semantic
+sections, schema issues, BOM treatment, invalid-UTF8/read prerequisites, and,
+for successful Wave0 arrays, `validated_array_length`. A Wave adapter may add
+direct authorities outside the neutral contract, including file-existence
+expansion, count floors, source URL presentation, submitted provenance,
+profile/depth, reference/index/backing, cross-artifact, return-map, phase
+completeness, and formal lifecycle checks. A missing, unsafe, or unreadable
+admitted target SHALL project through the existing earliest file-existence or
+authority rule and mask dependent schema/semantic rules; after successful read,
+parse/schema/semantic roots project through the existing direct rule. The Wave
+adapter SHALL not duplicate an existence/read path, YAML reader, Key Findings
+parser, or question-section parser for the same admitted fact.
+
+Implementation SHALL remove inlined Wave-only copies of
+`ReferenceMetadataArraySchema` evaluation, Key Findings parsing,
+question-list-section parsing, and the Wave0 count-floor YAML read after the
+adapters use the target-level operation. It SHALL not retain a submit-specific
+clone, add a generic linter CLI, introduce a plugin registry, or dispatch from
+user-authored IDs or path regexes. Parent snapshot/read/parse failure SHALL
+produce one neutral prerequisite root and mask dependent direct facts; each
+adapter preserves the same missing fact and mutable surface while naming its own
+dry-submit, inspect, or formal-Gate rerun.
+
+#### Scenario: Wave0 count floor consumes the successful direct result
+- **WHEN** the Wave0 schema route has a successful direct result for a Topic's
+  declared source output
+- **THEN** the corresponding count-floor route SHALL use that result's
+  `validated_array_length`
+- **AND** it SHALL not independently parse or reread the YAML file
+
+#### Scenario: Candidate projection does not reinterpret direct output
+- **WHEN** an authenticated current Wave0 submitted declaration reaches its
+  declared `source_yaml` output
+- **THEN** the candidate-projection reader SHALL derive only ordinals from a
+  passed `validated_array_length`
+- **AND** it SHALL not receive or reconstruct source-array entries or decoded
+  YAML content
+
+#### Scenario: candidate, candidate-projection, and Wave adapters agree on Wave0 schema fact
+- **WHEN** all three consumers evaluate identical source.yaml bytes through
+  `wave0.source-metadata-array.v1`
+- **THEN** they SHALL agree on top-level-array and
+  `ReferenceMetadataArraySchema` pass/fail plus the earliest issue
+- **AND** only the Wave adapter SHALL add count-floor or phase-wide findings
+
+#### Scenario: candidate and Wave adapters agree on tolerant Wave1 sections
+- **WHEN** both adapters evaluate identical evidence-summary or question-list
+  bytes with tolerated heading case, level, spacing, order or list presentation
+- **THEN** they SHALL return the same neutral direct result
+- **AND** the Wave adapter SHALL preserve its existing Gate rule ID while the
+  candidate uses a submit violation code
+
+#### Scenario: source URL presence remains Wave-only
+- **WHEN** an evidence summary has non-empty Key Findings but no Markdown URL
+  while structured submit source authorities are valid
+- **THEN** the neutral evidence-summary direct contract SHALL pass
+- **AND** the existing Wave `source_url_present` rule MAY still fail at its
+  owning Wave checkpoint
+
+#### Scenario: phase-wide Wave facts do not move into submit
+- **WHEN** neutral direct facts pass but submitted provenance, count floor,
+  depth review, reference backing, return map, queue drain, or completion event
+  fails
+- **THEN** candidate validation SHALL not evaluate or accept those phase-wide
+  facts
+- **AND** Wave inspect/Gate SHALL remain their verdict owner
+
+#### Scenario: direct fact implementation is not duplicated
+- **WHEN** apply completes the candidate, candidate-projection, and Wave
+  adapters
+- **THEN** one neutral target-level module SHALL own the three admitted direct
+  contracts
+- **AND** focused static or behavioral coverage SHALL fail if an adapter retains
+  an independent equivalent parser/checker
+
+#### Scenario: adapter reruns preserve checkpoint ownership
+- **WHEN** one neutral root appears during dry-submit, Wave inspect, and formal
+  Gate
+- **THEN** `missing_fact` and `write_to` SHALL describe the same direct fact
+  and artifact
+- **AND** each projection SHALL name its own exact dry-submit, inspect, or Gate
+  rerun without creating a competing acceptance authority
 
 ### Requirement: Wave2 complete gate rule set
 
@@ -289,213 +755,6 @@ For an unmet definition-owned `shared_ref_count_floor`, the structured repair co
 - **WHEN** Wave0 has fewer submitted `reference/00-shared-*.md` outputs than the profile-derived floor
 - **THEN** the gate CLI SHALL return the definition-owned failure with non-empty repair coordinates naming the existing delegated `wave0_source_intake` submit path
 - **AND** its feedback SHALL NOT name direct Phase creation under `reference/` as the repair
-
-### Requirement: Gate CLI evaluates wave1 rules from definition
-
-The Wave1 gate CLI SHALL evaluate work-unit provenance rule types, Wave1
-depth-contract rule types, and definition-owned direct output-contract
-descriptors from the active gate definition. It SHALL use work-unit helper
-diagnostics for ledger/index/manifest/result/receipt/beacon/hash/cache
-mismatches and deterministic readers for `depth-review.yaml`, Wave0 source URL
-sets, structured source claims, submitted cache-trail mappings, canonical
-reference Topic binding, and the reference-index table.
-
-`question_list_has_four_sections` SHALL use a typed
-`semantic_sections` descriptor whose parsed `required_sections` names Topic
-Investigation Targets, Question Reconciliation, Emergent Question Protocol,
-and Exploration / Exploitation Decision. Its evaluator SHALL dispatch on that
-descriptor type, normalize only equivalent heading presentation, and require
-each named section to be present and non-empty. It SHALL not dispatch by the
-rule ID, use an ordered regex, require `pattern`/`negate`, or make case,
-heading level, spacing, list style, or section order a blocking fact. Other
-active `pattern_match` rules retain their existing independently declared
-semantics.
-
-Formal gate and side-effect-free Wave1 inspect SHALL consume the same pure
-Wave1 reference-convergence result for current Topic identity, submitted
-backing, canonical consumer projections, index state, supplementary demand,
-and reference-floor judgment. The evaluator SHALL reuse the existing
-reference-format, backing, numeric-eligibility, Topic-layout, profile, index,
-and queue readers rather than copy their parsers or authority logic. The formal
-wrapper MAY retain its accepted gate-attempt/trace ownership only after
-evaluation; inspect remains read-only. Neither wrapper SHALL retain an
-independent broad `reference/*{topic}*.md` count, filename interpretation, or
-index/floor repair decision.
-
-Wave1 inspect composition SHALL keep the direct evaluator families separate:
-the shared Wave1 evaluator owns submitted output/artifact/reference/backing
-checks; the Seed Topic projection evaluator owns return-map entry shape,
-identity, and concrete-navigation checks. A generic return-map reader SHALL
-not scan `evidence-summary.md`, `question-list.md`, or rich reference files.
-The returned return-map classification SHALL derive from the Seed Topic
-projection evaluator alone, while independently invalid Wave1 artifacts retain
-their declared artifact rule IDs and direct repair coordinates.
-
-The convergence result SHALL return the earliest usable direct parent root or
-one per-Topic nearest action in this order:
-
-1. unusable canonical Topic/profile/submitted declaration/backing authority;
-2. canonical projection materialization for authenticated submitted backing,
-   including a legacy or misnamed current projection that has equivalent
-   backing;
-3. `reference/_INDEX.md` synchronization when canonical projections exist but
-   index parent/row coverage is stale;
-4. an existing same-Topic supplementary demand when one already owns the
-   remaining work;
-5. a true positive supplementary reference-floor deficit; or
-6. satisfied.
-
-For this purpose, submitted Wave1 backing SHALL come from one shared pure
-reader, not a broad declaration/file scan. For the current Topic it SHALL
-resolve `depth-review.yaml#/reviewed_work_unit_refs` to hash-valid submitted
-`wave1_topic_deepening` rows and verify each row's work-unit manifest embeds a
-hash-bound queue item whose `topic_uid` and current `topic_slug` resolve to the
-same canonical Topic. It SHALL reuse existing accepted source-claim, accepted
-URL, cache/degraded mapping, and URL-normalization rules to return a stable
-deduplicated set of backing candidates. Missing/invalid reviewed refs, ledger,
-manifest, snapshot, Topic binding, claim/cache/degraded mapping, or URL fact is
-a parent root. A filename, index row, reference body, unbound submitted row, or
-raw filesystem scan SHALL not be treated as materializable backing or as proof
-that backing is exhausted.
-
-When no submitted work-unit row can supply a reviewed ref, the depth contract
-SHALL return one submitted-evidence/binding root before source-claim mapping,
-source novelty, new-source comparison, `per_topic_ref_md_count_floor`, depth
-derivative, or provenance symptoms. The same Topic's reference-floor branch
-SHALL be masked rather than project a second submitted-backing root. It SHALL
-not advise the Agent to invent `reviewed_work_unit_refs[]`, treat a bare
-work-unit directory as submitted, or present an unassigned output as evidence.
-Feedback may name only an existing legal submitted-work or replacement owner;
-without one it SHALL state `missing_contract`/no-path and the same Wave1
-checkpoint.
-
-An invalid/missing index table SHALL produce exactly one
-`reference_index_table_invalid` parent root and mask row symptoms. A
-materializable projection, legacy/misnamed current projection, invalid index,
-or unresolved submitted backing SHALL not be reported as a degradable floor
-failure. A true floor deficit SHALL retain the existing
-`per_topic_ref_md_count_floor` rule identity and accepted degradation policy.
-
-All Wave0/Wave1/Wave2 shared evaluator roots SHALL expose the static contract
-lineage needed for one repair: `repair_kind`, `missing_fact`, and `write_to`;
-inspect and formal gate wrappers SHALL add their exact invoked checkpoint as
-`rerun`. These are read-only feedback coordinates, not a new authority or
-generic repair controller. `repair_kind` SHALL identify the legal next-action
-class, `missing_fact` SHALL identify the earliest direct failed fact and its
-owning contract, and `write_to` SHALL name the exact next-action coordinate
-interpreted by that kind. Existing inspect/advice strings MAY remain for
-compatibility but SHALL NOT be the sole repair information.
-
-Wave1 semantic Markdown checks SHALL protect section/content availability while
-tolerating equivalent presentation. `question_list_has_four_sections` SHALL
-use its definition-owned semantic-section descriptor. `source_url_present`
-SHALL accept a parseable bare HTTP(S) URL or Markdown link.
-`key_findings_non_empty` SHALL accept common bullet, numbered, or non-empty
-paragraph content under the semantic Key Findings section. These tolerant
-evaluators, not historical regex presentation, SHALL own the blocking result.
-
-#### Scenario: Inspect and gate share reference evaluation
-
-- **WHEN** Wave1 inspect and the formal Wave1 gate evaluate identical bundle
-  bytes for a current Topic
-- **THEN** both SHALL report the same parent/materialization/index/existing-work
-  /true-deficit/satisfied convergence class and repair coordinates
-- **AND** only the formal gate wrapper MAY perform accepted durable gate side
-  effects
-
-#### Scenario: Wave1 return-map inspection has one declared input family
-
-- **WHEN** valid `evidence-summary.md`, `question-list.md`, and rich reference
-  documents lack return-map fields while a Seed Topic slot is malformed
-- **THEN** Wave1 inspect SHALL emit return-map feedback only for the Seed Topic
-  coordinate
-- **AND** it SHALL preserve any independently applicable artifact or backing
-  finding with its existing rule ID
-
-#### Scenario: canonical materialization masks floor deficit
-
-- **WHEN** submitted, cache-backed Wave1 source facts can materialize a current
-  canonical reference but that reference is absent or only a legacy/misnamed
-  path exists
-- **THEN** inspect and gate SHALL report the canonical materialization root
-- **AND** they SHALL not report a supplementary floor deficit until that legal
-  projection repair is exhausted
-
-#### Scenario: invalid index masks dependent row findings
-
-- **WHEN** `_INDEX.md` is missing, empty, or has no accepted inventory table
-- **THEN** inspect and gate SHALL report one `reference_index_table_invalid`
-  root
-- **AND** they SHALL not enumerate missing index rows or use the index state as
-  a floor failure
-
-#### Scenario: Wave1 CLI ignores non-work-unit coverage
-
-- **WHEN** non-work-unit delegated directories contain Wave1-looking result
-  files and no submitted work-unit ledger rows cover the outputs
-- **THEN** Wave1 gate CLI SHALL fail delegated provenance
-- **AND** convergence SHALL not treat those files as materializable backing
-
-#### Scenario: Affected root carries contract-lineage repair coordinates
-
-- **WHEN** an in-scope Wave1 rule rejects a deterministic fact
-- **THEN** its primary structured diagnostic SHALL include non-empty
-  `repair_kind`, `missing_fact`, `write_to`, and `rerun`
-- **AND** the Agent SHALL not need to inspect Engine source to locate the
-  authorized repair surface or checkpoint
-
-#### Scenario: Wave1 CLI evaluates depth review from definition
-
-- **WHEN** the Wave1 gate definition contains a depth-review rule
-- **THEN** the CLI SHALL parse the rule target from the current run bundle
-- **AND** the rule SHALL contribute to the overall pass/fail determination
-
-#### Scenario: Normal legacy reference remains valid
-
-- **WHEN** a normal first-run reference uses the existing valid
-  `related_topic` metadata form and an accepted index table
-- **THEN** the shared Wave1 evaluator SHALL continue to accept that reference
-  binding through the canonical Topic resolver
-- **AND** no rerun-only producer or gate branch SHALL be required, while a
-  legacy file path remains non-counting until canonical projection repair
-
-#### Scenario: Missing declaration masks downstream Wave1 symptoms
-
-- **WHEN** a Wave1 work unit is submitted in index/status but its bundle ledger
-  row is absent
-- **THEN** inspect and gate SHALL report one `submitted_declaration_missing`
-  parent root for that work ID
-- **AND** they SHALL mask dependent missing-output, cache-mapping, count-floor,
-  and delegated-bypass symptoms
-
-#### Scenario: no submitted work can satisfy a depth review
-
-- **WHEN** a Wave1 depth review has no reviewed ref that resolves to a
-  submitted work-unit row for its current Topic
-- **THEN** inspect and Gate SHALL return one submitted-evidence/binding root
-- **AND** they SHALL mask source-claim mapping, source novelty, new-source
-  comparison, `per_topic_ref_md_count_floor`, and dependent depth-review
-  symptoms
-- **AND** feedback SHALL not authorize fabrication of a reviewed ref or an
-  unassigned output role, and SHALL return `missing_contract`/no-path when no
-  existing submitted-work or replacement owner is established
-
-#### Scenario: Question-list descriptor tolerates equivalent presentation
-
-- **WHEN** all four required question-list semantic sections are present and
-  non-empty in an equivalent order, case, heading level, spacing, or list style
-- **THEN** the shared evaluator SHALL accept the structure through its parsed
-  semantic-section descriptor
-- **AND** the historical ordered regex SHALL not participate in the result
-
-#### Scenario: Question-list semantic section is missing or empty
-
-- **WHEN** one declared question-list semantic section is absent or has no
-  meaningful content
-- **THEN** the shared evaluator SHALL return one
-  `question_list_has_four_sections` direct root naming that section
-- **AND** Gate and inspect SHALL not add a second regex-derived failure for the
-  same artifact
 
 ### Requirement: Gate CLI evaluates wave2 rules from definition
 
@@ -801,309 +1060,6 @@ When a materializable candidate exists, the evaluator SHALL select it by cross-t
 - **WHEN** two Topics have equal projected counts and both have unprojected candidates
 - **THEN** the evaluator SHALL break the tie only by the deterministic `topic_slug` order
 - **AND** it SHALL NOT prefer a Topic or source because its content looks more relevant, richer, or higher-tier
-
-### Requirement: Blocking judgment contracts SHALL close across producer, authority, checker, diagnostic, and guard
-
-Each blocking deterministic Wave gate/output contract SHALL use a closed and
-minimal executable chain: one direct runtime authority surface; one checker
-path that consumes that authority and returns a root-specific structured
-finding; one shared projection that exposes the smallest actionable root cause
-and repair coordinates; and focused changed-contract coverage that catches
-future drift. Agent producer guidance SHALL describe changed Agent-owned output
-contracts at the owning Phase/controller surface; it SHALL not be copied into a
-per-rule audit mapping. Engine-operation, user-decision, external-action, and
-missing-contract roots SHALL use their real operation or boundary.
-
-For Wave1 reference closeout, one pure convergence evaluator SHALL be the only
-owner of the cross-fact classification among current canonical Topic identity,
-profile floor, submitted/backed source facts, committed reference projections,
-index inventory, and existing supplementary demand. It SHALL call existing
-specialized readers/checkers for their direct facts; it SHALL not add a generic
-dependency engine, a second source catalog, a duplicate metadata parser, a new
-durable state, a watcher, retry tree, or generic repair controller. It SHALL
-replace the parallel broad-glob count/index/backing interpretations in Wave1
-inspect and formal gate, leaving `countReferences()` as the one narrow
-numeric-eligibility implementation with an exact selected-path mode.
-
-A specialized rule that can fail for multiple direct reasons, including
-provenance, reference/index, depth, cache, or finding-contract checks, SHALL
-use checker-owned findings and SHALL return the blocking basis and
-repair-kind/write coordinate on each concrete root. The definition SHALL not
-flatten those distinct roots into one static basis/repair. If a checker-owned
-blocking result lacks either part of the root contract, the standard projection
-SHALL fail as configuration integrity rather than infer it from rule metadata
-or prose. Formal gate and inspect SHALL reuse the same pure evaluator result
-and stable rule ID; their primary root object SHALL share `repair_kind`,
-`missing_fact`, and `write_to`, with only `rerun` checkpoint-specific.
-
-Blocking rules SHALL protect required structure, deterministic authority,
-provenance, consumer navigation, or explicit accepted floors. Presentation or
-maintenance preferences SHALL use tolerant parsing or advisory feedback unless
-they are necessary to locate/parse direct authority. If a prerequisite
-authority is absent or unparseable, the checker SHALL report that prerequisite
-first and short-circuit dependent symptoms. For reference inventory, an invalid
-or missing eight-column table SHALL mask row/source-layer symptoms until it
-parses. The implementation SHALL use local guards rather than a generalized
-dependency engine.
-
-Formal lifecycle checks such as node binding, handoff preflight, routing,
-degraded eligibility, gate-attempt durability, checkpoint, and
-`trace_event_*` remain formal-only and SHALL not be duplicated in inspect.
-
-The existing Wave0 source-metadata array fact, Wave1 Key Findings availability
-fact, and Wave1 four-question-section availability fact SHALL remain owned by
-one neutral target-level direct-output module selected only by a closed
-direct_contract ID. Its interface SHALL accept the current run bundle root, one
-Engine-resolved concrete bundle-relative target, and that ID; it SHALL own
-bounded open/read, fatal UTF-8 plus single-BOM handling, tolerant parsing, and
-contract-local structured roots without reading queue, manifest, result,
-receipt, ledger, profile, phase state, or gate definition. Neutral roots SHALL
-use only `root_class: semantic_content|contract_integrity`: target missing and
-parse/schema/required-section failure are semantic_content, while
-unsafe/non-regular/escaping target, bounded-read/oversize failure and invalid
-UTF-8 are contract_integrity. Submit-specific mechanical classification,
-repair_scope and recommended_action remain candidate-adapter concerns. The
-interface SHALL return only bounded snapshot metadata and roots, not
-raw/decoded bytes or parsed entries that an adapter could independently
-reinterpret. For `wave0.source-metadata-array.v1` only, a successful validated
-top-level YAML array SHALL expose `validated_array_length`; a failed result
-shall expose no usable validated length. That scalar describes the current
-resolved target evaluation only: it neither hashes/freezes target bytes nor
-selects a target, contract, or work unit or mutates runtime state.
-
-The work-unit candidate adapter, Wave evaluator adapter, and Wave0 submitted
-candidate-projection reader SHALL remain the concrete consumers of that seam.
-Candidate validation maps neutral roots to submit violations and repair scope;
-Wave inspect/formal Gate map the same roots to existing rule IDs, findings,
-hints, and checkpoint-specific reruns. The Wave0 candidate-projection reader
-shall authenticate the current submitted declaration, exact required output
-tuple, and hash-bound result before calling the neutral operation; after
-success it may consume only `validated_array_length`, never parser output.
-Existing rule IDs, including `per_topic_reference_schema_valid`,
-`key_findings_non_empty`, and `question_list_has_four_sections`, remain
-stable. Source URL presence remains a separate Wave-only rule and does not
-enter the neutral candidate contract.
-
-All adapters SHALL call that same target-level operation. Identical target
-bytes under the same direct contract SHALL agree on pass/fail, missing semantic
-sections, schema issues, BOM treatment, invalid-UTF8/read prerequisites, and,
-for successful Wave0 arrays, `validated_array_length`. A Wave adapter may add
-direct authorities outside the neutral contract, including file-existence
-expansion, count floors, source URL presentation, submitted provenance,
-profile/depth, reference/index/backing, cross-artifact, return-map, phase
-completeness, and formal lifecycle checks. A missing, unsafe, or unreadable
-admitted target SHALL project through the existing earliest file-existence or
-authority rule and mask dependent schema/semantic rules; after successful read,
-parse/schema/semantic roots project through the existing direct rule. The Wave
-adapter SHALL not duplicate an existence/read path, YAML reader, Key Findings
-parser, or question-section parser for the same admitted fact.
-
-Implementation SHALL remove inlined Wave-only copies of
-`ReferenceMetadataArraySchema` evaluation, Key Findings parsing,
-question-list-section parsing, and the Wave0 count-floor YAML read after the
-adapters use the target-level operation. It SHALL not retain a submit-specific
-clone, add a generic linter CLI, introduce a plugin registry, or dispatch from
-user-authored IDs or path regexes. Parent snapshot/read/parse failure SHALL
-produce one neutral prerequisite root and mask dependent direct facts; each
-adapter preserves the same missing fact and mutable surface while naming its own
-dry-submit, inspect, or formal-Gate rerun.
-
-#### Scenario: convergence replaces parallel Wave1 interpretations
-
-- **WHEN** a current Wave1 Topic has the same submitted backing, reference
-  paths, index bytes, profile floor, and queue state in inspect and gate
-- **THEN** both commands SHALL obtain their reference/floor class from one
-  convergence result
-- **AND** no separate broad glob, index count, or queue-advice branch may
-  return a contradictory success/failure result
-
-#### Scenario: prerequisite root short-circuits derived symptoms
-
-- **WHEN** canonical Topic/profile/submitted backing authority is unavailable
-- **THEN** the checker SHALL report that parent root with one repair coordinate
-- **AND** it SHALL mask materialization, index, and floor symptoms derived from
-  that unavailable authority
-
-#### Scenario: quality-floor policy remains scoped
-
-- **WHEN** canonical materialization, index synchronization, or backing repair
-  is required before a reference can count
-- **THEN** that finding SHALL not inherit the degradation eligibility of
-  `per_topic_ref_md_count_floor`
-- **AND** only a true post-repair count shortfall SHALL retain the existing
-  quality-floor rule and policy
-
-#### Scenario: blocking rule has a closed contract chain
-
-- **WHEN** an active gate rule contributes to pass/fail
-- **THEN** its descriptor, declared finding source, and checker finding SHALL
-  identify direct authority, root-specific basis/repair, and diagnostic
-  projection without a second inventory row
-- **AND** in-scope Wave artifact/provenance rules SHALL use the shared evaluator
-  route consumed by formal and inspect
-- **AND** active-definition execution, unknown-check fail-closed coverage, or a
-  focused changed-rule regression SHALL fail when the executable path is absent
-
-#### Scenario: Specialized Wave rule does not flatten distinct roots
-
-- **WHEN** one work-unit/depth/reference rule can fail on an Agent-owned file,
-  an Engine-owned binding, or a missing legal capability
-- **THEN** the checker SHALL return a distinct structured finding with blocking
-  basis and repair coordinate for the observed root
-- **AND** no definition-level fallback basis/repair SHALL override or obscure
-  that root
-
-#### Scenario: presentation preference is not promoted to authority
-
-- **WHEN** direct structured authority proves a required fact and Markdown
-  differs only in harmless presentation
-- **THEN** the command SHALL accept tolerant equivalent parsing or emit
-  advisory feedback
-- **AND** it SHALL NOT create an independent blocking rule for that preference
-
-#### Scenario: authority conflict is resolved by truth type
-
-- **WHEN** producer docs, submitted ledger rows, return-map refs, helper
-  checks, or inspect wording disagree about the same deterministic fact
-- **THEN** implementation SHALL resolve the conflict using the Source of Record
-  for that fact's truth type
-- **AND** the lower-authority surface SHALL be updated or diagnosed rather than
-  silently broadening gate acceptance
-
-#### Scenario: missing prerequisite masks dependent rules
-
-- **WHEN** a parent YAML object, required array, or required field cannot be
-  read
-- **THEN** the checker SHALL report the parent/field as the blocking root
-- **AND** dependent rules SHALL be recorded as masked or omitted rather than
-  failed independently
-
-#### Scenario: Root feedback names one authorized repair loop
-
-- **WHEN** a blocking rule has one actionable direct root
-- **THEN** primary feedback SHALL name `repair_kind`, the fact in
-  `missing_fact`, its mutable or Engine-owned repair surface in `write_to`, and
-  the same checkpoint in `rerun`
-- **AND** it SHALL NOT provide competing repair branches or require the Agent to
-  infer contract lineage from opaque prose
-
-#### Scenario: Wave root projection feeds the standard Gate hint
-
-- **WHEN** a shared Wave blocking root reaches a formal Gate wrapper
-- **THEN** the standard top-level `hints[]` entry SHALL be projected from that
-  root rather than reconstructed from inspect/advice prose
-- **AND** matching inspect SHALL expose the same direct fact and authorized
-  repair surface without formal routing side effects
-
-#### Scenario: delegated bypass scan has one side-effect owner
-
-- **WHEN** inspect and formal gate evaluate delegated-bypass provenance for the
-  same bundle
-- **THEN** both SHALL consume the same pure scan result
-- **AND** only the formal wrapper MAY emit durable bypass trace/log evidence
-- **AND** one formal invocation SHALL emit that diagnostic at most once
-
-#### Scenario: Invalid index table masks row cascade
-
-- **WHEN** the reference index parent cannot be parsed as the accepted table
-- **THEN** the shared evaluator SHALL return one
-  `reference_index_table_invalid` or equivalent root and the index path as the
-  nearest repair target
-- **AND** it SHALL NOT return one primary `missing_index_row` failure for every
-  reference file in the same evaluation
-
-#### Scenario: Wave0 direct output exposes bounded cardinality only after validation
-
-- **WHEN** `wave0.source-metadata-array.v1` reads a schema-valid YAML array
-  containing two entries
-- **THEN** its successful result SHALL expose `validated_array_length: 2`
-- **AND** it SHALL expose neither parsed entries nor raw/decoded target bytes
-
-#### Scenario: Wave0 count floor consumes the successful direct result
-
-- **WHEN** the Wave0 schema route has a successful direct result for a Topic's
-  declared source output
-- **THEN** the corresponding count-floor route SHALL use that result's
-  `validated_array_length`
-- **AND** it SHALL not independently parse or reread the YAML file
-
-#### Scenario: Candidate projection does not reinterpret direct output
-
-- **WHEN** an authenticated current Wave0 submitted declaration reaches its
-  declared `source_yaml` output
-- **THEN** the candidate-projection reader SHALL derive only ordinals from a
-  passed `validated_array_length`
-- **AND** it SHALL not receive or reconstruct source-array entries or decoded
-  YAML content
-
-#### Scenario: candidate, candidate-projection, and Wave adapters agree on Wave0 schema fact
-
-- **WHEN** all three consumers evaluate identical source.yaml bytes through
-  `wave0.source-metadata-array.v1`
-- **THEN** they SHALL agree on top-level-array and
-  `ReferenceMetadataArraySchema` pass/fail plus the earliest issue
-- **AND** only the Wave adapter SHALL add count-floor or phase-wide findings
-
-#### Scenario: candidate and Wave adapters agree on tolerant Wave1 sections
-
-- **WHEN** both adapters evaluate identical evidence-summary or question-list
-  bytes with tolerated heading case, level, spacing, order or list presentation
-- **THEN** they SHALL return the same neutral direct result
-- **AND** the Wave adapter SHALL preserve its existing Gate rule ID while the
-  candidate uses a submit violation code
-
-#### Scenario: source URL presence remains Wave-only
-
-- **WHEN** an evidence summary has non-empty Key Findings but no Markdown URL
-  while structured submit source authorities are valid
-- **THEN** the neutral evidence-summary direct contract SHALL pass
-- **AND** the existing Wave `source_url_present` rule MAY still fail at its
-  owning Wave checkpoint
-
-#### Scenario: unavailable snapshot masks direct symptoms without changing ownership
-
-- **WHEN** the target-level operation cannot obtain a safe bounded UTF-8
-  snapshot
-- **THEN** it SHALL emit one prerequisite root: semantic_content for a missing
-  target, or contract_integrity for unsafe/unreadable/oversized/invalid-UTF8
-  input
-- **AND** it SHALL not additionally claim missing YAML entries, Key Findings,
-  or question sections from unavailable bytes
-
-#### Scenario: Wave missing file keeps one existing rule identity
-
-- **WHEN** an admitted Wave0 or Wave1 target is missing or unreadable
-- **THEN** the target-level read root SHALL map to the existing earliest
-  file/authority rule and mask the dependent direct rule
-- **AND** Wave inspect/Gate SHALL not emit both an independent file-exists
-  failure and a second reader failure for that target
-
-#### Scenario: phase-wide Wave facts do not move into submit
-
-- **WHEN** neutral direct facts pass but submitted provenance, count floor,
-  depth review, reference backing, return map, queue drain, or completion event
-  fails
-- **THEN** candidate validation SHALL not evaluate or accept those phase-wide
-  facts
-- **AND** Wave inspect/Gate SHALL remain their verdict owner
-
-#### Scenario: direct fact implementation is not duplicated
-
-- **WHEN** apply completes the candidate, candidate-projection, and Wave
-  adapters
-- **THEN** one neutral target-level module SHALL own the three admitted direct
-  contracts
-- **AND** focused static or behavioral coverage SHALL fail if an adapter retains
-  an independent equivalent parser/checker
-
-#### Scenario: adapter reruns preserve checkpoint ownership
-
-- **WHEN** one neutral root appears during dry-submit, Wave inspect, and formal
-  Gate
-- **THEN** `missing_fact` and `write_to` SHALL describe the same direct fact
-  and artifact
-- **AND** each projection SHALL name its own exact dry-submit, inspect, or Gate
-  rerun without creating a competing acceptance authority
 
 ### Requirement: Wave gate definitions, helpers, and phase docs SHALL align as one judgment layer
 

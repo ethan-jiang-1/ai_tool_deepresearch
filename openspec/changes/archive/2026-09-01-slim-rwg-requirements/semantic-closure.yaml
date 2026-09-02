@@ -1,0 +1,7 @@
+schema_version: semantic-closure/v1
+change: 2026-09-01-slim-rwg-requirements
+status: not_applicable
+reason: >-
+  requirement 结构重组（3→7），全部既有文本逐字节保留（唯一例外为计划内 M3
+  措辞精确化，不改变任何 deterministic fact 的 resolution/conclusion/consumer）；
+  不向任何 semantic fact family 添加或改写 statement。
