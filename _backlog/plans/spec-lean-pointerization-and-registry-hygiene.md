@@ -141,7 +141,7 @@
 
 ### R1（主力）——DWU capability 身份迁移（设计已独立成文）
 
-**完整设计见独立文件 [`spec-lean-capability-split-dwu.md`](spec-lean-capability-split-dwu.md)**（自包含：事实基线、一变四拆分设计、身份迁移机制、副作用 S1-S7 与消解、R1a/R1b/R1c 三步、验收断言、待复核决策点 4 项）。本节仅留摘要：
+**完整设计见独立文件 [`capability-split-dwu.md`](capability-split-dwu.md)**（自包含：事实基线、一变四拆分设计、身份迁移机制、副作用 S1-S7 与消解、R1a/R1b/R1c 三步、验收断言、待复核决策点 4 项）。本节仅留摘要：
 
 - **一变四**：母体 `agent/delegated-work-units` 瘦身为 assignment & briefing；新设 `agent/work-unit-submission` / `agent/work-unit-preflight` / `agent/work-unit-correction`。
 - **身份迁移**：迁移 requirement 换发新 ID（WSU/WUP/WUC，reservation 申请），旧 DEW 行 `[DEPRECATED]`+后继指针；engine `@impl` 同 change 换新 ID（模块零移动）；catalog 3 新行 + DWU Purpose 改写。
@@ -194,7 +194,7 @@
 
 | spec | 行数 | 状态 |
 |---|---|---|
-| agent/delegated-work-units | 2360 | ✅ 设计定稿 → [`spec-lean-capability-split-dwu.md`](spec-lean-capability-split-dwu.md)（R1 执行） |
+| agent/delegated-work-units | 2360 | ✅ 设计定稿 → [`capability-split-dwu.md`](capability-split-dwu.md)（R1 执行） |
 | research/research-wave-gate-implementation | 1380 | ✅ 研究完成 → 不拆（同模式三实例；触发条件已登记） |
 | research/research-wave-phase-content | 1165 | ✅ 研究完成 → 不拆（共同契约权威；234 行块归 R2 按 F4 深挖执行） |
 | agent/agentic-queue | 1059 | ✅ 研究完成 → 不拆（一台 queue 机器的完整生命周期；触发条件已登记） |

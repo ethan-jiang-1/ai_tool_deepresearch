@@ -17,7 +17,8 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
-| [`spec-lean-pointerization-and-registry-hygiene`](spec-lean-pointerization-and-registry-hygiene.md) | 第二轮打扫：R0 工具先行（复述扫描器+装配通用化）、R1/R2 pointerization 减量（DWU 2360 与全部 >160 块）、R3 registry 卫生（15 死前缀+61 条 DEPRECATED 核对）、R4 §-guard 扩展、R5 housekeeping | 事实与思路已成文；执行待用户指令 |
+| [`capability-split-dwu`](capability-split-dwu.md) | `agent/delegated-work-units` 一变四 capability 拆分（母体 assignment & briefing + submission/preflight/correction）：设计定稿，§6 四个决策点待用户复核；复核通过后 T1 测绘起跑 | 设计定稿；执行待指令 |
+| [`spec-lean-pointerization-and-registry-hygiene`](spec-lean-pointerization-and-registry-hygiene.md) | 第二轮打扫：R0 工具先行（复述扫描器+装配通用化）、R2 pointerization 减量（全部 >160 块；DWU 已剥离至独立 plan）、R3 registry 卫生（15 死前缀+61 条 DEPRECATED 核对）、R4 §-guard 扩展、R5 housekeeping | 事实与思路已成文；R1 已剥离至独立 plan；执行待用户指令 |
 
 ## 最近关闭 (2026-09-01)
 
@@ -26,9 +27,6 @@
 | `spec-drift-audit-remediation-and-requirement-slimming` | CLS-084：八个有界 OpenSpec change 全部归档（C1 return-map 真相同步、C2 phase-content 坐标重同步、C3a–C3e 五批 requirement 瘦身——六大 spec 巨无霸清零且文本逐字节守恒、C4 `check-spec-section-references` 防复发 guard 接入 check-all）；全量 npm test 2967/2967 0 fail，finalizer 均 19/19。 |
 
 ### 参照资料（非 plan，供后续 change 引用）
-
-- `spec-lean-capability-split-dwu.md` — 活跃 plan R1 批次的自包含设计：`agent/delegated-work-units` 一变四 capability 拆分（事实基线/迁移机制/副作用 S1-S7/三步执行/4 项待复核决策点）。
-- `spec-lean-f4-megablock-deepdive.md` — 活跃 plan 的 F4 深挖参照：10 块 ≥190 行 requirement 的逐块处置设计（分割/清理候选/执行约束），R2 批次执行与复核以此为据。
 
 - `spec-lean-f4-megablock-deepdive.md` — 活跃 plan `spec-lean-pointerization-and-registry-hygiene` 的 F4 深挖参照：10 块 ≥190 行 requirement 的逐块处置设计（分割/清理候选/执行约束），R2 批次执行与复核以此为据。
 - `user-intent-carry-through-design-analysis.md`、`rerun-feedback-carry-through-design-analysis.md`、`user-intent-carry-through-implementation-plan.md` — 已随 `strengthen-user-intent-carry-through` 完成并移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
