@@ -1,0 +1,30 @@
+schema_version: verification-routing/v1
+change: 2026-09-01-slim-agq-requirements
+test_classes:
+  unit:
+    status: selected
+    rationale: 结构重组保真性由静态文本锁直接证明。
+  integration:
+    status: not_applicable
+    rationale: 无 CLI/子进程行为变更。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: 无 workflow 级状态链变更。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: 无 Agent/Markdown 流程行为变更。
+claims:
+  - id: agq-slim-line-conservation
+    statement: 拆分后主 spec 与 delta 的 3 个新块逐字一致；REMOVED 与 ADDED 内容行多重集合全等；16 个场景全部保留且仅出现一次；每个新 requirement ≤ 160 行。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/agq-slim-structure-locks.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

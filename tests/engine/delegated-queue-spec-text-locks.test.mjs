@@ -88,7 +88,8 @@ test("spec req header indexes match requirement counts", () => {
   const agqIds = agqHeader.match(/AGQ-\d{3}/g) ?? [];
   assert.equal(agqIds.length, 28, "AGQ header must list 28 IDs");
   assert.equal(new Set(agqIds).size, 28, "AGQ header IDs must be unique");
-  assert.equal(headingBlocks(agq).length, 28, "AGQ body must have 28 requirements");
+  // 2026-09-01-slim-agq-requirements: topic_deepening 1→3 拆分（文本逐字保留）
+  assert.equal(headingBlocks(agq).length, 30, "AGQ body must have 30 requirements after topic_deepening split");
 });
 
 test("DEW inline req lines are 1:1 with requirements", () => {
