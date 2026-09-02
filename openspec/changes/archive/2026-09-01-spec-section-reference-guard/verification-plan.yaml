@@ -1,0 +1,30 @@
+schema_version: verification-routing/v1
+change: 2026-09-01-spec-section-reference-guard
+test_classes:
+  unit:
+    status: selected
+    rationale: checker 的确定性裁决（fixture 双向：违规 root 报两处根因并 exit 1；干净 root exit 0）由 node:test 子进程断言直接证明。
+  integration:
+    status: not_applicable
+    rationale: checker 为单进程只读脚本，无生产 CLI 面。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: 无 workflow 级状态链变更。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: 无 Agent/Markdown 流程行为变更。
+claims:
+  - id: spec-section-reference-guard-verdicts
+    statement: fixture 违规 root（缺失 § 坐标 + 现在时退役散文）使 checker exit 1 并逐条输出 file:line 根因；干净 root exit 0；真实现存缺陷（autorun L120）清零后主库扫描为 PASS。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/governance/check-spec-section-references.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

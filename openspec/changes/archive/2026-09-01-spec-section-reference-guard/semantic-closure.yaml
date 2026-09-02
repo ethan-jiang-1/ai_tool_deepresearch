@@ -1,0 +1,7 @@
+schema_version: semantic-closure/v1
+change: 2026-09-01-spec-section-reference-guard
+status: not_applicable
+reason: >-
+  新增只读 governance checker 与一句退役措辞改写；不向任何 semantic fact family
+  添加或改写 statement，不改变任何 deterministic fact 的 resolution、conclusion
+  或 consumer 集。
