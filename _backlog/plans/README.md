@@ -17,7 +17,7 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
-| *（当前无活跃 plan）* | | |
+| [`spec-lean-pointerization-and-registry-hygiene`](spec-lean-pointerization-and-registry-hygiene.md) | 第二轮打扫：R0 工具先行（复述扫描器+装配通用化）、R1/R2 pointerization 减量（DWU 2360 与全部 >160 块）、R3 registry 卫生（15 死前缀+61 条 DEPRECATED 核对）、R4 §-guard 扩展、R5 housekeeping | 事实与思路已成文；执行待用户指令 |
 
 ## 最近关闭 (2026-09-01)
 
