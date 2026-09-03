@@ -53,7 +53,8 @@ bundle，不看任何别的，哪怕名字接近。
 
 **非目标（Excluded）**：不修复已污染的两个现存 bundle（补救是单独的 run 决策，
 走 accepted rerun/recovery 路径）；不覆盖 wave1 证据伪造与 trace 伪造
-（由 active change `harden-wave1-evidence-and-trace-integrity` 拥有，BUG-250/251）；
+（已由已归档 change `harden-wave1-evidence-and-trace-integrity` 修复并转为
+accepted 行为：CRC-009 / TRW-007 / TRW-008 / WAI-013，BUG-250/251）；
 不新增第三个 HITL checkpoint（创建同意是 entry/边界规则，不是 in-run checkpoint，
 HITL1/HITL2 仍是仅有的 interactive in-run 检查点）；不改变 entry selection 的
 用户显式提供原则（`bundle/run-entry` 不动）。
@@ -82,7 +83,7 @@ HITL1/HITL2 仍是仅有的 interactive in-run 检查点）；不改变 entry se
 | `workflow/workflow-directory-contract` | main spec（bare path 归属 current bundle root） | Verify-only | 路径归属已正确；语义引用是新维度，由 BUI-003 拥有 |
 | `agent/hitl-ux` | main spec（HITL1/HITL2 环模型） | Excluded | 创建同意不是 in-run checkpoint；把它做成第三个 checkpoint 会破坏"仅有的两个 interactive 检查点"契约 |
 | `workflow/silent-wave-execution` | RUN.md 引用（静默自律） | Excluded | 静默自律管 phase 间推进；bundle 创建不是 phase transition，其同意门由 CMI-010 拥有，无需改此 spec |
-| `engine/trace-writer` | active change harden-wave1 delta | Excluded | trace 伪造检测由 `harden-wave1-evidence-and-trace-integrity` 拥有（BUG-251），不重复立项 |
+| `engine/trace-writer` | accepted spec（TRW-007/008，来自已归档 change harden-wave1） | Excluded | trace 伪造检测已是 accepted 行为（BUG-251 修复），不重复立项 |
 | `research/post-final-recovery` | RUN.md 引用（ReopenResearchPass） | Excluded | 重定 scope 的合法路径已有 accepted recovery 契约；本变更只在"另开新 bundle"入口加同意门，不改 recovery 语义 |
 | `agent/agent-command-surface` | catalog 行 + spec 引用 | Excluded | entry 文档 trigger/execution 区分已有；本变更不新增命令面，只改一个既有 CLI 的参数集与两个 playbook 文本 |
 

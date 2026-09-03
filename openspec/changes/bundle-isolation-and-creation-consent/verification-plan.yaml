@@ -59,7 +59,7 @@ claims:
       inside the created bundle; an ack naming an unflagged or nonexistent
       bundle is rejected before mutation.
     test_class: integration
-    proof_subject: cli_surface
+    proof_subject: deterministic_contract
     asset:
       kind: node_test
       path: tests/integration/cli/instantiate-run-bundle-consent.test.mjs
@@ -93,7 +93,7 @@ claims:
       diagnostic naming the citing file and cited bundle with the existing
       cleanup/blocker severity split, without altering their other outputs.
     test_class: integration
-    proof_subject: cli_surface
+    proof_subject: deterministic_contract
     asset:
       kind: node_test
       path: tests/integration/cli/inspect-bundle-cross-reference.test.mjs

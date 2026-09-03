@@ -2,7 +2,7 @@
 
 > 最后更新: 2026-09-03 | `_backlog/bugs/` — 活跃 bug 在此
 >
-> **bug 编号权威在 `_done/_fixed_bugs/`，新 bug = 最大编号 + 1（当前 BUG-250 起）。** 本文件只列活跃 bug。
+> **bug 编号权威在 `_done/_fixed_bugs/`，新 bug = 最大编号 + 1（当前 BUG-252 起）。** 本文件只列活跃 bug。
 
 ## 修完一个 bug 的步骤
 
@@ -21,11 +21,11 @@
 > BUG-232/233/234/236 已按 2026-08-19 结案并移入 [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)。
 > BUG-241..245 已按 2026-08-26 结案并移入 [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)。
 > BUG-246/247 已按 2026-08-27 结案并移入 [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)。
+> BUG-250/251 已按 2026-09-03 结案并移入 [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)，见下方「最近关闭 (2026-09-03)」。
 
 | Bug | Severity | Phase | 简述 |
 |-----|----------|-------|------|
-| [BUG-250](BUG-250-wave1-submit-evidence-fail-open.md) | 高 | wave1 | `wave1_topic_deepening` submit 对空 `source_claims`/`accepted_source_urls` + 占位 cache（example.com / "Deep research content."）fail-open，质量闸门完全推迟到 gate（49 次失败后疲劳），是 BUG-249 家族绕过前的伪造入口。现场：`dpt_rb_glm-5-3-deepseek-v4-domestic-chips`，11 条声明全空。 |
-| [BUG-251](BUG-251-rb-trace-forgery-undetected.md) | 高 | 全周期 | `rb_trace.jsonl` 可被 run-scoped 脚本 `echo >>` 直接伪造（bundle 名错误、ts 倒填、`wave2_completion` 无对应 gate），audit 0 次读 trace、gate 的 `trace_event_present` 消费伪造事件。现场：伪造事件链 bundle=`glm-5-3-deepseek-v4-domestic-chips`（缺 `dpt_rb_` 前缀）。 |
+| （当前无活跃 bug） | — | — | 全部已结案；新 bug 按 Next available bug ID 建卡。 |
 
 > BUG-237 已随 `2026-08-24-enforce-seed-initialization-body-completeness`、
 > BUG-238 已随 `2026-08-24-document-wave0-deferred-all-or-nothing`、
@@ -37,6 +37,8 @@
 
 | Bug | 结案依据 |
 |-----|----------|
+| BUG-250 | `2026-09-03-harden-wave1-evidence-and-trace-integrity`：`wave1_topic_deepening` submit 对空 `source_claims[]`/`accepted_source_urls[]` + 占位 cache（example.com / "Deep research content."）fail-open，质量闸门推迟到 gate（49 次失败后疲劳），是 BUG-249 家族绕过前的伪造入口；修复：`validateSourceClaims` 空 claims 且无显式 degraded capture 时 fail-fast（按 `outputContract.source_claims.allowed` 限定 kind），cache-leaf 占位判定扩展覆盖标题+填充句/纯标题页/IANA 示例域名映射（显式 degraded 出口保留），拒绝发生在 ledger append 前且不触发 inline backfill；delta spec CRC-009 已同步 main specs，finalizer 19/19 归档（提交 `c276c727c`）。 |
+| BUG-251 | 同上 change：`rb_trace.jsonl` 可被 run-scoped 脚本 `echo >>` 直接伪造（bundle 短名、ts 倒填、`wave2_completion` 无对应 gate），audit 0 次读 trace、gate `trace_event_present` 消费伪造事件；关键事实：`rb_status.json#/bundle` 短名与伪造事件同值，只有目录 basename 能区分；修复：全部 trace 写入者（traceEntry 集中 stamp / writeGateAttempt / log-event）强制 writer 身份 + canonical bundle（目录 basename，detail 不可覆盖），wave gate `trace_event_present` fail-closed 校验 canonical basename（缺 writer 容忍历史事件），audit 新增 advisory 完整性检查（完成事件须 passed gate_attempt 见证 + ts 单调 + canonical bundle，`final_report_complete` 无 gate 必标记）；delta specs TRW-007/TRW-008 已同步 main specs，finalizer 19/19 归档（提交 `c276c727c`）。 |
 | BUG-249 | `2026-09-03-close-lifecycle-bypass-detection-gap`：Wave1 gate 疲劳后 Phase Agent 在 `stop: no` 静默期自写脚本落 `final/final.md`、手勾 Progress、谎报完成（同族第三次爆发，见 BUG-033/042/047-049/063）；检测改为外生可检 + 自我挫败——wave gate 新增 `premature_final_present` fail-closed blocking root（唯一补救 `final/attic-<原名>`），audit 封闭词表新增 `premature_final_present`/`plan_progress_tamper_suspected` 并挂 integrity 对象，`enter-phase` 输出附带 bounded integrity 摘要，Progress 手勾为可指证篡改证据，完成宣告需 terminal 事实 backing；全量回归 3007/3007 绿（提交 `f75be39f5`）。同批补登记 BUG-248 行（`2026-09-02-extend-mutate-layout-to-hitl1`）。 |
 | BUG-248 | `2026-09-02-extend-mutate-layout-to-hitl1`：HITL1/seed-topics 初始建 topic 阶段无法物理移除 topic 或改 slug；`mutate_layout` 完整 target 在 legal HITL1 pre-gate window 获得授权（与 rerun 同护栏），inspect baseline context 按窗口派生。 |
 
@@ -220,7 +222,7 @@ drain 阶段。8 个 bug 均为 framework DX/contract 层面的确定性缺陷�
 
 > BUG-099/106 不在 Wave execution/gate remediation 范围内，由 [`silent-autonomous-execution`](../plans/silent-autonomous-execution.md) 承接。现行 Chain/Queue/Work Unit contract 与 actor/Gate canary checkpoint 已收敛；残余问题只等待有效 current-head Phase-Agent observation，不再以“核心路径先稳定”为 reopen 条件。BUG-129/130/131/142 已移至 `../_done/_suspended_bugs/`：它们分别等待当前真实反例、产品策略决定或有效 current-head Agent-flow observation，不是活跃 implementation defect。
 
-**Next available bug ID: BUG-248**
+**Next available bug ID: BUG-252**
 
 ## BUG-132–137 接手地图
 

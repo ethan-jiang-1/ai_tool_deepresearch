@@ -10,7 +10,7 @@
 
 - [ ] 2.1 新增 `DEEP_RESEARCH_HARNESS/engine/helpers/cross-bundle-reference-scan.mjs`：扫描 `rb_plan.md`、`seed_topics/`、`artifacts/`、`reference/`、`final/` 中 `dpt_rb_[a-z0-9][a-z0-9-]*` token（排除本 bundle 自身名），输出 `{file, citedBundle}` 列表，验证：unit 测试覆盖命中、自身名排除、多文件聚合
 - [ ] 2.2 `inspect-bundle.mjs` 接入扫描结果，按 BUI-002 既有 cleanup/blocker 分级报告 bundle isolation diagnostic，验证：integration 测试对含 `dpt_rb_chinese-ai-inference-chips-vs-nvidia/final/final_v7.md` 引用的 fixture bundle 产出命名文件与 cited bundle 的诊断
-- [ ] 2.3 `audit-phase-status.mjs` 接入同一扫描模块（不重复实现），验证：integration 测试确认 audit 报告包含同一 diagnostic 且不改变其余 audit 输出
+- [ ] 2.3 `audit-phase-status.mjs`（经其委托的 `DEEP_RESEARCH_HARNESS/engine/helpers/phase-status-audit.mjs`，harden-wave1 归档后的当前结构）接入同一扫描模块（不重复实现），验证：integration 测试确认 audit 报告包含同一 diagnostic 且不改变其余 audit 输出
 
 ## 3. Playbook 文本改写
 
