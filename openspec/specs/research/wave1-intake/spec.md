@@ -1,6 +1,6 @@
 # Wave1 Intake
 
-> req: WAI-001, WAI-002, WAI-003, WAI-004, WAI-005, WAI-006, WAI-007, WAI-008, WAI-009, WAI-010, WAI-011, WAI-012
+> req: WAI-001, WAI-002, WAI-003, WAI-004, WAI-005, WAI-006, WAI-007, WAI-008, WAI-009, WAI-010, WAI-011, WAI-012, WAI-013
 
 > delta-synced: strengthen-user-intent-carry-through (WAI-012)
 

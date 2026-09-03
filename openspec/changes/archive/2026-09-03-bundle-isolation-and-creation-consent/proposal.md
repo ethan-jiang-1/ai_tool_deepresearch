@@ -43,7 +43,11 @@ bundle，不看任何别的，哪怕名字接近。
 - **新建 bundle 需用户知情（CMI-010，ADDED 到 `bundle/cmd-bundle-instantiation`）**：
   对已存在 bundle 的 collision、run 中途重启、重定 scope 再开新 bundle 等一切
   **追加性** bundle 创建，Agent SHALL 先向用户说明并取得明确同意后才能 instantiate。
-  命名本身继续 Agent 派生（CMI-005 的命名自主性不变）。
+  命名本身继续 Agent 派生。
+- **CMI-005 收窄（MODIFIED，全文替换）**：原"SHALL NOT make bundle creation
+  depend on a mid-pipeline user response"与 CMI-010 冲突；收窄为"命名派生与
+  首个 bundle 创建不依赖用户"，追加创建路由到 CMI-010 的 stop-and-ask，
+  并显式禁止 collision-safe 静默改名重试。
 - **创建器 sibling 预检（CMI-010 场景）**：`instantiate-run-bundle.mjs` 在创建前 SHALL
   扫描目标目录下已存在的 `dpt_rb_*` sibling；存在同前缀/名字接近或非 Final 状态的
   sibling 时 SHALL 拒绝创建并给出要求用户同意的诊断，除非显式携带
@@ -70,15 +74,15 @@ HITL1/HITL2 仍是仅有的 interactive in-run 检查点）；不改变 entry se
 - `bundle/bundle-data-isolation`：ADDED requirement BUI-003 —— run 内容信息自包含与
   跨 bundle 引用诊断（现有 BUI-001/002 只管文件系统隔离）。
 - `bundle/cmd-bundle-instantiation`：ADDED requirement CMI-010 —— 追加性 bundle 创建
-  需用户知情同意与创建器 sibling 预检（现有 CMI-005 的"命名不是 mid-pipeline 用户依赖"
-  保持不变，本变更不动 CMI-005 的 requirement 文本，只在其邻域新增创建决定边界）。
+  需用户知情同意与创建器 sibling 预检；MODIFIED requirement CMI-005 —— 收窄
+  "创建不依赖用户响应"条款至命名与首个 bundle，消解与 CMI-010 的 SHALL 冲突。
 
 ## Capability Discovery
 
 | Candidate path | Evidence read | Decision | Reason |
 |---|---|---|---|
-| `bundle/bundle-data-isolation` | main spec（BUI-001/002：目录共存、路径归属、repo-root leak 诊断） | **Modify** | 只覆盖文件系统隔离；语义级引用（把别的 bundle 结论当证据/基线）无契约，正是本次污染形态 |
-| `bundle/cmd-bundle-instantiation` | main spec（CMI-001..009）+ `command_playbook/instantiate-run-bundle.md` | **Modify** | CMI-005 与 playbook 明确禁止询问用户、指示 collision 静默改名重试；需新增创建同意边界与预检 |
+| `bundle/bundle-data-isolation` | main spec（BUI-001/002：目录共存、路径归属、repo-root leak 诊断） | Modify | 只覆盖文件系统隔离；语义级引用（把别的 bundle 结论当证据/基线）无契约，正是本次污染形态 |
+| `bundle/cmd-bundle-instantiation` | main spec（CMI-001..009）+ `command_playbook/instantiate-run-bundle.md` | Modify | CMI-005 与 playbook 明确禁止询问用户、指示 collision 静默改名重试；新增 CMI-010 同意边界与预检，并 MODIFIED CMI-005 消解同 capability 内 SHALL 冲突 |
 | `bundle/run-entry` | main spec（entry selection：用户显式提供、不许 scan 选择） | Verify-only | 已禁止以扫描方式选择 bundle；本变更为其"creating a bundle"回退路径补同意门，不改其 requirement |
 | `workflow/workflow-directory-contract` | main spec（bare path 归属 current bundle root） | Verify-only | 路径归属已正确；语义引用是新维度，由 BUI-003 拥有 |
 | `agent/hitl-ux` | main spec（HITL1/HITL2 环模型） | Excluded | 创建同意不是 in-run checkpoint；把它做成第三个 checkpoint 会破坏"仅有的两个 interactive 检查点"契约 |
@@ -89,13 +93,19 @@ HITL1/HITL2 仍是仅有的 interactive in-run 检查点）；不改变 entry se
 
 ## Impact
 
-- **代码**：`DEEP_RESEARCH_HARNESS/cli/instantiate-run-bundle.mjs`（argv 解析扩展
-  `--acknowledge-existing-bundle <name>`、sibling 扫描预检、拒绝诊断）；
-  `DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs` 与 `audit-phase-status.mjs`
-  （跨 bundle 引用内容扫描诊断）；`DEEP_RESEARCH_HARNESS/command_playbook/instantiate-run-bundle.md`
+- **代码**：`DEEP_RESEARCH_HARNESS/engine/helpers/instantiate-sibling-preflight.mjs`
+  （新增纯函数：sibling 扫描、前缀相似、Final 信号判定）；
+  `DEEP_RESEARCH_HARNESS/cli/instantiate-run-bundle.mjs`（argv 解析扩展
+  `--acknowledge-existing-bundle <name>`、接线预检、拒绝诊断）；
+  `DEEP_RESEARCH_HARNESS/engine/helpers/cross-bundle-reference-scan.mjs`（新增
+  内容引用扫描）；`DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs` 与
+  `DEEP_RESEARCH_HARNESS/engine/helpers/phase-status-audit.mjs`（经 audit CLI
+  委托接入诊断）；`DEEP_RESEARCH_HARNESS/command_playbook/instantiate-run-bundle.md`
   与 `continue-run-bundle.md`（文本条款改写）。CLAUDE/AGENTS 面无需新命令。
-- **测试**：`tests/engine/`（创建器预检 unit）、`tests/integration/cli/`
-  （sibling 拒绝/ack 参数/内容扫描诊断）。
+- **测试**：`tests/engine/helpers/`（instantiate-sibling-preflight、
+  cross-bundle-reference-scan unit）、`tests/integration/cli/`
+  （sibling 拒绝/ack 参数/argv 形态/内容扫描诊断，与既有
+  `instantiate-run-bundle.test.mjs` 同层）。
 - **不涉及**：无新依赖；无 schema 破坏性变更；不改 gate 判定规则
   （诊断走 inspect/audit 既有 advisory/blocker 分级）。
 

@@ -1,6 +1,6 @@
 # cache-raw-web-content Specification
 
-> req: CRC-001, CRC-002, CRC-003, CRC-004, CRC-005, CRC-006, CRC-007, CRC-008
+> req: CRC-001, CRC-002, CRC-003, CRC-004, CRC-005, CRC-006, CRC-007, CRC-008, CRC-009
 
 ## Purpose
 

@@ -12,20 +12,28 @@ test_classes:
     rationale: Change is bounded to creator preflight and inspect/audit diagnostic seams; the integration claims cover the full CLI surface and add no further verdict.
   agent_flow_e2e:
     status: not_applicable
-    rationale: No new agent-driven runtime behavior; playbook text edits are reviewable artifacts whose enforcement claims are the deterministic CLI checks above.
+    rationale: >-
+      The self-containment requirement also imposes Agent semantic obligations
+      (materializing user-supplied input, stopping on baseline framing) whose
+      deterministic subset is the machine scan; this plan selects deterministic
+      proof for the scan and CLI seams, while the semantic obligations are
+      carried by the playbook rewrite and requirement text, reviewable as
+      change artifacts rather than by a machine verdict in this change.
 claims:
   - id: sibling-preflight-detection
     statement: >-
       The creator's sibling preflight flags a requested name that shares a
       kebab-case prefix relation with an existing dpt_rb_* sibling (e.g. x vs
       x-v2), and independently flags any sibling whose rb_status.json does not
-      evidence a Final node (missing/unreadable status fails closed); a Final
-      sibling with no prefix relation does not trigger.
+      evidence the Final terminal state (state completed with current_gate
+      readiness_passed; missing, unreadable, or field-absent status fails
+      closed as non-Final); a Final sibling with no prefix relation does not
+      trigger.
     test_class: unit
     proof_subject: deterministic_contract
     asset:
       kind: node_test
-      path: tests/engine/instantiate-sibling-preflight.test.mjs
+      path: tests/engine/helpers/instantiate-sibling-preflight.test.mjs
     execution_profile:
       fixture: fixture_backed
       subject_execution: none
@@ -38,11 +46,11 @@ claims:
       --acknowledge-existing-bundle <name> is accepted at most once; unknown
       options, repeats, and missing values fail before filesystem side effects
       with a single diagnostic, consistent with the CMI-008 argv shape.
-    test_class: unit
+    test_class: integration
     proof_subject: deterministic_contract
     asset:
       kind: node_test
-      path: tests/engine/instantiate-sibling-preflight.test.mjs
+      path: tests/integration/cli/instantiate-run-bundle-consent.test.mjs
     execution_profile:
       fixture: fixture_backed
       subject_execution: none
@@ -79,7 +87,7 @@ claims:
     proof_subject: deterministic_contract
     asset:
       kind: node_test
-      path: tests/engine/cross-bundle-reference-scan.test.mjs
+      path: tests/engine/helpers/cross-bundle-reference-scan.test.mjs
     execution_profile:
       fixture: fixture_backed
       subject_execution: none

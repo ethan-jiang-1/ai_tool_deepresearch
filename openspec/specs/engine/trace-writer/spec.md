@@ -1,6 +1,6 @@
 # Trace Writer
 
-> req: TRW-001, TRW-002, TRW-003, TRW-004, TRW-005, TRW-006
+> req: TRW-001, TRW-002, TRW-003, TRW-004, TRW-005, TRW-006, TRW-007, TRW-008
 
 ## Purpose
 

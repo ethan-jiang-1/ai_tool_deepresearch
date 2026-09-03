@@ -18,6 +18,8 @@ Reload Procedure below. A supplied candidate missing either file is
 `unsupported_current_entry_contract`: stop without reading it as an
 operational entry, falling back to `RUN.md`, creating a bundle, selecting
 another bundle, migration, upgrade, or a human-only Harness command.
+(注：bundle 创建同意的契约由 `cmd-bundle-instantiation` CMI-010 拥有，
+不在本 canonical 节重复；创建行为始终经 CLI sibling 预检与用户显式同意放行。)
 
 With no supplied existing candidate, research, deep-research, investigation,
 or report intent with `DEEP_RESEARCH_HARNESS/` selected uses

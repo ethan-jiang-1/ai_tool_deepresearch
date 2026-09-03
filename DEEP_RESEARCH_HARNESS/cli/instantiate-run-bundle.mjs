@@ -17,12 +17,13 @@ import {
   PlanSchema,
 } from '../schema/index.mjs';
 import { parseMdFrontmatter } from '../engine/helpers/gate-helpers.mjs';
+import { siblingPreflight } from '../engine/helpers/instantiate-sibling-preflight.mjs';
 import { createTrace } from '../engine/trace.mjs';
 import { logToRun } from '../engine/logger.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEMPLATES_DIR = join(__dirname, '..', 'rb_templates');
-const G = '\x1b[32m', R = '\x1b[31m', B = '\x1b[0m';
+const G = '\x1b[32m', R = '\x1b[31m', Y = '\x1b[33m', B = '\x1b[0m';
 
 const args = process.argv.slice(2);
 if (hasStandaloneHelp(args)) {
@@ -48,8 +49,9 @@ if (forceRequested) {
 }
 
 function printUsage(exitCode) {
-  console.error('Usage: node instantiate-run-bundle.mjs <name> [--target-dir <dir>]');
+  console.error('Usage: node instantiate-run-bundle.mjs <name> [--target-dir <dir>] [--acknowledge-existing-bundle <sibling-name>]');
   console.error('  Creates dpt_rb_<name>/ at <dir> (default: repo root) from DEEP_RESEARCH_HARNESS/rb_templates/');
+  console.error('  --acknowledge-existing-bundle: required with explicit user consent when sibling preflight flags an existing bundle');
   process.exit(exitCode);
 }
 
@@ -67,13 +69,14 @@ function hasStandaloneHelp(argv) {
 }
 
 function parseCreatorArgs(argv) {
-  rejectRepeatedOptions(argv, new Set(['target-dir', 'force']));
+  rejectRepeatedOptions(argv, new Set(['target-dir', 'force', 'acknowledge-existing-bundle']));
   try {
     return parseArgs({
       args: argv,
       options: {
         'target-dir': { type: 'string' },
         force: { type: 'boolean' },
+        'acknowledge-existing-bundle': { type: 'string' },
       },
       strict: true,
       allowPositionals: true,
@@ -92,7 +95,7 @@ function rejectRepeatedOptions(argv, supportedOptions) {
     if (!match || !supportedOptions.has(match[1])) continue;
     if (seen.has(match[1])) failUsage(`option --${match[1]} may be supplied only once`);
     seen.add(match[1]);
-    if (match[1] === 'target-dir' && arg === '--target-dir') index += 1;
+    if ((match[1] === 'target-dir' || match[1] === 'acknowledge-existing-bundle') && arg === `--${match[1]}`) index += 1;
   }
 }
 
@@ -108,6 +111,29 @@ try {
 const baseDir = targetDir ?? repoRoot;
 mkdirSync(baseDir, { recursive: true });
 const bundleDir = resolve(baseDir, `dpt_rb_${bundleName}`);
+
+// ── Sibling preflight (CMI-010) ──
+const preflight = siblingPreflight(baseDir, bundleName);
+const ackValue = parsedArgs.values['acknowledge-existing-bundle'] ?? null;
+if (preflight.flag) {
+  if (ackValue !== null) {
+    // Ack supplied: verify it's the flagged sibling's bare name
+    const flaggedRawName = preflight.sibling.replace(/^dpt_rb_/, '');
+    if (ackValue !== flaggedRawName) {
+      console.error(`${R}Error: --acknowledge-existing-bundle ${ackValue} does not match flagged sibling (dpt_rb_${flaggedRawName}). Use the exact sibling bare name.${B}`);
+      process.exit(1);
+    }
+    // User acknowledged — proceed
+  } else {
+    console.error(`${R}Error: ${preflight.reason}${B}`);
+    console.error(`${Y}Use --acknowledge-existing-bundle <sibling-name> after obtaining explicit user consent to create this additional bundle.${B}`);
+    process.exit(1);
+  }
+} else if (ackValue !== null) {
+  // Ack supplied but no sibling was flagged — reject
+  console.error(`${R}Error: --acknowledge-existing-bundle=${ackValue} was supplied but no sibling was flagged. Remove the flag to create the first bundle.${B}`);
+  process.exit(1);
+}
 
 // Handle existing
 if (existsSync(bundleDir)) {

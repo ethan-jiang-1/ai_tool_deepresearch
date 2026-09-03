@@ -57,7 +57,12 @@ split: diagnostic cleanup when it cannot be associated with the current run
 surface, active-bundle blocker when it can.
 
 The scan is a diagnostic over content text; it does not parse semantics and
-does not by itself repair, rewrite, or gate the bundle.
+does not by itself repair, rewrite, or gate the bundle. It is necessary but
+not sufficient evidence of informational self-containment: a semantic citation
+carrying no `dpt_rb_*` token (for example a prior report identified only as
+`历史报告 V7`) remains a violation of the self-containment requirement that the
+scan cannot see, and stays an Agent obligation under that requirement,
+reviewable through run surfacing and user audit.
 
 #### Scenario: Cross-bundle path citation is reported
 

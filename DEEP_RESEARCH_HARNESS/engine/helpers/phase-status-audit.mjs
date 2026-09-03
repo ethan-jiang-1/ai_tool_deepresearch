@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { z } from 'zod';
+import { scanBundle } from './cross-bundle-reference-scan.mjs';
 import {
   findLatestLegalHandoff,
   gateKeyToEnum,
@@ -301,21 +302,31 @@ export function auditPhaseStatus(bundlePath) {
   // phase-status verdict (ok/outcome) — audit is a reporting surface, not a gate.
   const traceIntegrity = evaluateTraceCompletionIntegrity(bundlePath);
   const withTrace = { ...result, trace_integrity: traceIntegrity };
+
+  // Cross-bundle reference scan (BUI-003)
+  const bundleBasename = basename(bundlePath);
+  const ownBundleName = bundleBasename.startsWith('dpt_rb_') ? bundleBasename.slice('dpt_rb_'.length) : bundleBasename;
+  const crossRefHits = scanBundle(bundlePath, ownBundleName);
+  const crossRefDiagnostic = crossRefHits.length > 0
+    ? crossRefHits.map((h) => ({ file: h.file, cited: h.citedBundles }))
+    : [];
+  const withCrossRef = { ...withTrace, cross_references: crossRefDiagnostic };
+
   const integrity = evaluateLifecycleIntegrity(bundlePath);
-  if (!integrity) return withTrace;
+  if (!integrity) return withCrossRef;
   if (result.ok === true) {
     // Lifecycle window itself is legal, but an integrity fact hit: the
     // top-level outcome names the first integrity finding (design D1).
     return {
-      ...withTrace,
+      ...withCrossRef,
       ok: false,
       outcome: integrity.outcomes[0],
-      advice: [...integrity.remediation, ...(Array.isArray(withTrace.advice) ? withTrace.advice : [])],
+      advice: [...integrity.remediation, ...(Array.isArray(withCrossRef.advice) ? withCrossRef.advice : [])],
       integrity,
       diagnostic_only: true,
     };
   }
-  return { ...withTrace, integrity };
+  return { ...withCrossRef, integrity };
 }
 
 // @impl TRW-008: completion events (waveN_completion / final_report_complete) are legal

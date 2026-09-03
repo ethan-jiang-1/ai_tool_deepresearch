@@ -23,10 +23,10 @@ affected:
       makes such citations isolation violations reported by inspect/audit
       content scans, instead of unconstrained Agent discretion.
     authority:
-      resolver: DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs#crossBundleReferenceScan
+      resolver: DEEP_RESEARCH_HARNESS/engine/helpers/cross-bundle-reference-scan.mjs
     established_by:
-      - DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs#crossBundleReferenceScan
-      - DEEP_RESEARCH_HARNESS/cli/audit-phase-status.mjs#crossBundleReferenceScan
+      - DEEP_RESEARCH_HARNESS/engine/helpers/cross-bundle-reference-scan.mjs
+      - DEEP_RESEARCH_HARNESS/engine/helpers/phase-status-audit.mjs
     consumers:
       - DEEP_RESEARCH_HARNESS/cli/audit-phase-status.mjs#auditPhaseStatus
     overlap:
@@ -44,7 +44,7 @@ affected:
           path ownership; the new BUI-003 requirement extends the same
           capability to information-level containment without changing BUI-001/002.
     verification:
-      truth_table: tests/engine/cross-bundle-reference-scan.test.mjs
+      truth_table: tests/engine/helpers/cross-bundle-reference-scan.test.mjs
       cross_surface: tests/integration/cli/inspect-bundle-cross-reference.test.mjs
   - family: bundle.creation-consent
     fact: >-
@@ -55,9 +55,10 @@ affected:
       acknowledgment is supplied, instead of the current playbook-instructed
       silent collision-safe rename retry.
     authority:
-      resolver: DEEP_RESEARCH_HARNESS/cli/instantiate-run-bundle.mjs#siblingPreflight
+      resolver: DEEP_RESEARCH_HARNESS/engine/helpers/instantiate-sibling-preflight.mjs
     established_by:
-      - DEEP_RESEARCH_HARNESS/cli/instantiate-run-bundle.mjs#siblingPreflight
+      - DEEP_RESEARCH_HARNESS/engine/helpers/instantiate-sibling-preflight.mjs
+      - DEEP_RESEARCH_HARNESS/cli/instantiate-run-bundle.mjs
     consumers:
       - DEEP_RESEARCH_HARNESS/command_playbook/instantiate-run-bundle.md
     overlap:
@@ -75,5 +76,5 @@ affected:
           unsupported-entry fallback; the consent gate is the same boundary
           restated at the creator CLI, not a second entry authority.
     verification:
-      truth_table: tests/engine/instantiate-sibling-preflight.test.mjs
+      truth_table: tests/engine/helpers/instantiate-sibling-preflight.test.mjs
       cross_surface: tests/integration/cli/instantiate-run-bundle-consent.test.mjs

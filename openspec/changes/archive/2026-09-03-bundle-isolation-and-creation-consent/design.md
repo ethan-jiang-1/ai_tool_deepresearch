@@ -24,28 +24,32 @@ CMI-005 + playbook 明文指示静默 collision 改名。本设计把 Charter �
 
 ## Decisions
 
-### D1: sibling 预检放在创建器 CLI 内，而非 playbook 约定
+### D1: sibling 预检 = engine helper 纯函数 + CLI 接线
 
-- **选择**：`instantiate-run-bundle.mjs` 在 argv 解析后、任何 mkdir/写文件前，
-  `readdirSync(targetDir)` 过滤 `dpt_rb_*`；对每个 sibling 读取其 `rb_status.json`
-  的 `current_node`/`state` 判定是否 Final。
+- **选择**：预检逻辑做成纯函数落在 `DEEP_RESEARCH_HARNESS/engine/helpers/instantiate-sibling-preflight.mjs`
+  （与 `cache-leaf-contract.mjs` 等既有 helper 同型，unit 测试随
+  `tests/engine/helpers/` 惯例）；`instantiate-run-bundle.mjs` 在 argv 解析后、
+  任何 mkdir/写文件前调用它：`readdirSync(targetDir)` 过滤 `dpt_rb_*`，对每个
+  sibling 读取 `rb_status.json` 判定是否 Final。
 - **为何不选 playbook-only**：v2 事件证明 prose 约束挡不住 autonomous execution
   疲劳（同 bundle 的 49 次 gate 失败后绕过就是先例）。Engine verdict 是 Charter
   指定的 deterministic trust root。
 - **为何不选全局 registry**：最短合法闭环——一次 readdir + 一次 status 读取即可
   判定，无需新增跨 run 持久状态；registry 会引入第二真相源与失效问题。
 
-### D2: "名字接近"的机器判定 = kebab 前缀关系
+### D2: "名字接近"的机器判定 = kebab 前缀关系；Final 判定用确定信号
 
 - **选择**：requested name 去掉 `dpt_rb_` 前缀后，与 sibling name 互为
   前缀（`glm-5-3-deepseek-v4-domestic-chips` 是
   `glm-5-3-deepseek-v4-domestic-chips-v2` 的前缀）即 name-similar；
   另加"sibling 非 Final"独立触发。两者任一命中即需 ack。
+- **Final 信号**（依据实际 Final bundle 的 `rb_status.json` 形态）：
+  `state === "completed"` 且 `current_gate === "readiness_passed"` 视为 Final；
+  status 文件缺失、不可读、解析失败或字段缺省（legacy bundle 可能无
+  `current_node`/`state`）一律视为非 Final——fail-closed。
 - **备选放弃**：编辑距离/模糊匹配——引入阈值语义，违反 semantic precision
   （读者无法回答"多近算近"），且前缀关系已覆盖本事件形态（`-v2`、`-fix`、
   `-rerun` 等派生名）。
-- **状态判定**：`rb_status.json` 存在且 `current_node` 指向 Final 节点（或无
-  status 文件的 archive 形态）视为 Final；读取失败视为非 Final（fail-closed）。
 
 ### D3: `--acknowledge-existing-bundle <name>` 是唯一放行通道
 
@@ -72,8 +76,13 @@ CMI-005 + playbook 明文指示静默 collision 改名。本设计把 Charter �
 - **Source of Record**：跨 bundle 引用事实的 SoR 是 bundle 内容文件本身；
   诊断输出是投影，不是第二真相源。
 
-### D5: playbook 改写保持 CMI-005 命名自主性不动
+### D5: playbook 改写 + CMI-005 收窄（消解同 capability 内 SHALL 冲突）
 
+- 原 CMI-005 "SHALL NOT make bundle creation depend on a mid-pipeline user
+  response" 与本变更 CMI-010（追加创建必须用户同意）正面冲突；delta 以
+  MODIFIED 全文替换 CMI-005：命名派生与首个 bundle 创建保持不依赖用户，
+  追加创建（碰撞/重启/重定 scope）路由到 CMI-010 的 stop-and-ask，并显式
+  禁止"collision-safe 静默改名重试"。
 - `instantiate-run-bundle.md` 第 1 步（定名）文本保留；第 2 步 collision 段
   改为："报错停止 → 向用户呈现 sibling 局面与三个合法去向（继续 / accepted
   recovery reopen / 用户同意后带 ack 新建）"；删除"collision-safe 名称后重试"。
@@ -89,8 +98,13 @@ CMI-005 + playbook 明文指示静默 collision 改名。本设计把 Charter �
   触发已覆盖大部分；漏网者由用户对话层兜底，机器判定只承诺前缀关系。
 - [内容扫描误报（引用自己名字/教学示例）] → 排除本 bundle 名 token；其余
   命中只是 diagnostic，Agent 可语义解释并修复措辞。
+- [内容扫描盲区：语义引用不含 `dpt_rb_*` token] → 实际污染形态
+  `final/references/03_hybrid-deployment.md:68` 的"历史报告 V7"不含路径
+  token，扫描抓不到；spec 已声明 scan 必要非充分，语义引用由 BUI-003 第一条
+  的 Agent 义务 + run surfacing + 用户审计兜底，不由机器判定假装覆盖。
 - [ack 被滥用为机械绕过] → playbook 明文要求 ack 之前必须有用户明确表达；
-  ack 参数本身在 run.log/诊断中可见，事后可审计（与 D3 的进程级事实一致）。
+  ack 调用本身留在会话命令历史中可事后审计（`run_start` 日志行不含 argv，
+  已由 v2 的 run.log 实证，不能依赖日志记录 ack）。
 
 ## Migration Plan
 

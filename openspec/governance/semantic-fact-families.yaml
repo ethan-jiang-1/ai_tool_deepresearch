@@ -77,3 +77,15 @@ families:
       For a post-final rerun entry, which checkpoint target SHALL the reentry
       diagnostic (`check-reentry --at`) use, and what does each accepted target
       form (gate enum vs phase ref) mean for the current chain?
+  - id: bundle.information-self-containment
+    bounded_question: >-
+      During a selected run bundle operation, does every plan, evidence,
+      reference, or final content item resolve inside the selected current run
+      bundle's own produced evidence or an explicit user-supplied input, with no
+      other run bundle cited, imported, or used as a baseline?
+  - id: bundle.creation-consent
+    bounded_question: >-
+      Does instantiating an additional production run bundle (collision retry,
+      mid-run restart, re-scope, or sibling of a non-Final bundle) carry an
+      explicit user decision, and does the creator CLI's sibling preflight
+      verdict match that decision state?

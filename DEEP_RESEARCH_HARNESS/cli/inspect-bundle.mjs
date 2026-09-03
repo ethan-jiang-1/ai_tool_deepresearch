@@ -13,6 +13,7 @@ import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from 'n
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { checkCurrentEntryContract } from '../engine/helpers/current-entry-contract.mjs';
+import { scanBundle } from '../engine/helpers/cross-bundle-reference-scan.mjs';
 
 const REQUIRED = [
   'rb_plan.md', 'rb_profile.yaml',
@@ -296,6 +297,22 @@ if (flag === '--summary') {
 const missing = REQUIRED.filter(f => !existsSync(join(bundleDir, f)));
 const leakDiagnostics = repoRootRuntimeLeakDiagnostics(bundleDir);
 const activeLeakDiagnostics = leakDiagnostics.filter((diag) => diag.severity === 'active_bundle_blocker');
+
+// Cross-bundle reference scan (BUI-003)
+const bundleBasename = bundleDir.split(/[/\\]/).pop() || '';
+const ownBundleName = bundleBasename.startsWith('dpt_rb_') ? bundleBasename.slice('dpt_rb_'.length) : bundleBasename;
+const crossRefHits = scanBundle(bundleDir, ownBundleName);
+const crossRefBlocker = crossRefHits.length > 0;
+
+if (crossRefBlocker) {
+  console.log(`${Y}Cross-bundle reference diagnostics (BUI-003):${B}`);
+  for (const hit of crossRefHits) {
+    for (const cited of hit.citedBundles) {
+      console.log(`${Y}  Bundle isolation diagnostic [active_bundle_blocker]: ${hit.file} cites dpt_rb_${cited}${B}`);
+    }
+  }
+}
+
 if (missing.length > 0) {
   console.log(`${R}Inspect bundle: missing ${missing.join(', ')}${B}`);
   process.exit(1);
@@ -306,8 +323,13 @@ if (leakDiagnostics.length > 0) {
     console.log(`${color}Bundle isolation diagnostic [${diag.severity}]: ${diag.path} — ${diag.message}${B}`);
   }
 }
-if (activeLeakDiagnostics.length > 0) {
-  console.log(`${R}Inspect bundle: repo-root runtime leak associated with current run bundle${B}`);
+if (activeLeakDiagnostics.length > 0 || crossRefBlocker) {
+  if (activeLeakDiagnostics.length > 0) {
+    console.log(`${R}Inspect bundle: repo-root runtime leak associated with current run bundle${B}`);
+  }
+  if (crossRefBlocker) {
+    console.log(`${R}Inspect bundle: cross-bundle content references found — resolve before continuing${B}`);
+  }
   process.exit(1);
 }
 console.log(`${G}Inspect bundle: directory structure complete${B}`);
