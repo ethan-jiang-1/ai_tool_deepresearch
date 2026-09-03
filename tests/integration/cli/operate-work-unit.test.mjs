@@ -1138,6 +1138,96 @@ describe('operate-work-unit inspect', () => {
     }
   });
 
+  it('dry-submit reports duplicate accepted claim urls inside an invalid accepted-url root (@impl DEW-031)', () => {
+    const dir = tempBundle();
+    try {
+      writeCanonicalPlan(dir);
+      saveQueueWith(dir, [supplementaryWave1QueueItem()]);
+      const claim = spawnSync(process.execPath, [
+        CLI,
+        'claim',
+        dir,
+        '--phase', 'wave1',
+        '--actor-outcome', 'available',
+        '--actor-source', 'native_probe',
+        '--actor-role-key', 'dpt-evidence-extractor',
+        '--actor-reason', 'probe_succeeded',
+        '--execution-actor', 'delegated_subagent',
+      ], { encoding: 'utf-8', timeout: 5000 });
+      assert.equal(claim.status, 0, claim.stderr || claim.stdout);
+      const workId = JSON.parse(claim.stdout).claimed_work_ids[0];
+      const record = loadWorkUnitIndex(dir).work_units[workId];
+
+      writeFileSync(path.join(dir, record.paths.runtime_receipt_ref), `${JSON.stringify({
+        event: 'work_done',
+        work_id: record.work_id,
+        queue_item_id: record.queue_item_id,
+        kind: record.kind,
+        receipt_nonce: record.receipt_nonce,
+        actor_contract_version: record.actor_contract_version,
+        execution_actor_class: record.actor_execution.execution_actor_class,
+        ts: '2026-08-24T00:00:00.000Z',
+      })}\n`);
+      // Two accepted claims share one cache-backed URL; a third accepted URL has
+      // no matching claim, so dry-submit already rejects on the accepted-URL
+      // membership root and the duplicate-claim enrichment must ride along.
+      const sharedUrl = 'https://fixture.news-research.com/wave1-new-source';
+      const cacheTrail = `_cache/wave1/primary/${record.queue_item_id}/duplicate-source`;
+      mkdirSync(path.join(dir, cacheTrail), { recursive: true });
+      writeFileSync(path.join(dir, cacheTrail, 'websearch.json'), '[]\n');
+      writeFileSync(path.join(dir, cacheTrail, 'page.md'), '# Captured Page\n\nReal fetched body text for the duplicate-source claim.\n');
+      writeFileSync(path.join(dir, cacheTrail, 'meta.json'), `${JSON.stringify({ url: sharedUrl })}\n`);
+      const resultPath = path.join(dir, '_tmp', `${workId}.result.json`);
+      mkdirSync(path.dirname(resultPath), { recursive: true });
+      writeFileSync(resultPath, `${JSON.stringify({
+        schema_version: 'work-unit.result.v1',
+        work_id: record.work_id,
+        queue_item_id: record.queue_item_id,
+        kind: record.kind,
+        receipt_nonce: record.receipt_nonce,
+        actor_contract_version: record.actor_contract_version,
+        execution_actor_class: record.actor_execution.execution_actor_class,
+        summary: 'duplicate accepted claim urls in an invalid result',
+        output_files: [],
+        source_claims: [
+          {
+            url: sharedUrl,
+            source_ref: 'artifacts/wave1/topic-a/evidence-summary.md',
+            acceptance_status: 'accepted',
+            is_new_vs_wave0: true,
+            cache_trail_refs: [cacheTrail],
+          },
+          {
+            url: sharedUrl,
+            source_ref: 'artifacts/wave1/topic-a/evidence-summary.md',
+            acceptance_status: 'accepted',
+            is_new_vs_wave0: true,
+            cache_trail_refs: [cacheTrail],
+          },
+        ],
+        accepted_source_urls: [sharedUrl, 'https://fixture.news-research.com/unclaimed-source'],
+        cache_trails: [cacheTrail],
+      }, null, 2)}\n`);
+
+      const dry = spawnSync(process.execPath, [CLI, 'dry-submit', dir, '--work-id', workId, '--result', resultPath], {
+        encoding: 'utf-8', timeout: 5000,
+      });
+      assert.equal(dry.status, 1, dry.stderr || dry.stdout);
+      const out = JSON.parse(dry.stdout);
+      assert.equal(out.ok, false);
+      const flattened = JSON.stringify(out);
+      // DEW-031: dry-submit already rejects an accepted claim root and the
+      // duplicate accepted claim url enrichment rides along on the same result.
+      assert.match(flattened, /source_ref_not_authorized/);
+      assert.match(flattened, /Repeated accepted claim urls/);
+      assert.match(flattened, /fixture\.news-research\.com\/wave1-new-source' x2 at \/source_claims\/0\.\.1/);
+      assert.equal(out.violations[0].details.repeated_claim_urls[0].count, 2);
+      assert.equal(existsSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER)), false);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
   it('submits one claimed Wave1 work unit while another claimed actor owns its receipt and result', () => {
     const dir = tempBundle();
     try {

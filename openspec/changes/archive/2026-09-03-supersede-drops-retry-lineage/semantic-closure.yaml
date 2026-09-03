@@ -1,0 +1,33 @@
+schema_version: semantic-closure/v1
+change: supersede-drops-retry-lineage
+status: affected
+catalog_additions: []
+affected:
+  - family: work-unit.submission-ledger-and-supersession
+    fact: >-
+      What lineage a fresh supersession successor demand carries when the
+      submitted predecessor is itself a timeout-retry attempt (attempt_index >=
+      2). This change requires the fresh successor to drop the inherited retry
+      trio (retry_of_work_id / retry_reason / attempt_index) and carry only the
+      five flat supersession fields plus non-retry lineage, so supersede of an
+      attempt-2+ submitted row succeeds instead of failing with
+      `retry lineage parent <work_id> is missing for supersession-<work_id>`.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/work-unit-supersession.mjs#buildSupersessionSuccessorDemand
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-lifecycle.mjs#closeWorkUnitAttempt
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-supersession.mjs#validateSuccessorRetryContinuation
+    consumers:
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-supersession.mjs#evaluateWorkUnitSupersessionEligibility
+      - DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave1-complete.mjs
+    overlap:
+      - coordinate: DEEP_RESEARCH_HARNESS/schema/contracts/queue.mjs#WORK_UNIT_SUPERSESSION_LINEAGE_FIELDS
+        relation: derived
+        detail: >-
+          The supersession-field constant names which lineage fields are
+          replaced by the fresh direct edge; this change adds the retry-lineage
+          field set so successor construction clears both families of inherited
+          attempt lineage.
+    verification:
+      truth_table: tests/engine/work-unit-attempt-disposition.test.mjs
+      cross_surface: tests/e2e/work-unit-attempt-recovery.test.mjs

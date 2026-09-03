@@ -1,4 +1,4 @@
-// @impl DEW-002, DEW-022, DEW-024, SNC-008, WAI-008, WTS-010
+// @impl DEW-002, DEW-022, DEW-024, DEW-030, SNC-008, WAI-008, WTS-010
 // Work-unit envelope: file refs, result schema, task markdown, spawn prompt, envelope write.
 
 import {
@@ -479,6 +479,32 @@ function taskMarkdown(manifest, bundleDir, resultSchema, actorDelivery) {
       ? [
           '- `source_claims[]` binds accepted URLs to declared cache trails or an explicit degraded capture; `source_ref` may name only a current declared output or an authorized prior submitted output.',
           `- Claim-time source lineage: current assigned paths ${sourceRefLineage.current_assigned_paths.map((entry) => `\`${entry}\``).join(', ') || '<none>'}; eligible prior outputs ${sourceRefLineage.eligible_prior_outputs.map((entry) => `\`${entry.path}\``).join(', ') || '<none>'}.`,
+          '- `cache_trail_refs[]` and `degraded_capture_ref` must each name one **declared cache leaf directory** from the result `cache_trails[]` set — never a file inside the leaf such as `<leaf>/page.md`. If a leaf directory already records the explicit degraded/fetch-failure condition, prefer that declared directory and omit the degraded ref.',
+          '- `source_ref` must be one exact current assigned output path declared in `output_files[]` (e.g. `artifacts/wave1/<topic>/evidence-summary.md`) or one exact authorized prior submitted output path — never a leaf slug or other free-form identifier.',
+          '- Claim `url` must match the URL recorded by the referenced cache leaf `meta.json` mapping (query included); when the leaf records a different URL than the claim, sync the claim `url` to the leaf mapping.',
+          '',
+          'Positive example (two legal accepted-claim outlets — replace every `<...>` with a real value before submit):',
+          '```json',
+          jsonBlock({
+            source_claims: [
+              {
+                url: 'https://<leaf meta.json recorded url>',
+                source_ref: requiredOutputs.find((required) => required.path)?.path || 'artifacts/wave1/<topic>/evidence-summary.md',
+                acceptance_status: 'accepted',
+                is_new_vs_wave0: true,
+                cache_trail_refs: ['_cache/wave1/<topic>/<slug>'],
+              },
+              {
+                url: 'https://<leaf meta.json recorded url>',
+                source_ref: requiredOutputs.find((required) => required.path)?.path || 'artifacts/wave1/<topic>/evidence-summary.md',
+                acceptance_status: 'accepted',
+                is_new_vs_wave0: true,
+                degraded_capture_ref: '_cache/wave1/<topic>/<slug-with-explicit-degraded-record>',
+              },
+            ],
+          }, null, 2),
+          '```',
+          'The bracketed `<leaf>` values must resolve to cache leaf **directories** you declare in `cache_trails[]`; dry-submit rejects undeclared refs. Each cache/degraded ref must be declared in the result\'s `cache_trails[]` at submit.',
         ]
       : []),
     '',

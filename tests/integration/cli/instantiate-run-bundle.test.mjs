@@ -1,5 +1,5 @@
-// @impl CMI-004, CMI-008: instantiate-run-bundle.mjs integration test
-import { describe, it, after } from 'node:test';
+// @impl CMI-004, CMI-008, CMI-010: instantiate-run-bundle.mjs integration test
+import { describe, it, before, beforeEach, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
@@ -9,10 +9,26 @@ import { parse as parseYaml } from 'yaml';
 
 const REPO_ROOT = process.cwd();
 const INSTANTIATE = join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/instantiate-run-bundle.mjs');
-const BUNDLES_DIR = join(REPO_ROOT, 'tests', '.test-bundles');
+// This file runs as one of many parallel node --test processes, all of which
+// share tests/.test-bundles for other fixtures. The instantiate sibling
+// preflight (CMI-010) scans its --target-dir for dpt_rb_* dirs, so this file
+// must point at its own dedicated subdirectory (mirroring the consent-era
+// isolation) or parallel suites' bundles would spuriously block creation.
+const BUNDLES_DIR = join(REPO_ROOT, 'tests', '.test-bundles', 'instantiate-run-bundle');
 const createdBundleDirs = new Set();
 
 describe('instantiate-run-bundle.mjs integration', () => {
+  before(() => {
+    mkdirSync(BUNDLES_DIR, { recursive: true });
+  });
+  beforeEach(() => {
+    // Clean leftovers from this file's own earlier subtests before each one.
+    for (const entry of readdirSync(BUNDLES_DIR, { withFileTypes: true })) {
+      if (entry.isDirectory() && entry.name.startsWith('dpt_rb_')) {
+        rmSync(join(BUNDLES_DIR, entry.name), { recursive: true, force: true });
+      }
+    }
+  });
   after(() => {
     for (const dir of createdBundleDirs) {
       rmSync(dir, { recursive: true, force: true });
@@ -86,7 +102,9 @@ describe('instantiate-run-bundle.mjs integration', () => {
     const result = runInstantiate(name);
 
     assert.equal(result.status, 1);
-    assert.match(result.stderr, /already exists/);
+    // CMI-010: an existing same-name dir is a non-Final sibling, so the CLI
+    // refuses creation through the consent gate before any filesystem write.
+    assert.match(result.stderr, /consent|already exists|overwrite/i);
     assert.equal(readFileSync(marker, 'utf-8'), 'keep me');
     assert.equal(existsSync(join(dir, 'rb_status.json')), false);
   });

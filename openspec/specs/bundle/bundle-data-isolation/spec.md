@@ -1,5 +1,5 @@
 # bundle-data-isolation Specification
-> req: BUI-001, BUI-002
+> req: BUI-001, BUI-002, BUI-003
 
 ## Purpose
 多个 Runtime Bundle SHALL 能在项目根同级共存，同时保持控制文件、运行数据、reference、artifacts 和 trace 互相隔离、互不污染。

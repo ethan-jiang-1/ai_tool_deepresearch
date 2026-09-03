@@ -562,4 +562,32 @@ describe('work-unit index and envelope', () => {
       cleanup(dir);
     }
   });
+
+  it('generates source-claim value-domain guidance with an accepted-and-degraded example for source-claim assignments', () => {
+    const dir = tempBundle();
+    try {
+      const { manifest } = createWorkUnit(dir, {
+        queueItem: queueItemForKind('wave1_topic_deepening'),
+        wave: 1,
+      });
+      const task = readFileSync(path.join(dir, manifest.paths.task_ref), 'utf-8');
+      // DEW-030: cache/degraded refs must be declared cache leaf directories, never <leaf>/page.md
+      assert.match(task, /cache_trail_refs\[\]` and `degraded_capture_ref` must each name one \*\*declared cache leaf directory\*\*/);
+      assert.match(task, /never a file inside the leaf such as `<leaf>\/page\.md`/);
+      // source_ref must be a current assigned output path or authorized prior output, never a slug
+      assert.match(task, /`source_ref` must be one exact current assigned output path/);
+      assert.match(task, /never a leaf slug or other free-form identifier/);
+      // claim url follows the leaf meta.json mapping
+      assert.match(task, /Claim `url` must match the URL recorded by the referenced cache leaf `meta\.json`/);
+      // accepted + degraded positive example present
+      assert.match(task, /Positive example \(two legal accepted-claim outlets/);
+      assert.match(task, /cache_trail_refs/);
+      assert.match(task, /degraded_capture_ref/);
+      assert.match(task, /must be declared in the result's `cache_trails\[\]` at submit|declared in `cache_trails\[\]`/);
+      // example refs are derived from the assignment (cache policy root + an assigned output path)
+      assert.match(task, /_cache\//);
+    } finally {
+      cleanup(dir);
+    }
+  });
 });

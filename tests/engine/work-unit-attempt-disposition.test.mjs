@@ -1,4 +1,4 @@
-// @impl DEW-022, DEW-023, DEW-024, CHI-004
+// @impl DEW-022, DEW-023, DEW-024, AGQ-026, CHI-004
 
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -6,6 +6,7 @@ import path from 'node:path';
 import { describe, it } from 'node:test';
 
 import {
+  buildSupersessionSuccessorDemand,
   drySubmitWorkUnit,
   inspectWorkUnits,
   supersedeWorkUnitAttempt,
@@ -68,5 +69,43 @@ describe('work-unit attempt disposition', () => {
     } finally {
       cleanupWorkUnitBundle(bundleDir);
     }
+  });
+
+  it('builds a supersession successor that drops inherited retry lineage (@impl AGQ-026)', () => {
+    const relation = {
+      schema_version: 'work-unit.supersession.v1',
+      predecessor_work_id: 'wu-w1-b000-deep-i0012',
+      predecessor_queue_item_id: 'wave1-deep-11_mi308-baseline',
+      accepted_ledger_record_hash: 'a'.repeat(64),
+      root_code: 'submitted_result_drift',
+      reason: 'result drift',
+      recorded_at: '2026-09-03T00:00:00.000Z',
+      tx_id: 'tx-supersede-retry',
+      successor_queue_item_id: 'supersession-wu-w1-b000-deep-i0012',
+    };
+    const retryLeafTerminalItem = {
+      queue_item_id: 'wave1-deep-11_mi308-baseline',
+      title: 'Deepen retry leaf',
+      kind: 'wave1_topic_deepening',
+      lineage: {
+        retry_of_work_id: 'wu-w1-b000-deep-i0011',
+        retry_reason: 'attempt timed out',
+        attempt_index: 2,
+        supersession_of_work_id: 'wu-w1-b000-deep-i0004',
+      },
+      payload: { topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000' },
+    };
+
+    const successor = buildSupersessionSuccessorDemand(retryLeafTerminalItem, relation);
+    assert.equal(successor.queue_item_id, relation.successor_queue_item_id);
+    assert.equal(successor.lineage.supersession_of_work_id, relation.predecessor_work_id);
+    assert.equal(successor.lineage.supersession_of_queue_item_id, relation.predecessor_queue_item_id);
+    assert.equal(successor.lineage.supersession_accepted_ledger_record_hash, relation.accepted_ledger_record_hash);
+    assert.equal(successor.lineage.supersession_root, relation.root_code);
+    assert.equal(successor.lineage.supersession_tx_id, relation.tx_id);
+    assert.equal(Object.hasOwn(successor.lineage, 'retry_of_work_id'), false, 'retry_of_work_id must be dropped');
+    assert.equal(Object.hasOwn(successor.lineage, 'retry_reason'), false, 'retry_reason must be dropped');
+    assert.equal(Object.hasOwn(successor.lineage, 'attempt_index'), false, 'retry attempt_index must be dropped');
+    assert.equal(successor.lineage.supersession_of_work_id !== retryLeafTerminalItem.lineage.supersession_of_work_id, true, 'prior supersession direct edge replaced');
   });
 });

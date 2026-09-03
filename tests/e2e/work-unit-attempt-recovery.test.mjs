@@ -588,6 +588,75 @@ describe('submitted work-unit supersession', () => {
     }
   });
 
+  it('supersedes a normally submitted attempt-2 retry without inherited retry lineage', () => {
+    const bundleDir = tempWorkUnitBundle('wu-supersede-attempt2-retry-');
+    try {
+      // Build a timeout-retry chain on the original queue item and submit the attempt-2 leaf.
+      const first = claimAndSubmitWorkUnit(bundleDir, { submit: false });
+      const attempt1 = first.record;
+      assert.equal(attempt1.attempt_index, 1);
+      const timedOut = closeWorkUnitAttempt(bundleDir, {
+        work_id: attempt1.work_id,
+        status: 'timed_out',
+        reason: 'attempt-1 timed out before result',
+        force: true,
+      });
+      assert.equal(timedOut.ok, true);
+
+      const retryClaim = claimWorkUnits(bundleDir, {
+        phase: 'wave0',
+        count: 1,
+        ...availableActorDecision('wave0_source_intake'),
+      });
+      const retry = loadWorkUnitIndex(bundleDir).work_units[retryClaim.claimed_work_ids[0]];
+      assert.equal(retry.attempt_index, 2);
+      const templateResult = JSON.parse(readFileSync(first.resultPath, 'utf8'));
+      const retryResultPath = writeAttemptCandidate(bundleDir, retry, templateResult, 'retry completed');
+      const submittedRetry = submitWorkUnit(bundleDir, {
+        work_id: retry.work_id,
+        resultPath: retryResultPath,
+      });
+      assert.equal(submittedRetry.ok, true, JSON.stringify(submittedRetry, null, 2));
+
+      // Drift the submitted attempt-2 retry result, then supersede the retry leaf itself.
+      const acceptedResultPath = path.join(bundleDir, retry.paths.result_ref);
+      const acceptedResult = JSON.parse(readFileSync(acceptedResultPath, 'utf8'));
+      writeFileSync(acceptedResultPath, `${JSON.stringify({
+        ...acceptedResult,
+        summary: 'drifted attempt-2 retry result',
+      }, null, 2)}\n`);
+
+      const eligible = evaluateWorkUnitSupersessionEligibility(bundleDir, { work_id: retry.work_id });
+      assert.equal(eligible.eligible, true, JSON.stringify(eligible, null, 2));
+      assert.equal(eligible.root_code, 'submitted_result_drift');
+
+      const superseded = supersedeWorkUnitAttempt(bundleDir, {
+        work_id: retry.work_id,
+        reason: 'result drift after attempt-2 retry submit',
+      });
+      assert.equal(superseded.ok, true, JSON.stringify(superseded, null, 2));
+      assert.equal(superseded.successor_queue_item_id, superseded.relation.successor_queue_item_id);
+
+      // The fresh supersession successor must not inherit the retry chain of the old queue item.
+      const queue = loadQueue(bundleDir);
+      const successor = [...queue.active_window, ...queue.refill_pool]
+        .find((entry) => entry.queue_item_id === superseded.successor_queue_item_id);
+      assert.ok(successor, 'supersession successor must be queued in an ordinary location');
+      assert.equal(successor.lineage?.supersession_of_work_id, retry.work_id);
+      assert.equal(successor.lineage?.retry_of_work_id, undefined, 'successor must not inherit retry_of_work_id');
+      assert.equal(successor.lineage?.retry_reason, undefined, 'successor must not inherit retry_reason');
+      assert.equal(successor.lineage?.attempt_index, undefined, 'successor must not inherit retry attempt_index');
+
+      const lineage = resolveWorkUnitSupersessionLineage(bundleDir, {
+        predecessorWorkId: retry.work_id,
+      });
+      assert.deepEqual(lineage.edges.map((edge) => edge.kind), ['supersession']);
+      assert.equal(lineage.leaf.queue_item_id, superseded.successor_queue_item_id);
+    } finally {
+      cleanupWorkUnitBundle(bundleDir);
+    }
+  });
+
   it('selects an audited late-accepted successor after retry cleanup', () => {
     for (const claimRetry of [false, true]) {
       const bundleDir = tempWorkUnitBundle(`wu-supersede-late-${claimRetry ? 'claimed' : 'queued'}-`);

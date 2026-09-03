@@ -1,4 +1,4 @@
-// @impl DEW-004, DEW-022, DEW-024, SNC-005, REF-006
+// @impl DEW-004, DEW-022, DEW-024, DEW-031, SNC-005, REF-006
 // Work-unit validation: manifest/beacon/result reading, runtime receipt validation,
 // output file validation, cache trail validation, source claim validation, queue binding validation.
 
@@ -732,6 +732,40 @@ export function validateSourceClaims(bundleDir, result, outputContract, {
   const cacheTrails = new Set(result.cache_trails || []);
   const acceptedClaimUrls = new Set();
 
+  // @impl DEW-031: when the result is already being rejected for an accepted
+  // claim/accepted-URL/cache root and several accepted claims share one
+  // normalized url, enrich that rejection with the duplicate claim counts so
+  // the Agent can collapse them in one deterministic edit. This is diagnostic
+  // enrichment only: it never turns a passing result into a failing one.
+  const repeatedUrlCounts = new Map();
+  for (const [claimIndex, claim] of claims.entries()) {
+    if (!acceptedClaimStatus(claim.acceptance_status)) continue;
+    const normalized = normalizeUrlForSourceCache(claim.url);
+    const entry = repeatedUrlCounts.get(normalized) || { url: claim.url, count: 0, indexes: [] };
+    entry.count += 1;
+    entry.indexes.push(claimIndex);
+    repeatedUrlCounts.set(normalized, entry);
+  }
+  const repeatedUrls = [...repeatedUrlCounts.values()].filter((entry) => entry.count > 1);
+  const throwRepeatedEnriched = (message, repair = {}) => {
+    if (repeatedUrls.length === 0) throw validationRepairError(message, repair);
+    const summary = repeatedUrls
+      .map((entry) => `'${entry.url}' x${entry.count} at /source_claims/${entry.indexes[0]}..${entry.indexes[entry.indexes.length - 1]}`)
+      .join('; ');
+    throw validationRepairError(`${message} Repeated accepted claim urls: ${summary}`, {
+      ...repair,
+      details: {
+        ...(repair.details || {}),
+        repeated_claim_urls: repeatedUrls.map((entry) => ({
+          url: entry.url,
+          count: entry.count,
+          first_claim_index: entry.indexes[0],
+          last_claim_index: entry.indexes[entry.indexes.length - 1],
+        })),
+      },
+    });
+  };
+
   for (const [claimIndex, claim] of claims.entries()) {
     if (!acceptedClaimStatus(claim.acceptance_status)) continue;
     acceptedClaimUrls.add(claim.url);
@@ -742,13 +776,13 @@ export function validateSourceClaims(bundleDir, result, outputContract, {
       sourceRef: claim.source_ref,
     });
     if (authorization.reason_code === 'source_ref_unsafe') {
-      throw validationRepairError(`accepted source claim has unsafe source_ref: ${claim.source_ref}`, {
+      throwRepeatedEnriched(`accepted source claim has unsafe source_ref: ${claim.source_ref}`, {
         repair_kind: 'agent_action',
         json_pointer: `/source_claims/${claimIndex}/source_ref`,
       });
     }
     if (authorization.reason_code === 'source_ref_prior_authority_invalid') {
-      throw validationRepairError(`prior submitted source-ref authority is unavailable while resolving '${claim.source_ref}': ${authorization.authority_error}`, {
+      throwRepeatedEnriched(`prior submitted source-ref authority is unavailable while resolving '${claim.source_ref}': ${authorization.authority_error}`, {
         code: 'source_ref_prior_authority_invalid',
         repair_kind: 'missing_contract',
         write_to: 'work-unit submitted-output lineage boundary: ledger/index/manifest/queue authority',
@@ -768,7 +802,7 @@ export function validateSourceClaims(bundleDir, result, outputContract, {
         ? 'none'
         : observedPrior.map((entry) => `work_id=${entry.work_id}, topic_uid=${entry.topic_uid || '<unbound>'}, wave=${entry.wave}, kind=${entry.kind}, role=${entry.role}, reason=${entry.reason_code || (authorization.reason_code === 'source_ref_prior_ambiguous' ? 'ambiguous_exact_path' : 'eligible')}`).join('; ');
       const message = `accepted source claim source_ref '${claim.source_ref}' was searched in current outputs (not found) and prior submitted outputs (${observedPrior.length} exact match(es)); expected a current assigned output or one exact same-topic wave=${manifest?.wave ?? '<wave>'} kind=${manifest?.kind || '<kind>'} prior output with authorized role [${allowedRoles.join(', ')}]. Prior candidates: ${priorDetail}`;
-      throw validationRepairError(message, {
+      throwRepeatedEnriched(message, {
         code: authorization.reason_code,
         repair_kind: 'agent_action',
         json_pointer: `/source_claims/${claimIndex}/source_ref`,
@@ -785,7 +819,7 @@ export function validateSourceClaims(bundleDir, result, outputContract, {
     const refs = Array.isArray(claim.cache_trail_refs) ? claim.cache_trail_refs.filter(Boolean) : [];
     const degradedRef = claim.degraded_capture_ref || null;
     if (contract.accepted_requires_cache_or_degraded === true && refs.length === 0 && !degradedRef) {
-      throw validationRepairError(`accepted source claim requires cache_trail_refs[] or degraded_capture_ref: ${claim.url}`, {
+      throwRepeatedEnriched(`accepted source claim requires cache_trail_refs[] or degraded_capture_ref: ${claim.url}`, {
         repair_kind: 'agent_action',
         json_pointer: `/source_claims/${claimIndex}/cache_trail_refs`,
       });
@@ -794,14 +828,14 @@ export function validateSourceClaims(bundleDir, result, outputContract, {
     const allRefs = [...refs, ...(degradedRef ? [degradedRef] : [])];
     for (const trail of allRefs) {
       if (!cacheTrails.has(trail)) {
-        throw validationRepairError(`accepted source claim cache/degraded ref is not declared in cache_trails[]: ${trail}`, {
+        throwRepeatedEnriched(`accepted source claim cache/degraded ref is not declared in cache_trails[]: ${trail}`, {
           repair_kind: 'agent_action',
           json_pointer: `/source_claims/${claimIndex}/cache_trail_refs`,
         });
       }
       const mapping = cacheTrailMapping(bundleDir, trail, { virtualCachePages });
       if (trail === degradedRef && !mapping.degraded) {
-        throw validationRepairError(`degraded_capture_ref lacks explicit degraded/fetch-failure record: ${trail}`, {
+        throwRepeatedEnriched(`degraded_capture_ref lacks explicit degraded/fetch-failure record: ${trail}`, {
           repair_kind: 'agent_action',
           json_pointer: `/source_claims/${claimIndex}/degraded_capture_ref`,
         });
@@ -811,7 +845,7 @@ export function validateSourceClaims(bundleDir, result, outputContract, {
         // BUG-242: carry the leaf's actually-recorded urls so the Agent can
         // repair the claim/url or cache trail without reading meta.json.
         const recorded = mapping.urls.join(' | ');
-        throw validationRepairError(`accepted source claim cache trail maps to a different URL for ${claim.url}: ${trail}; cache leaf records: ${recorded}`, {
+        throwRepeatedEnriched(`accepted source claim cache trail maps to a different URL for ${claim.url}: ${trail}; cache leaf records: ${recorded}`, {
           repair_kind: 'agent_action',
           json_pointer: `/source_claims/${claimIndex}/url`,
           details: {
@@ -829,7 +863,7 @@ export function validateSourceClaims(bundleDir, result, outputContract, {
       // BUG-242: carry the declared accepted claim urls so the Agent can
       // identify the exact repair coordinate in one step.
       const declared = [...acceptedClaimUrls].join(' | ');
-      throw validationRepairError(`accepted_source_urls[] entry has no matching accepted source_claims[] entry: ${url}; declared accepted source_claims urls: ${declared}`, {
+      throwRepeatedEnriched(`accepted_source_urls[] entry has no matching accepted source_claims[] entry: ${url}; declared accepted source_claims urls: ${declared}`, {
         repair_kind: 'agent_action',
         json_pointer: `/accepted_source_urls/${urlIndex}`,
         details: {

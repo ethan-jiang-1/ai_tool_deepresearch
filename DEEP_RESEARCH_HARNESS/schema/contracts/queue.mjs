@@ -24,6 +24,15 @@ export const WORK_UNIT_SUPERSESSION_LINEAGE_FIELDS = Object.freeze([
   'supersession_root',
   'supersession_tx_id',
 ]);
+// Timeout-retry continuation fields carried on a queue demand item lineage by
+// the retry path (work-unit-lifecycle closeWorkUnitAttempt / buildRetryDemand).
+// They identify an attempt chain that belongs to one queue_item_id and must not
+// be inherited by a fresh supersession successor under a different queue id.
+export const WORK_UNIT_RETRY_LINEAGE_FIELDS = Object.freeze([
+  'retry_of_work_id',
+  'retry_reason',
+  'attempt_index',
+]);
 const SUPERSESSION_RELATION_ONLY_FIELDS = [
   'schema_version',
   'predecessor_work_id',

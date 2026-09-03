@@ -1,5 +1,5 @@
 # cmd-bundle-instantiation Specification
-> req: CMI-001, CMI-002, CMI-003, CMI-004, CMI-005, CMI-006, CMI-008, CMI-009
+> req: CMI-001, CMI-002, CMI-003, CMI-004, CMI-005, CMI-006, CMI-008, CMI-009, CMI-010
 
 ## Purpose
 Bundle 实例化命令 playbook、rb_templates 模板文件、validate-bundle.mjs/inspect-bundle.mjs 校验脚本的契约。

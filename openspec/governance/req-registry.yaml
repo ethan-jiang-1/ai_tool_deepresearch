@@ -223,6 +223,8 @@ DEW-025: delegated-work-units — Current Wave0 work-unit contracts expose submi
 DEW-027: delegated-work-units — Sub-agents do not own workflow authority
 DEW-028: delegated-work-units — Dry-submit cache-URL mismatch diagnostics carry the recorded leaf urls
 DEW-029: delegated-work-units — Dry-submit runtime-receipt schema diagnostics carry the raw value, all affected lines, and the expected format
+DEW-030: delegated-work-units — Generated source-claim authoring guidance states cache/degraded-ref and source_ref value domains with an accepted-and-degraded example
+DEW-031: delegated-work-units — Dry-submit invalid-result reports duplicate accepted claim urls and their count
 DEW-026: delegated-work-units — Affected delegated work receives current intent through the existing task brief
 
 # agent/hitl-ux

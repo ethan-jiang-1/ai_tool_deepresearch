@@ -1,0 +1,35 @@
+schema_version: semantic-closure/v1
+change: wave1-result-authoring-contract
+status: affected
+catalog_additions: []
+affected:
+  - family: work-unit.source-claim-provenance
+    fact: >-
+      What value domains a source claim's cache/degraded refs, source_ref, and
+      url may take, and whether dry-submit reports duplicate accepted claims for
+      one URL. This change makes the generated task authoring guidance state the
+      exact domains (cache/degraded refs = declared cache leaf directories,
+      never <leaf>/page.md; source_ref = current assigned output path or
+      authorized prior submitted output, never a slug) plus an accepted-and-
+      degraded positive example, and makes dry-submit report the count and
+      JSON-pointer range when multiple accepted claims share one normalized URL.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/work-unit-envelope.mjs#taskMarkdown
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-envelope.mjs#taskMarkdown
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-validation.mjs#validateSourceClaims
+    consumers:
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-validation.mjs#validateSourceClaims
+      - DEEP_RESEARCH_HARNESS/engine/helpers/wave1-source-claim-mapping.mjs
+    overlap:
+      - coordinate: DEEP_RESEARCH_HARNESS/engine/work-unit-validation.mjs#validateSourceClaims
+        relation: derived
+        detail: >-
+          validateSourceClaims already rejects a cache/degraded ref not declared
+          in cache_trails[], rejects an unauthorized source_ref, and (BUG-242)
+          carries recorded leaf urls; this change adds the duplicate-claim count
+          to the same validator and feeds the exact value domains into the
+          generated task guidance.
+    verification:
+      truth_table: tests/engine/work-unit-validation.test.mjs
+      cross_surface: tests/integration/cli/operate-work-unit.test.mjs

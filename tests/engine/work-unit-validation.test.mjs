@@ -3,6 +3,8 @@
 // kinds whose output contract accepts source claims (wave1_topic_deepening)
 // must carry at least one claim or an explicit degraded capture; kinds without
 // a source_claims contract (wave0/wave2) keep the empty pass-through.
+// Also covers DEW-031 duplicate accepted-claim-url enrichment inside an
+// already-invalid source-claims result.
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -111,6 +113,82 @@ describe('validateSourceClaims empty-claims claim floor @impl WAI-013', () => {
     const { dir, trail } = bundleWithCacheLeaf({ degraded: false });
     try {
       assert.doesNotThrow(() => validateSourceClaims(dir, zeroClaimResult(trail), WAVE2_CONTRACT));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('validateSourceClaims duplicate accepted-claim-url enrichment @impl DEW-031', () => {
+  before(() => { mkdirSync(TMP, { recursive: true }); });
+  after(() => { rmSync(TMP, { recursive: true, force: true }); });
+
+  function duplicateClaimBundle({ withExtraAcceptedUrl = false } = {}) {
+    const dir = path.join(TMP, `dpt_rb_dup-claim-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+    const trail = '_cache/wave1/primary/topic-a/deepening';
+    mkdirSync(path.join(dir, trail), { recursive: true });
+    writeFileSync(path.join(dir, trail, 'page.md'), '# Captured Page\n\nReal fetched body text for the work unit source.\n');
+    writeFileSync(path.join(dir, trail, 'meta.json'), `${JSON.stringify({ url: 'https://fixture.news-research.com/source-a' })}\n`);
+    const claim = {
+      url: 'https://fixture.news-research.com/source-a',
+      source_ref: 'artifacts/wave1/topic-a/evidence-summary.md',
+      acceptance_status: 'accepted',
+      is_new_vs_wave0: true,
+      cache_trail_refs: [trail],
+    };
+    const accepted = ['https://fixture.news-research.com/source-a'];
+    if (withExtraAcceptedUrl) accepted.push('https://fixture.news-research.com/unclaimed-source');
+    const result = {
+      ...zeroClaimResult(trail),
+      output_files: [{ path: 'artifacts/wave1/topic-a/evidence-summary.md', role: 'evidence_summary' }],
+      source_claims: [claim, { ...claim, source_ref: 'artifacts/wave1/topic-a/evidence-summary.md' }],
+      accepted_source_urls: accepted,
+    };
+    return { dir, trail, result };
+  }
+
+  it('reports repeated claim url, count, and pointer range inside an invalid accepted-url root', () => {
+    const { dir, result } = duplicateClaimBundle({ withExtraAcceptedUrl: true });
+    try {
+      assert.throws(
+        () => validateSourceClaims(dir, result, WAVE1_CONTRACT),
+        (error) => {
+          assert.match(error.message, /no matching accepted source_claims/);
+          assert.match(error.message, /source-a' x2 at \/source_claims\/0\.\.1/);
+          assert.equal(error.repair_contract.details.repeated_claim_urls.length, 1);
+          assert.equal(error.repair_contract.details.repeated_claim_urls[0].count, 2);
+          assert.equal(error.repair_contract.details.repeated_claim_urls[0].first_claim_index, 0);
+          assert.equal(error.repair_contract.details.repeated_claim_urls[0].last_claim_index, 1);
+          return true;
+        },
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('adds no duplicate enrichment when the already-invalid result has distinct claim urls', () => {
+    const { dir, result } = duplicateClaimBundle({ withExtraAcceptedUrl: true });
+    try {
+      result.source_claims = [result.source_claims[0]];
+      assert.throws(
+        () => validateSourceClaims(dir, result, WAVE1_CONTRACT),
+        (error) => {
+          assert.match(error.message, /no matching accepted source_claims/);
+          assert.doesNotMatch(error.message, /Repeated accepted claim urls/);
+          assert.equal(error.repair_contract.details?.repeated_claim_urls, undefined);
+          return true;
+        },
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('does not fail a duplicate-only result whose other source-claim checks pass', () => {
+    const { dir, result } = duplicateClaimBundle({ withExtraAcceptedUrl: false });
+    try {
+      assert.doesNotThrow(() => validateSourceClaims(dir, result, WAVE1_CONTRACT));
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

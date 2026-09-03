@@ -1,0 +1,44 @@
+schema_version: verification-routing/v1
+change: supersede-drops-retry-lineage
+test_classes:
+  unit:
+    status: selected
+    rationale: Deterministic contract tests for supersession successor demand lineage construction (retry trio cleared, supersession fields carried).
+  integration:
+    status: not_applicable
+    rationale: The supersede/retry-chain scenario lives in the deterministic_e2e recovery surface which already drives full lifecycle helpers on temporary bundles; no separate CLI-boundary claim adds verdict beyond it.
+  deterministic_e2e:
+    status: selected
+    rationale: Supersede of a submitted attempt-2 retry exercised through the full work-unit lifecycle (claim -> timeout -> retry claim -> submit -> drift -> supersede -> lineage resolution) on a temporary bundle.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: No real-agent behavior changes; this change corrects deterministic engine successor-demand lineage construction.
+claims:
+  - id: successor-demand-drops-retry-lineage
+    statement: buildSupersessionSuccessorDemand clears the inherited retry trio (retry_of_work_id / retry_reason / attempt_index) when constructing a fresh supersession successor, and the successor's lineage carries only the five flat supersession fields plus non-retry lineage.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-attempt-disposition.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: supersede-attempt2-retry-succeeds
+    statement: Superseding a normally submitted attempt-2 retry row succeeds, commits one fresh supersession successor without inherited retry lineage, and resolveWorkUnitSupersessionLineage resolves a fresh leaf without a missing-parent error.
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/work-unit-attempt-recovery.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

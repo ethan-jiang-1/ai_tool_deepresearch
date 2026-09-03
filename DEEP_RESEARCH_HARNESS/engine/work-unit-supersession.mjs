@@ -6,6 +6,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import {
+  WORK_UNIT_RETRY_LINEAGE_FIELDS,
   WORK_UNIT_SUPERSESSION_LINEAGE_FIELDS,
 } from '../schema/contracts/queue.mjs';
 import {
@@ -304,9 +305,14 @@ function successorQueueItemId(workId) {
   return `supersession-${workId}`;
 }
 
-function withoutSupersessionLineage(lineage) {
+// A fresh supersession successor is a brand-new deepening demand under a new
+// queue_item_id. It must not inherit the predecessor's timeout-retry attempt
+// chain (retry_of_work_id/retry_reason/attempt_index) — those edges are only
+// legal within one queue_item_id's own attempt chain — nor any prior
+// supersession direct-parent fields, which the new relation replaces.
+function withoutInheritedAttemptLineage(lineage) {
   const next = clone(lineage || {});
-  for (const field of WORK_UNIT_SUPERSESSION_LINEAGE_FIELDS) delete next[field];
+  for (const field of [...WORK_UNIT_SUPERSESSION_LINEAGE_FIELDS, ...WORK_UNIT_RETRY_LINEAGE_FIELDS]) delete next[field];
   return next;
 }
 
@@ -324,7 +330,7 @@ export function buildSupersessionSuccessorDemand(terminalItem, relation) {
     status: 'queued',
     restore_priority: 'normal',
     lineage: {
-      ...withoutSupersessionLineage(terminalItem.lineage),
+      ...withoutInheritedAttemptLineage(terminalItem.lineage),
       supersession_of_work_id: relation.predecessor_work_id,
       supersession_of_queue_item_id: relation.predecessor_queue_item_id,
       supersession_accepted_ledger_record_hash: relation.accepted_ledger_record_hash,

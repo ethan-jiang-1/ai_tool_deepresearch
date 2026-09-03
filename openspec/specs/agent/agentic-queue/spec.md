@@ -5,6 +5,7 @@
 > delta-synced: add-audited-late-accept-for-timed-out-work-units (AGQ-018, AGQ-019)
 > delta-synced: make-work-unit-attempt-recovery-explicit (AGQ-026)
 > delta-synced: remove-recursive-queue-failure-repair (AGQ-019)
+> delta-synced: supersede-drops-retry-lineage (AGQ-026)
 
 ## Purpose
 
@@ -974,6 +975,16 @@ When a predecessor already carries those five fields, the new demand SHALL repla
 edge while retaining earlier edges in the predecessor terminal snapshot/index history. The demand SHALL enter
 one existing ordinary queue location and be claimed only through normal current actor observation.
 
+A fresh supersession successor is a brand-new deepening demand, not a retry continuation of the submitted
+predecessor's queue item. When the predecessor's terminal-history `item` snapshot carries timeout-retry
+continuation lineage (`retry_of_work_id`, `retry_reason`, and the retry `attempt_index`), the fresh successor
+SHALL NOT copy those retry-continuation fields onto its own lineage: they identify an attempt chain that
+belongs to the predecessor's own `queue_item_id`, and the successor has a different fresh `queue_item_id`.
+A supersession successor therefore SHALL be eligible to supersede an attempt-2+ submitted predecessor exactly
+as an attempt-1 predecessor, without requiring the attempt-1 parent to exist under the successor's queue
+identity. Any retry edge the successor later acquires SHALL be produced only by the successor's own ordinary
+timeout/actor-unavailable retry path under its fresh queue identity.
+
 The queue SHALL not move the predecessor terminal item back into `active_window`, rewrite its terminal
 history, reuse its work ID or queue-item ID, allocate a work ID during supersession, or create a second
 current completion record. Repeated supersession lookup SHALL return the same successor and its current
@@ -1036,6 +1047,18 @@ SHALL not reopen.
   reopen the superseded predecessor
 - **AND** an already submitted retry SHALL continue to block late-submit and remain the only current leaf
 
+#### Scenario: supersede of an attempt-2 retry predecessor creates a fresh successor without inherited retry lineage
+
+- **WHEN** a submitted predecessor whose terminal-history `item` snapshot carries timeout-retry lineage
+  (`retry_of_work_id` pointing at its attempt-1 parent, `retry_reason`, and `attempt_index` ≥ 2) is
+  superseded through the audited supersession path
+- **THEN** the Engine SHALL create exactly one fresh successor queue demand with the new `queue_item_id`
+- **AND** the successor's lineage SHALL carry the five flat supersession fields and SHALL NOT carry the
+  predecessor's inherited `retry_of_work_id`, `retry_reason`, or retry `attempt_index`
+- **AND** lineage resolution SHALL NOT require the attempt-1 parent to exist under the successor's queue
+  identity or treat that absent parent as a missing retry edge
+- **AND** a later timeout of the successor SHALL create its own retry edge under the fresh successor queue
+  identity through the ordinary timeout retry path
 ### Requirement: `operate-queue check` SHALL report a distinct drained conclusion for a fully drained queue
 
 When a queue has an empty `active_window` — the refill step keeps `refill_pool` empty whenever the active window is empty — and no `delegated_in_flight` work, `operate-queue check` SHALL report a distinct `drained` conclusion: `drained: true` emitted alongside `passed: false` and the ordinary non-zero check exit status. The `drained` flag SHALL be distinguishable from both `passed: true` (work is available and healthy) and a plain `passed: false` blocker or missing receipt, and the output SHALL NOT advise the Agent to refill or record a blocker.

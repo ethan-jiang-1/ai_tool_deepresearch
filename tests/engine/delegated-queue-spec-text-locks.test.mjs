@@ -79,10 +79,11 @@ test("spec req header indexes match requirement counts", () => {
   const dewHeader = dew.split("\n").find((l) => l.startsWith("> req: DEW-"));
   assert.ok(dewHeader, "DEW header req line must exist");
   const dewIds = dewHeader.match(/DEW-\d{3}/g) ?? [];
-  assert.equal(dewIds.length, 29, "DEW header must list 29 IDs");
-  assert.equal(new Set(dewIds).size, 29, "DEW header IDs must be unique");
+  assert.equal(dewIds.length, 31, "DEW header must list 31 IDs");
+  assert.equal(new Set(dewIds).size, 31, "DEW header IDs must be unique");
   // 2026-09-01-slim-dwu-requirements: 七条巨无霸 7→15 拆分（文本逐字保留）
-  assert.equal(headingBlocks(dew).length, 37, "DEW body must have 37 requirements after mega splits");
+  // wave1-result-authoring-contract: +DEW-030/DEW-031 (generated authoring value domains, duplicate claim diagnostics)
+  assert.equal(headingBlocks(dew).length, 39, "DEW body must have 39 requirements after mega splits and DEW-030/031");
 
   const agqHeader = agq.split("\n").find((l) => l.startsWith("> req: AGQ-"));
   assert.ok(agqHeader, "AGQ header req line must exist");
@@ -95,13 +96,13 @@ test("spec req header indexes match requirement counts", () => {
 
 test("DEW inline req lines are 1:1 with requirements", () => {
   const inline = dew.split("\n").filter((l) => /^> req: DEW-\d{3}$/.test(l));
-  assert.equal(inline.length, 29, "every DEW requirement carries exactly one inline req line");
+  assert.equal(inline.length, 31, "every DEW requirement carries exactly one inline req line");
   const ids = inline.map((l) => l.match(/DEW-\d{3}/)[0]);
-  assert.equal(new Set(ids).size, 29, "inline req IDs must be unique");
+  assert.equal(new Set(ids).size, 31, "inline req IDs must be unique");
 });
 
 test("registry carries the newly registered requirement IDs", () => {
-  for (const id of ["DEW-027", "DEW-028", "DEW-029", "AGQ-028"]) {
+  for (const id of ["DEW-027", "DEW-028", "DEW-029", "DEW-030", "DEW-031", "AGQ-028"]) {
     assert.ok(
       registry.includes(`${id}: `),
       `registry must contain ${id}`,

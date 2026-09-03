@@ -1,0 +1,58 @@
+schema_version: verification-routing/v1
+change: wave1-result-authoring-contract
+test_classes:
+  unit:
+    status: selected
+    rationale: Deterministic contract tests for generated task guidance value-domain text and validateSourceClaims duplicate-claim counting.
+  integration:
+    status: selected
+    rationale: Dry-submit duplicate-claim diagnostic and generated-envelope guidance exercised through CLI/submit surfaces on temporary bundles.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: The behavior is bounded to envelope generation and dry-submit diagnostics on claimed attempts; integration covers the CLI boundary without a full-bundle e2e.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: No real-agent behavior changes; guidance and diagnostics are deterministic Engine outputs.
+claims:
+  - id: generated-task-states-ref-value-domains
+    statement: For a source-claims-allowed assignment, the generated task.md Completion Contract states that cache_trail_refs[]/degraded_capture_ref require declared cache leaf directory paths (forbidding <leaf>/page.md), that source_ref requires a current assigned output path or authorized prior submitted output (forbidding slugs), and includes one accepted-cache-trail and one degraded-capture positive example drawn from the assignment's declared cache policy and output paths.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-lifecycle.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: duplicate-claim-count-diagnostic
+    statement: validateSourceClaims reports, for each repeated normalized accepted claim URL, the claim count and the JSON-pointer range of the duplicated claims, without changing verdicts when no duplicates exist.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-validation.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: dry-submit-duplicate-claims-cli
+    statement: operate-work-unit dry-submit on a claimed wave1 result with 16 accepted claims across 4 distinct URLs reports the repeated-URL count diagnostic; a result with distinct claim URLs is unaffected.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-work-unit.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
