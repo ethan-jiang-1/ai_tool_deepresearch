@@ -56,7 +56,7 @@ function writeWave1Trace(dir) {
 const VALID_EVIDENCE_SUMMARY = `# Evidence Summary: Topic A
 
 ## Source URLs
-- [Example Source](https://example.com/news/deepening-topic-a) — retrieved 2026-01-15
+- [Example Source](https://fixture.news-research.com/news/deepening-topic-a) — retrieved 2026-01-15
 
 ## Key Findings
 1. **机制理解**: AI alignment research shows promising results in scalable oversight.
@@ -74,7 +74,7 @@ last_updated: 2026-01-15
 
 | target_id | target_question | origin | status | backing_refs | next_action |
 | --- | --- | --- | --- | --- | --- |
-| topic-a-T01 | How to measure alignment? | seed | 开放 | https://example.com/news/deepening-topic-a | 移交 wave2 |
+| topic-a-T01 | How to measure alignment? | seed | 开放 | https://fixture.news-research.com/news/deepening-topic-a | 移交 wave2 |
 
 ## Question Reconciliation
 
@@ -91,7 +91,7 @@ last_updated: 2026-01-15
 ## Exploration / Exploitation Decision
 
 - decision: continue
-- trigger_refs: https://example.com/news/deepening-topic-a
+- trigger_refs: https://fixture.news-research.com/news/deepening-topic-a
 - unresolved_questions: topic-a-T01
 - queue_consequence: 移交 wave2 cross-topic synthesis
 - next_action: wave2
@@ -182,7 +182,7 @@ human_decision_checkpoints:
 
   writeFileSync(join(dir, 'reference', '01-topic-a-deepening.md'),
     '# Topic A Deepening Reference\n\n' +
-    '- source_url: https://example.com/news/deepening-topic-a\n' +
+    '- source_url: https://fixture.news-research.com/news/deepening-topic-a\n' +
     '- acceptance_status: accepted\n' +
     '- source_type: secondary\n' +
     '- tier: Tier 2\n' +
@@ -203,10 +203,10 @@ human_decision_checkpoints:
   for (const topic of extraTopics) {
     mkdirSync(join(dir, 'artifacts', 'wave1', topic.slug), { recursive: true });
     mkdirSync(join(dir, 'artifacts', 'wave0', topic.slug), { recursive: true });
-    writeFileSync(join(dir, 'artifacts', 'wave0', topic.slug, 'source.yaml'), `- url: https://example.com/news/${topic.slug}-wave0\n  title: Wave0 foundation\n  retrieved_date: 2026-07-14\n  topic_tag: ${topic.slug}\n`);
+    writeFileSync(join(dir, 'artifacts', 'wave0', topic.slug, 'source.yaml'), `- url: https://fixture.news-research.com/news/${topic.slug}-wave0\n  title: Wave0 foundation\n  retrieved_date: 2026-07-14\n  topic_tag: ${topic.slug}\n`);
     writeFileSync(join(dir, 'reference', `${topic.id}-${topic.slug}-deepening.md`),
       `# ${topic.title} Deepening Reference\n\n` +
-      `- source_url: https://example.com/news/${topic.slug}-deepening\n` +
+      `- source_url: https://fixture.news-research.com/news/${topic.slug}-deepening\n` +
       '- acceptance_status: accepted\n' +
       '- source_type: secondary\n' +
       '- tier: Tier 2\n' +
@@ -225,7 +225,7 @@ human_decision_checkpoints:
   return dir;
 }
 
-function submitAndReviewWorkUnit(dir, { slug = 'topic-a', topicUid = 'tp_123e4567-e89b-12d3-a456-426614174000', sourceUrl = 'https://example.com/news/deepening-topic-a', cacheTrail = '_cache/wave1/primary/topic-a/deepening-topic-a', queueItemId = 'topic-a', id = '01' } = {}) {
+function submitAndReviewWorkUnit(dir, { slug = 'topic-a', topicUid = 'tp_123e4567-e89b-12d3-a456-426614174000', sourceUrl = 'https://fixture.news-research.com/news/deepening-topic-a', cacheTrail = '_cache/wave1/primary/topic-a/deepening-topic-a', queueItemId = 'topic-a', id = '01' } = {}) {
   const submission = claimAndSubmitWorkUnit(dir, {
     phase: 'wave1',
     queueItemId,
@@ -381,7 +381,7 @@ describe('Wave1 carried-target receipt integration', () => {
     writeFileSync(join(dir, 'artifacts/wave1/topic-b/evidence-summary.md'), `# Evidence Summary: Topic B
 
 ## Source URLs
-- [Source B](https://example.com/news/topic-b-deepening) — retrieved 2026-01-15
+- [Source B](https://fixture.news-research.com/news/topic-b-deepening) — retrieved 2026-01-15
 
 ## Key Findings
 1. **机制理解**: Cross-domain evidence shows complementary patterns.
@@ -407,11 +407,11 @@ Checked; none.
 Continue.
 `);
     writeFileSync(join(dir, 'seed_topics/topic-b.md'), SECOND_TOPIC);
-    writeFileSync(join(dir, 'artifacts/wave0/topic-b/source.yaml'), `- url: https://example.com/news/topic-b-wave0\n  title: Wave0 B\n  retrieved_date: 2026-07-14\n  topic_tag: topic-b\n`);
+    writeFileSync(join(dir, 'artifacts/wave0/topic-b/source.yaml'), `- url: https://fixture.news-research.com/news/topic-b-wave0\n  title: Wave0 B\n  retrieved_date: 2026-07-14\n  topic_tag: topic-b\n`);
     submitAndReviewWorkUnit(dir, {
       slug: 'topic-b',
       topicUid: 'tp_223e4567-e89b-12d3-a456-426614174001',
-      sourceUrl: 'https://example.com/news/topic-b-deepening',
+      sourceUrl: 'https://fixture.news-research.com/news/topic-b-deepening',
       cacheTrail: '_cache/wave1/primary/topic-b/deepening-topic-b',
       queueItemId: 'topic-b',
       id: '02',

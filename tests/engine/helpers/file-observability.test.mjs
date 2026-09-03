@@ -165,7 +165,7 @@ describe('file observability', () => {
 
   it('classifies ledger-declared files as declared_authoritative', () => {
     const dir = setupBundle('fo-declared', {
-      'reference/topic-a-source1.md': '# Ref\n- source_url: https://example.com/news/a\n\n## Key Facts\n- Fact 1\n- Fact 2\n- Fact 3\n- Fact 4\n- Fact 5\n\n## Core Content Capture\nContent\n\n## Relevance To This Research\nRelevant\n\n## Quotable Terms / Concepts\nTerm\n\n## Risks And Limitations\nRisk\n',
+      'reference/topic-a-source1.md': '# Ref\n- source_url: https://fixture.news-research.com/news/a\n\n## Key Facts\n- Fact 1\n- Fact 2\n- Fact 3\n- Fact 4\n- Fact 5\n\n## Core Content Capture\nContent\n\n## Relevance To This Research\nRelevant\n\n## Quotable Terms / Concepts\nTerm\n\n## Risks And Limitations\nRisk\n',
     });
     claimAndSubmitWorkUnit(dir, {
       phase: 'wave1',
@@ -173,12 +173,12 @@ describe('file observability', () => {
       outputs: [{
         path: 'reference/topic-a-source1.md',
         role: 'reference',
-        source_url: 'https://example.com/news/a',
+        source_url: 'https://fixture.news-research.com/news/a',
         source_slug: 'source1',
       }],
       cacheTrails: [{
         path: '_cache/wave1/primary/topic-a/source1',
-        url: 'https://example.com/news/a',
+        url: 'https://fixture.news-research.com/news/a',
       }],
     });
 
@@ -211,7 +211,7 @@ describe('file observability', () => {
 
   it('treats backed Phase-owned reference projections as expected, not orphan blockers', () => {
     const dir = setupBundle('fo-backed-projection');
-    const sourceUrl = 'https://example.com/news/phase-owned';
+    const sourceUrl = 'https://fixture.news-research.com/news/phase-owned';
     const evidencePath = 'artifacts/wave1/topic-a/evidence-summary.md';
     const questionPath = 'artifacts/wave1/topic-a/question-list.md';
     const cacheTrail = '_cache/wave1/primary/topic-a/phase-owned';
@@ -280,13 +280,13 @@ describe('file observability', () => {
       outputs: [{
         path: 'reference/topic-a-source1.md',
         role: 'reference',
-        source_url: 'https://example.com/news/a',
+        source_url: 'https://fixture.news-research.com/news/a',
         source_slug: 'source1',
-        content: referenceContent({ source_url: 'https://example.com/news/a' }),
+        content: referenceContent({ source_url: 'https://fixture.news-research.com/news/a' }),
       }],
       cacheTrails: [{
         path: '_cache/wave1/primary/topic-a/source1',
-        url: 'https://example.com/news/a',
+        url: 'https://fixture.news-research.com/news/a',
       }],
     });
 
@@ -349,13 +349,13 @@ describe('file observability', () => {
       outputs: [{
         path: 'reference/topic-a-source1.md',
         role: 'reference',
-        source_url: 'https://example.com/news/a',
+        source_url: 'https://fixture.news-research.com/news/a',
         source_slug: 'source1',
-        content: referenceContent({ source_url: 'https://example.com/news/a' }),
+        content: referenceContent({ source_url: 'https://fixture.news-research.com/news/a' }),
       }],
       cacheTrails: [{
         path: '_cache/wave1/primary/topic-a/source1',
-        url: 'https://example.com/news/a',
+        url: 'https://fixture.news-research.com/news/a',
       }],
     });
 
@@ -373,12 +373,12 @@ describe('file observability', () => {
   it('labels projection drift, delegated bypass, missing index rows, and source-claim cache mismatches distinctly', () => {
     const dir = setupBundle('fo-diagnostics', {
       'reference/topic-a-unbacked.md': referenceContent({
-        source_url: 'https://example.com/news/unbacked',
+        source_url: 'https://fixture.news-research.com/news/unbacked',
         related_topic: 'topic-a',
         coreContent: 'This reference cites no submitted source/cache/work-unit backing.',
       }),
       'reference/loose.md': referenceContent({
-        source_url: 'https://example.com/news/loose',
+        source_url: 'https://fixture.news-research.com/news/loose',
         related_topic: 'topic-a',
       }),
     });
@@ -396,17 +396,17 @@ describe('file observability', () => {
       }],
       cacheTrails: [{
         path: '_cache/wave1/primary/topic-a/source',
-        url: 'https://example.com/news/source',
+        url: 'https://fixture.news-research.com/news/source',
       }],
       resultOverrides: {
         source_claims: [{
-          url: 'https://example.com/news/source',
+          url: 'https://fixture.news-research.com/news/source',
           acceptance_status: 'accepted',
           is_new_vs_wave0: true,
           source_ref: 'artifacts/wave1/topic-a/evidence-summary.md',
           cache_trail_refs: ['_cache/wave1/primary/topic-a/source'],
         }],
-        accepted_source_urls: ['https://example.com/news/source'],
+        accepted_source_urls: ['https://fixture.news-research.com/news/source'],
       },
     });
     writeFileSync(join(dir, '_cache/wave1/primary/topic-a/source/page.md'), '# Page\n');

@@ -271,7 +271,7 @@ function writeValidSubmitFiles(dir, record, {
   const sourcePath = manifest.output_contract.required_outputs.find((output) => output.role === 'source_yaml').path;
   const topicSlug = sourcePath.split('/').at(-2);
   const resolvedSources = sources || [{
-    url: 'https://example.com/source',
+    url: 'https://fixture.news-research.com/source',
     title: 'Example source',
     retrieved_date: '2026-07-20',
     topic_tag: topicSlug,
@@ -794,6 +794,53 @@ describe('operate-work-unit inspect', () => {
     }
   });
 
+  it('rejects a fabricated placeholder/filler cache leaf before ledger append (@impl CRC-009)', () => {
+    const dir = tempBundle();
+    try {
+      saveQueueWith(dir, [queueItem()]);
+      const claimOut = JSON.parse(execFileSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf-8' }));
+      const workId = claimOut.claimed_work_ids[0];
+      const record = loadWorkUnitIndex(dir).work_units[workId];
+      const resultPath = writeValidSubmitFiles(dir, record);
+      // BUG-251 shape: filler page.md + placeholder-domain meta.json
+      const cacheTrail = `_cache/wave0/primary/${record.queue_item_id}/s01_source`;
+      writeFileSync(path.join(dir, cacheTrail, 'page.md'), `# ${record.queue_item_id}\n\nDeep research content.\n`);
+      writeFileSync(path.join(dir, cacheTrail, 'meta.json'), `${JSON.stringify({ url: 'https://example.com/fabricated-source' })}\n`);
+
+      const rejected = spawnSync(process.execPath, [CLI, 'submit', dir, '--work-id', workId, '--result', resultPath], { encoding: 'utf-8', timeout: 5000 });
+      assert.equal(rejected.status, 1, rejected.stderr || rejected.stdout);
+      const submitOut = JSON.parse(rejected.stdout);
+      assert.equal(submitOut.ok, false);
+      assert.equal(submitOut.status, 'claimed');
+      assert.match(submitOut.last_submit_rejection.reason, /placeholder/);
+      // The rejection ran before the ledger append — no ledger file exists.
+      assert.equal(existsSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER)), false);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('accepts an explicit degraded capture despite the placeholder-shaped cache leaf (@impl CRC-009)', () => {
+    const dir = tempBundle();
+    try {
+      saveQueueWith(dir, [queueItem()]);
+      const claimOut = JSON.parse(execFileSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf-8' }));
+      const workId = claimOut.claimed_work_ids[0];
+      const record = loadWorkUnitIndex(dir).work_units[workId];
+      const resultPath = writeValidSubmitFiles(dir, record);
+      // Placeholder-shaped page, but it carries an explicit fetch-failure record.
+      const cacheTrail = `_cache/wave0/primary/${record.queue_item_id}/s01_source`;
+      writeFileSync(path.join(dir, cacheTrail, 'page.md'), `# ${record.queue_item_id}\n\nfetch failure: 403 forbidden when fetching the assigned source (explicit degraded capture)\n`);
+
+      const submitOut = JSON.parse(execFileSync(process.execPath, [CLI, 'submit', dir, '--work-id', workId, '--result', resultPath], { encoding: 'utf-8' }));
+      assert.equal(submitOut.ok, true, JSON.stringify(submitOut.last_submit_rejection || null));
+      assert.equal(submitOut.status, 'submitted');
+      assert.equal(existsSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER)), true);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
   it('serializes same-target Wave0 supplements and preserves append-only ordinal ownership', () => {
     const dir = tempBundle();
     try {
@@ -809,7 +856,7 @@ describe('operate-work-unit inspect', () => {
       const firstWorkId = firstClaim.claimed_work_ids[0];
       const firstRecord = loadWorkUnitIndex(dir).work_units[firstWorkId];
       const firstSource = {
-        url: 'https://example.com/source-1',
+        url: 'https://fixture.news-research.com/source-1',
         title: 'Example source 1',
         retrieved_date: '2026-07-20',
         topic_tag: 'topic-a',
@@ -827,7 +874,7 @@ describe('operate-work-unit inspect', () => {
       const secondWorkId = secondClaim.claimed_work_ids[0];
       const secondRecord = loadWorkUnitIndex(dir).work_units[secondWorkId];
       const secondSource = {
-        url: 'https://example.com/source-2',
+        url: 'https://fixture.news-research.com/source-2',
         title: 'Example source 2',
         retrieved_date: '2026-07-20',
         topic_tag: 'topic-a',
@@ -985,8 +1032,8 @@ describe('operate-work-unit inspect', () => {
       const cacheTrail = `_cache/wave1/primary/${record.queue_item_id}/supplementary-source`;
       mkdirSync(path.join(dir, cacheTrail), { recursive: true });
       writeFileSync(path.join(dir, cacheTrail, 'websearch.json'), '[]\n');
-      writeFileSync(path.join(dir, cacheTrail, 'page.md'), '# Captured Page\n\nSupplementary source capture.\n');
-      writeFileSync(path.join(dir, cacheTrail, 'meta.json'), '{"url":"https://example.com/supplementary"}\n');
+      writeFileSync(path.join(dir, cacheTrail, 'page.md'), '# Captured Page\n\nfetch failure: supplementary source fetch was blocked (explicit degraded capture)\n');
+      writeFileSync(path.join(dir, cacheTrail, 'meta.json'), '{"url":"https://fixture.news-research.com/supplementary"}\n');
       const resultPath = path.join(dir, '_tmp', `${workId}.result.json`);
       mkdirSync(path.dirname(resultPath), { recursive: true });
       writeFileSync(resultPath, `${JSON.stringify({
@@ -1015,6 +1062,77 @@ describe('operate-work-unit inspect', () => {
       assert.equal(submit.status, 0, submit.stderr || submit.stdout);
       assert.equal(JSON.parse(submit.stdout).ok, true);
       assert.equal(readFileSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER), 'utf-8').split(/\r?\n/).filter(Boolean).length, 1);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('rejects a zero-claim Wave1 result before ledger append without inline backfill (@impl WAI-013)', () => {
+    const dir = tempBundle();
+    try {
+      writeCanonicalPlan(dir);
+      saveQueueWith(dir, [supplementaryWave1QueueItem()]);
+      const claim = spawnSync(process.execPath, [
+        CLI,
+        'claim',
+        dir,
+        '--phase', 'wave1',
+        '--actor-outcome', 'available',
+        '--actor-source', 'native_probe',
+        '--actor-role-key', 'dpt-evidence-extractor',
+        '--actor-reason', 'probe_succeeded',
+        '--execution-actor', 'delegated_subagent',
+      ], { encoding: 'utf-8', timeout: 5000 });
+      assert.equal(claim.status, 0, claim.stderr || claim.stdout);
+      const workId = JSON.parse(claim.stdout).claimed_work_ids[0];
+      const record = loadWorkUnitIndex(dir).work_units[workId];
+
+      writeFileSync(path.join(dir, record.paths.runtime_receipt_ref), `${JSON.stringify({
+        event: 'work_done',
+        work_id: record.work_id,
+        queue_item_id: record.queue_item_id,
+        kind: record.kind,
+        receipt_nonce: record.receipt_nonce,
+        actor_contract_version: record.actor_contract_version,
+        execution_actor_class: record.actor_execution.execution_actor_class,
+        ts: '2026-08-09T00:00:00.000Z',
+      })}\n`);
+      // BUG-250 shape: real-looking cache page, but the result carries no source claims
+      // and no degraded-capture record.
+      const cacheTrail = `_cache/wave1/primary/${record.queue_item_id}/supplementary-source`;
+      mkdirSync(path.join(dir, cacheTrail), { recursive: true });
+      writeFileSync(path.join(dir, cacheTrail, 'websearch.json'), '[]\n');
+      writeFileSync(path.join(dir, cacheTrail, 'page.md'), '# Captured Page\n\nReal fetched body text for the supplementary source.\n');
+      writeFileSync(path.join(dir, cacheTrail, 'meta.json'), '{"url":"https://fixture.news-research.com/supplementary"}\n');
+      const resultPath = path.join(dir, '_tmp', `${workId}.result.json`);
+      mkdirSync(path.dirname(resultPath), { recursive: true });
+      writeFileSync(resultPath, `${JSON.stringify({
+        schema_version: 'work-unit.result.v1',
+        work_id: record.work_id,
+        queue_item_id: record.queue_item_id,
+        kind: record.kind,
+        receipt_nonce: record.receipt_nonce,
+        actor_contract_version: record.actor_contract_version,
+        execution_actor_class: record.actor_execution.execution_actor_class,
+        summary: 'zero-claim supplementary result',
+        output_files: [],
+        source_claims: [],
+        accepted_source_urls: [],
+        cache_trails: [cacheTrail],
+      }, null, 2)}\n`);
+
+      const submit = spawnSync(process.execPath, [CLI, 'submit', dir, '--work-id', workId, '--result', resultPath], {
+        encoding: 'utf-8', timeout: 5000,
+      });
+      assert.equal(submit.status, 1, submit.stderr || submit.stdout);
+      const out = JSON.parse(submit.stdout);
+      assert.equal(out.ok, false);
+      assert.equal(out.status, 'claimed');
+      assert.match(out.last_submit_rejection.reason, /both empty and no explicit degraded capture/i);
+      // Fail-fast ran before the ledger append — no ledger file, no inline backfill.
+      assert.equal(existsSync(path.join(dir, WORK_UNIT_OUTPUT_LEDGER)), false);
+      const indexAfter = loadWorkUnitIndex(dir).work_units[workId];
+      assert.equal(indexAfter.status, 'claimed');
     } finally {
       cleanup(dir);
     }
@@ -1079,8 +1197,8 @@ describe('operate-work-unit inspect', () => {
       const cacheTrail = `_cache/wave1/primary/${index[workIdB].queue_item_id}/supplementary-source`;
       mkdirSync(path.join(dir, cacheTrail), { recursive: true });
       writeFileSync(path.join(dir, cacheTrail, 'websearch.json'), '[]\n');
-      writeFileSync(path.join(dir, cacheTrail, 'page.md'), '# Captured Page\n\nSupplementary source capture.\n');
-      writeFileSync(path.join(dir, cacheTrail, 'meta.json'), '{"url":"https://example.com/supplementary"}\n');
+      writeFileSync(path.join(dir, cacheTrail, 'page.md'), '# Captured Page\n\nfetch failure: supplementary source fetch was blocked (explicit degraded capture)\n');
+      writeFileSync(path.join(dir, cacheTrail, 'meta.json'), '{"url":"https://fixture.news-research.com/supplementary"}\n');
       const resultB = path.join(dir, '_tmp', `${workIdB}.result.json`);
       mkdirSync(path.dirname(resultB), { recursive: true });
       writeFileSync(resultB, JSON.stringify({

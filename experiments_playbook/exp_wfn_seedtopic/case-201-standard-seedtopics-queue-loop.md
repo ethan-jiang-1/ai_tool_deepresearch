@@ -49,7 +49,7 @@ cat > "$B/rb_profile.yaml" <<'YAML'
 plan_basename: agql_seed
 research_profile: quick_factual
 root_must_answer_set: ["How does the queue materialize seed topics?"]
-research_access: { status: available, probed_at: "2026-07-10T00:00:00.000Z", result_url: "https://example.com/case-201-fixture", fetch_outcome: success }
+research_access: { status: available, probed_at: "2026-07-10T00:00:00.000Z", result_url: "https://fixture.news-research.com/case-201-fixture", fetch_outcome: success }
 human_decision_checkpoints:
   hitl1: { status: recorded, recorded_at: "2026-07-10T00:00:00.000Z" }
   hitl2: { status: not_started, answerability_class: not_assessed, user_decision: not_started, final_report_view: not_started }

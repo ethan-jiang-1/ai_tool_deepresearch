@@ -258,7 +258,7 @@ function executeTopic(bundleDir, topic) {
   const starter = starterFromTask(readFileSync(path.join(bundleDir, record.paths.task_ref), 'utf8'));
 
   const sourcePath = `artifacts/wave0/${topic.slug}/source.yaml`;
-  const topicUrl = `https://docs.example.org/${topic.slug}/foundation`;
+  const topicUrl = `https://docs.fixture.news-research.com/${topic.slug}/foundation`;
   mkdirSync(path.join(bundleDir, path.dirname(sourcePath)), { recursive: true });
   writeFileSync(path.join(bundleDir, sourcePath), sourceYaml(topic, topicUrl));
 
@@ -395,7 +395,7 @@ describe('rerun-added Topic follows the normal Wave0 producer', () => {
 
     const orphanPath = path.join(rerun.bundleDir, 'artifacts/wave0', TARGET_TOPIC.slug, 'source.yaml');
     mkdirSync(path.dirname(orphanPath), { recursive: true });
-    writeFileSync(orphanPath, sourceYaml(TARGET_TOPIC, 'https://docs.example.org/added-topic/orphan'));
+    writeFileSync(orphanPath, sourceYaml(TARGET_TOPIC, 'https://docs.fixture.news-research.com/added-topic/orphan'));
 
     const gate = runGate(rerun.bundleDir);
     assert.equal(gate.status, 1);

@@ -296,21 +296,123 @@ function adviceForOutcome(outcome, bundlePath, latestWindow = null) {
 
 export function auditPhaseStatus(bundlePath) {
   const result = auditPhaseStatusInner(bundlePath);
+  // @impl TRW-008: advisory trace completion-integrity reading. Integrity findings
+  // surface as an independent `trace_integrity` diagnostic; they do not change the
+  // phase-status verdict (ok/outcome) — audit is a reporting surface, not a gate.
+  const traceIntegrity = evaluateTraceCompletionIntegrity(bundlePath);
+  const withTrace = { ...result, trace_integrity: traceIntegrity };
   const integrity = evaluateLifecycleIntegrity(bundlePath);
-  if (!integrity) return result;
+  if (!integrity) return withTrace;
   if (result.ok === true) {
     // Lifecycle window itself is legal, but an integrity fact hit: the
     // top-level outcome names the first integrity finding (design D1).
     return {
-      ...result,
+      ...withTrace,
       ok: false,
       outcome: integrity.outcomes[0],
-      advice: [...integrity.remediation, ...(Array.isArray(result.advice) ? result.advice : [])],
+      advice: [...integrity.remediation, ...(Array.isArray(withTrace.advice) ? withTrace.advice : [])],
       integrity,
       diagnostic_only: true,
     };
   }
-  return { ...result, integrity };
+  return { ...withTrace, integrity };
+}
+
+// @impl TRW-008: completion events (waveN_completion / final_report_complete) are legal
+// lifecycle evidence only when a passed gate_attempt of the matching gate identity
+// witnesses them, timestamps are monotonic in append order, and the completion event
+// carries the canonical bundle identity (directory basename — NOT the rb_status.json
+// short name, which is the forged-event shape). Historical gate_attempt events keep
+// their short-name bundle; the witness check matches on gate identity + passed only.
+const TRACE_COMPLETION_GATE_RE = /^wave([0-9]+)_completion$/;
+
+function gateIdentityForCompletionEvent(eventName) {
+  const waveMatch = TRACE_COMPLETION_GATE_RE.exec(eventName);
+  if (waveMatch) return `wave${waveMatch[1]}-complete`;
+  // final_report_complete has no framework gate: no gate identity can witness it.
+  return null;
+}
+
+export function evaluateTraceCompletionIntegrity(bundlePath) {
+  const trace = readTraceEventsWithIndex(bundlePath);
+  if (!trace.ok) {
+    return { ok: true, checked: false, reason: trace.reason, findings: [] };
+  }
+  const canonicalBundle = basename(bundlePath);
+  const events = trace.events || [];
+  const findings = [];
+  let previousTs = null;
+  let tsMonotonic = true;
+
+  for (const entry of events) {
+    const event = entry.event ?? entry;
+    const ts = typeof event.ts === 'string' ? event.ts : null;
+
+    // Timestamp monotonicity applies to every event in append order (equal allowed).
+    if (ts !== null && previousTs !== null && ts < previousTs) {
+      tsMonotonic = false;
+      findings.push({
+        reason_code: 'trace_integrity_non_monotonic_ts',
+        event: event.event,
+        ts,
+        previous_ts: previousTs,
+        detail: `trace event '${event.event}' at ${ts} is older than the preceding event at ${previousTs} (append order must be ts-non-decreasing)`,
+      });
+    }
+    if (ts !== null) previousTs = ts;
+
+    const isCompletion = event.event === 'final_report_complete' || TRACE_COMPLETION_GATE_RE.test(event.event);
+    if (!isCompletion) continue;
+
+    // Canonical bundle identity: completion events must carry the directory basename.
+    if (event.bundle !== canonicalBundle) {
+      findings.push({
+        reason_code: 'trace_integrity_unsupported_completion',
+        event: event.event,
+        ts,
+        bundle: event.bundle ?? null,
+        expected_bundle: canonicalBundle,
+        detail: `completion event '${event.event}' carries bundle '${event.bundle ?? '<missing>'}' which is not the canonical bundle basename '${canonicalBundle}'`,
+      });
+    }
+
+    const gateIdentity = gateIdentityForCompletionEvent(event.event);
+    if (gateIdentity === null) {
+      findings.push({
+        reason_code: 'trace_integrity_unsupported_completion',
+        event: event.event,
+        ts,
+        bundle: event.bundle ?? null,
+        detail: `completion event '${event.event}' has no framework gate identity; it cannot be witnessed by a passed gate_attempt`,
+      });
+      continue;
+    }
+    const witnessed = events.some((other) => {
+      const candidate = other.event ?? other;
+      return candidate.event === 'gate_attempt'
+        && candidate.gate === gateIdentity
+        && candidate.passed === true
+        && (ts === null || typeof candidate.ts !== 'string' || candidate.ts <= ts);
+    });
+    if (!witnessed) {
+      findings.push({
+        reason_code: 'trace_integrity_unsupported_completion',
+        event: event.event,
+        ts,
+        bundle: event.bundle ?? null,
+        gate: gateIdentity,
+        detail: `completion event '${event.event}' has no passed gate_attempt witness for gate '${gateIdentity}'`,
+      });
+    }
+  }
+
+  return {
+    ok: findings.length === 0,
+    checked: true,
+    canonical_bundle: canonicalBundle,
+    ts_monotonic: tsMonotonic,
+    findings,
+  };
 }
 
 function auditPhaseStatusInner(bundlePath) {

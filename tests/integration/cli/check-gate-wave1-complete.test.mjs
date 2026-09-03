@@ -3,7 +3,7 @@ import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, basename } from 'node:path';
 import { setStatusWindow, witnessedHandoffEvents, writeTraceEvents } from './handoff-fixtures.mjs';
 import {
   claimAndSubmitWorkUnit,
@@ -167,7 +167,7 @@ function materializeWave1Projections(dir) {
 const VALID_EVIDENCE_SUMMARY = `# Evidence Summary: Topic A
 
 ## Source URLs
-- [Example Source](https://example.com/news/deepening-topic-a) — retrieved 2026-01-15
+- [Example Source](https://fixture.news-research.com/news/deepening-topic-a) — retrieved 2026-01-15
 
 ## Key Findings
 1. **机制理解**: AI alignment research shows promising results in scalable oversight.
@@ -191,7 +191,7 @@ const NO_SOURCE_URL_SUMMARY = `# Evidence Summary: Topic A
 const EMPTY_FINDINGS_SUMMARY = `# Evidence Summary: Topic A
 
 ## Source URLs
-- [Example](https://example.com/some-page) — retrieved 2026-01-15
+- [Example](https://fixture.news-research.com/some-page) — retrieved 2026-01-15
 
 ## Key Findings
 
@@ -243,7 +243,7 @@ last_updated: 2026-01-15
 
 | target_id | target_question | origin | status | backing_refs | next_action |
 | --- | --- | --- | --- | --- | --- |
-| topic-a-T01 | How to measure alignment? | seed | 开放 | https://example.com/news/deepening-topic-a | 移交 wave2 |
+| topic-a-T01 | How to measure alignment? | seed | 开放 | https://fixture.news-research.com/news/deepening-topic-a | 移交 wave2 |
 
 ## Question Reconciliation
 
@@ -260,7 +260,7 @@ last_updated: 2026-01-15
 ## Exploration / Exploitation Decision
 
 - decision: continue
-- trigger_refs: https://example.com/news/deepening-topic-a
+- trigger_refs: https://fixture.news-research.com/news/deepening-topic-a
 - unresolved_questions: topic-a-T01
 - queue_consequence: 移交 wave2 cross-topic synthesis
 - next_action: wave2
@@ -349,7 +349,7 @@ human_decision_checkpoints:
   // Reference: flat format with topic-prefixed files (required by count_floor)
   writeFileSync(join(dir, 'reference', '01-topic-a-deepening.md'),
     '# Topic A Deepening Reference\n\n' +
-    '- source_url: https://example.com/news/deepening-topic-a\n' +
+    '- source_url: https://fixture.news-research.com/news/deepening-topic-a\n' +
     '- acceptance_status: accepted\n' +
     '- source_type: secondary\n' +
     '- tier: Tier 2\n' +
@@ -396,7 +396,7 @@ function writeCanonicalTopicPlan(dir, topicUid, {
 
 function submitWave1WorkUnit(dir, {
   queueItemId = 'topic-a',
-  sourceUrl = 'https://example.com/news/deepening-topic-a',
+  sourceUrl = 'https://fixture.news-research.com/news/deepening-topic-a',
   isNewVsWave0 = true,
   cacheTrail = `_cache/wave1/primary/${queueItemId}/deepening-topic-a`,
   assignmentMode = 'primary',
@@ -460,7 +460,7 @@ function submitWave1WorkUnit(dir, {
 function writeDepthReview(dir, {
   submission,
   topic = 'topic-a',
-  wave0Urls = ['https://example.com/news/wave0-foundation'],
+  wave0Urls = ['https://fixture.news-research.com/news/wave0-foundation'],
   decision = 'accept',
   supplementary = [],
   reviewedRefs = null,
@@ -502,7 +502,7 @@ function submitAndReviewWave1WorkUnit(dir, options = {}) {
     cacheTrail: options.cacheTrail || `_cache/wave1/primary/${options.queueItemId || 'topic-a'}/deepening-topic-a`,
   });
   materializeCanonicalFixtureProjection(dir, submission, {
-    sourceUrl: options.sourceUrl || 'https://example.com/news/deepening-topic-a',
+    sourceUrl: options.sourceUrl || 'https://fixture.news-research.com/news/deepening-topic-a',
     cacheTrail: options.cacheTrail || `_cache/wave1/primary/${options.queueItemId || 'topic-a'}/deepening-topic-a`,
   });
   return submission;
@@ -572,7 +572,7 @@ function prepareSupersededWave1GateBundle() {
   const successor = submitSupersessionSuccessor(dir, predecessor);
   writeDepthReview(dir, { submission: successor });
   materializeCanonicalFixtureProjection(dir, successor, {
-    sourceUrl: 'https://example.com/news/deepening-topic-a',
+    sourceUrl: 'https://fixture.news-research.com/news/deepening-topic-a',
     cacheTrail: '_cache/wave1/primary/topic-a/deepening-topic-a',
   });
   writeWave1Trace(dir);
@@ -593,7 +593,7 @@ function writeParityReferenceIndex(dir, topics) {
     '| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |',
     '| --- | --- | --- | --- | --- | --- | --- | --- |',
     ...topics.flatMap((topic) => {
-      const sourceUrl = `https://docs.example.org/${topic.slug}/wave1-source`;
+      const sourceUrl = `https://docs.fixture.news-research.com/${topic.slug}/wave1-source`;
       const canonical = canonicalWave1ReferencePath({ topicSlug: topic.slug, sourceUrl });
       return [
         `| reference/${topic.slug}-deepening.md | primary | expert | Tier 2 | ${topic.slug} | wave1_topic | accepted | 2026-07-14 |`,
@@ -685,7 +685,7 @@ title: ${topic.title}
 }
 
 function submitParityTopic(dir, topic, { preserveQueue = false } = {}) {
-  const sourceUrl = `https://docs.example.org/${topic.slug}/wave1-source`;
+  const sourceUrl = `https://docs.fixture.news-research.com/${topic.slug}/wave1-source`;
   const referencePath = `reference/${topic.slug}-deepening.md`;
   const evidencePath = `artifacts/wave1/${topic.slug}/evidence-summary.md`;
   const questionPath = `artifacts/wave1/${topic.slug}/question-list.md`;
@@ -702,7 +702,7 @@ function submitParityTopic(dir, topic, { preserveQueue = false } = {}) {
   writeFileSync(join(dir, evidencePath), parityEvidenceSummary(topic, sourceUrl));
   writeFileSync(join(dir, questionPath), parityQuestionList(topic, sourceUrl));
   writeFileSync(join(dir, 'seed_topics', `${topic.slug}.md`), renderCanonicalSeed(topic));
-  writeFileSync(join(dir, 'artifacts/wave0', topic.slug, 'source.yaml'), `- url: https://docs.example.org/${topic.slug}/wave0-source
+  writeFileSync(join(dir, 'artifacts/wave0', topic.slug, 'source.yaml'), `- url: https://docs.fixture.news-research.com/${topic.slug}/wave0-source
   title: Wave0 foundation
   retrieved_date: 2026-07-14
   topic_tag: ${topic.slug}
@@ -793,7 +793,7 @@ describe('check-gate-wave1-complete', () => {
 
     const canonical = canonicalWave1ReferencePath({
       topicSlug: 'topic-a',
-      sourceUrl: 'https://example.com/news/deepening-topic-a',
+      sourceUrl: 'https://fixture.news-research.com/news/deepening-topic-a',
     });
     assert.equal(canonical.ok, true);
     rmSync(join(dir, canonical.path));
@@ -826,7 +826,7 @@ describe('check-gate-wave1-complete', () => {
     writeWave1Trace(dir);
     const supplementary = submitWave1WorkUnit(dir, {
       queueItemId: 'topic-a-supplementary',
-      sourceUrl: 'https://example.com/news/deepening-topic-a-supplementary',
+      sourceUrl: 'https://fixture.news-research.com/news/deepening-topic-a-supplementary',
       cacheTrail: '_cache/wave1/primary/topic-a-supplementary/deepening-topic-a',
       assignmentMode: 'supplementary',
       referenceFloorDeficit: 1,
@@ -835,7 +835,7 @@ describe('check-gate-wave1-complete', () => {
     assert.equal(supplementary.submitted.ok, true, JSON.stringify(supplementary.submitted));
     writeDepthReview(dir, { submission: primary });
     materializeCanonicalFixtureProjection(dir, primary, {
-      sourceUrl: 'https://example.com/news/deepening-topic-a',
+      sourceUrl: 'https://fixture.news-research.com/news/deepening-topic-a',
       cacheTrail: '_cache/wave1/primary/topic-a/deepening-topic-a',
     });
     const profilePath = join(dir, 'rb_profile.yaml');
@@ -1006,7 +1006,7 @@ describe('check-gate-wave1-complete', () => {
       .replace(/- Finding three:/, '* Finding three:')
       .replace(/- Finding four:/, '+ Finding four:')
       .replace(/- Finding five:/, '5. Finding five:'));
-    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), `# Evidence Summary\n\n## Source URLs\nhttps://example.com/news/deepening-topic-a\n\n### key findings\nA substantive finding expressed as a paragraph.\n`);
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), `# Evidence Summary\n\n## Source URLs\nhttps://fixture.news-research.com/news/deepening-topic-a\n\n### key findings\nA substantive finding expressed as a paragraph.\n`);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), `# Questions\n\n## Exploration/Exploitation Decision\ncontinue\n\n#### Emergent Question Protocol\nChecked.\n\n### topic investigation targets\nTargets.\n\n## QUESTION RECONCILIATION\nReconciled.\n`);
     writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
     submitAndReviewWave1WorkUnit(dir);
@@ -1217,7 +1217,7 @@ describe('check-gate-wave1-complete', () => {
       reviewedRefs: [`${submission.record.paths.work_unit_dir}/`],
     });
     materializeCanonicalFixtureProjection(dir, submission, {
-      sourceUrl: 'https://example.com/news/deepening-topic-a',
+      sourceUrl: 'https://fixture.news-research.com/news/deepening-topic-a',
       cacheTrail: '_cache/wave1/primary/topic-a/deepening-topic-a',
     });
     writeWave1Trace(dir);
@@ -1328,6 +1328,58 @@ describe('check-gate-wave1-complete', () => {
     assert.ok(output.inspect.some(m => m.includes('trace') || m.includes('Trace event') || m.includes('wave1_completion')), `Expected trace event fail: ${JSON.stringify(output.inspect)}`);
   });
 
+  it('7a. @impl TRW-007 ignores a forged wave1_completion whose bundle is the rb_status.json short name', () => {
+    const dir = createBundle(unique('forgedtrace'));
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
+    writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
+    submitAndReviewWave1WorkUnit(dir);
+    // BUG-251 shape: the forged event carries the rb_status.json#/bundle short name,
+    // which is NOT the canonical bundle basename (the bundle directory name).
+    const shortName = JSON.parse(readFileSync(join(dir, 'rb_status.json'), 'utf-8')).bundle;
+    const events = witnessedHandoffEvents({
+      sourceGate: 'wave0-complete',
+      phase: 'wave0',
+      sourceNode: 'phases/phase-wave0.md',
+      targetNode: 'phases/phase-wave1.md',
+    });
+    writeTraceEvents(dir, [...events, { event: 'wave1_completion', ts: new Date().toISOString(), bundle: shortName }]);
+    const result = runGate(dir);
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.check.passed, false, 'gate must not pass on the forged completion event');
+    assert.ok(
+      output.inspect.some(m => m.includes('wave1_completion') && m.includes('canonical bundle')),
+      `Expected canonical-bundle trace fail: ${JSON.stringify(output.inspect)}`,
+    );
+  });
+
+  it('7b. @impl TRW-007 accepts a CLI-written wave1_completion with the canonical bundle basename', () => {
+    const dir = createBundle(unique('clitrace'));
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
+    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
+    writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
+    submitAndReviewWave1WorkUnit(dir);
+    // log-event.mjs shape: writer 'cli' + bundle = directory basename.
+    const events = witnessedHandoffEvents({
+      sourceGate: 'wave0-complete',
+      phase: 'wave0',
+      sourceNode: 'phases/phase-wave0.md',
+      targetNode: 'phases/phase-wave1.md',
+    });
+    writeTraceEvents(dir, [...events, {
+      event: 'wave1_completion',
+      ts: new Date().toISOString(),
+      writer: 'cli',
+      bundle: basename(dir),
+    }]);
+    const result = runGate(dir);
+    const output = JSON.parse(result.stdout);
+    assert.ok(
+      !output.check.failed_rule_ids.includes('trace_event_wave1_completion'),
+      `trace rule must be satisfied by the canonical-bundle completion event: ${JSON.stringify(output.check.failed_rule_ids)}`,
+    );
+  });
+
   it('8. rejects reference files with placeholder source_url (example.com)', () => {
     const dir = createBundle(unique('placehold'));
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
@@ -1365,7 +1417,7 @@ describe('check-gate-wave1-complete', () => {
     writeWave1Trace(dir);
     writeFileSync(join(dir, 'reference/topic-a-orphan.md'),
       '# Orphan\n\n' +
-      '- source_url: https://example.com/news/orphan\n' +
+      '- source_url: https://fixture.news-research.com/news/orphan\n' +
       '- acceptance_status: accepted\n' +
       '- source_type: secondary\n' +
       '- tier: Tier 2\n' +
@@ -1384,7 +1436,7 @@ describe('check-gate-wave1-complete', () => {
 
   it('10. accepts canonical YAML rich references without return-map fields', () => {
     const dir = createBundle(unique('yamlref'));
-    const sourceUrl = 'https://example.com/news/deepening-topic-a';
+    const sourceUrl = 'https://fixture.news-research.com/news/deepening-topic-a';
     const cacheTrail = '_cache/wave1/primary/topic-a/deepening-topic-a';
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
@@ -1480,9 +1532,9 @@ describe('check-gate-wave1-complete', () => {
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
     writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
     submitAndReviewWave1WorkUnit(dir, {
-      sourceUrl: 'https://example.com/news/deepening-topic-a',
+      sourceUrl: 'https://fixture.news-research.com/news/deepening-topic-a',
       isNewVsWave0: false,
-      wave0Urls: ['https://example.com/news/deepening-topic-a'],
+      wave0Urls: ['https://fixture.news-research.com/news/deepening-topic-a'],
       decision: 'supplement_required',
       supplementary: ['wave1-deepen-topic-a-v2'],
     });

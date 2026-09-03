@@ -1,0 +1,100 @@
+schema_version: verification-routing/v1
+change: harden-wave1-evidence-and-trace-integrity
+test_classes:
+  unit:
+    status: selected
+    rationale: Deterministic contract tests for the three enforcement seams (cache-leaf placeholder judgment, submit claim-floor, trace writer identity).
+  integration:
+    status: selected
+    rationale: End-to-end submit fail-fast and audit/gate trace-integrity reads exercised through CLI surfaces on temporary bundles.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: Change is bounded to submit-time and audit/gate seams; a full-bundle e2e adds no verdict beyond the integration claims.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: No real-agent behavior changes; this change hardens deterministic validation and audit reads.
+claims:
+  - id: cache-leaf-filler-judgment
+    statement: inspectCacheLeaf treats filler-only page.md (e.g. heading + "Deep research content.") and placeholder-domain meta URLs (example.com) as placeholder leaves, and accepts real fetched content or explicit degraded capture.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/cache-leaf-contract.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: submit-claim-floor
+    statement: validateSourceClaims fails fast when source_claims[] and accepted_source_urls[] are both empty without an explicit degraded-capture record, instead of returning a pass.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-validation.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: trace-writer-identity
+    statement: trace.mjs events carry a writer identity and a bundle field equal to the canonical bundle basename; the schema validates the fields while staying backward-compatible.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/trace.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: submit-rejects-placeholder-and-empty
+    statement: operate-work-unit submit rejects a source binding backed only by a placeholder/filler cache leaf and rejects a wave1_topic_deepening result with empty claims, without appending ledger rows or running inline backfill.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/operate-work-unit.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: gate-trace-bundle-match
+    statement: trace_event_present gate rules ignore completion events whose bundle field is missing or not equal to the canonical bundle basename (a short name equal to rb_status.json#/bundle is still rejected), even when the event name matches a real phase.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-wave1-complete.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: audit-trace-integrity
+    statement: audit-phase-status flags completion events without a passed gate_attempt witness (matched by gate identity), with non-monotonic ts, or with bundle not equal to the canonical basename, and accepts legitimate gate-backed events.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/audit-phase-status.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

@@ -102,10 +102,11 @@ export function appendExactTraceLine({ tracePath, lineBytes, expectedPrefixByteL
  * @param {Object} [options]
  * @param {boolean} [options.consoleEcho=true]  whether traceEntry() echoes colored output to console
  * @param {Object} [options.icons]              custom icon set for traceSummary(); merged onto defaults
+ * @param {string} [options.writer='engine']    stable writer identity stamped on every entry (TRW-007)
  * @returns {{ traceInit, traceEntry, traceSummary, traceCleanup, traceFilePath }}
  */
 export function createTrace(filePath, options = {}) {
-  const { consoleEcho = true, icons: customIcons } = options;
+  const { consoleEcho = true, icons: customIcons, writer = 'engine' } = options;
   const icons = { ...DEFAULT_ICONS, ...customIcons };
   const TRACE_FILE = filePath;
 
@@ -121,10 +122,16 @@ export function createTrace(filePath, options = {}) {
 
   function traceEntry(event, detail = {}) {
     mkdirSync(path.dirname(TRACE_FILE), { recursive: true });
+    // TRW-007: every entry carries the writer identity and the canonical bundle name
+    // (bundle directory basename). Detail-provided `writer`/`bundle` must NOT override
+    // the central stamp — callers stopped hand-stamping short-name bundles.
+    const { writer: detailWriter, bundle: detailBundle, ...rest } = detail;
     const entry = JSON.stringify({
       ts: new Date().toISOString(),
       event,
-      ...detail,
+      writer,
+      bundle: path.basename(path.dirname(TRACE_FILE)),
+      ...rest,
     });
     appendFileSync(TRACE_FILE, entry + '\n');
 

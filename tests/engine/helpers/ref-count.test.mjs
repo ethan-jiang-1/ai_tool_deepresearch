@@ -25,7 +25,7 @@ after(() => {
 
 function refContent(overrides = {}) {
   const defaults = {
-    source_url: 'https://example.com/research/findings',
+    source_url: 'https://fixture.news-research.com/research/findings',
     acceptance_status: 'accepted',
     source_type: 'primary',
     tier: 'Tier 2',
@@ -138,7 +138,7 @@ describe('isCountable', () => {
 
   it('returns countable=true when source_url looks like a homepage', () => {
     const dir = setupBundle('rc-homepage', {
-      'reference/homepage.md': refContent({ source_url: 'https://example.com/' }),
+      'reference/homepage.md': refContent({ source_url: 'https://fixture.news-research.com/' }),
     });
     const result = isCountable('reference/homepage.md', dir);
     assert.strictEqual(result.countable, true, `Expected countable but got: ${JSON.stringify(result)}`);
@@ -146,7 +146,7 @@ describe('isCountable', () => {
 
   it('returns countable=true when source_url has a shallow path', () => {
     const dir = setupBundle('rc-shallow', {
-      'reference/shallow.md': refContent({ source_url: 'https://example.com/news/' }),
+      'reference/shallow.md': refContent({ source_url: 'https://fixture.news-research.com/news/' }),
     });
     const result = isCountable('reference/shallow.md', dir);
     assert.strictEqual(result.countable, true, `Expected countable but got: ${JSON.stringify(result)}`);
@@ -186,7 +186,7 @@ describe('isCountable', () => {
   it('counts the YAML quoted accepted :warning: form as the accepted family', () => {
     const frontmatterWarning = [
       '---',
-      'source_url: "https://example.com/warning-reference"',
+      'source_url: "https://fixture.news-research.com/warning-reference"',
       'acceptance_status: "accepted :warning:"',
       'source_type: primary',
       'tier: "Tier 2"',
@@ -256,7 +256,7 @@ describe('isCountable', () => {
   it('returns countable=true when semantic sections are missing', () => {
     const dir = setupBundle('rc-no-facts', {
       'reference/no-facts.md': [
-        '- source_url: https://example.com/research/article',
+        '- source_url: https://fixture.news-research.com/research/article',
         '- acceptance_status: accepted',
         '- source_type: primary',
         '- tier: Tier 2',
@@ -280,7 +280,7 @@ describe('isCountable', () => {
   it('returns countable=true with semicolon-delimited URLs where one is article-level', () => {
     const dir = setupBundle('rc-multi-url', {
       'reference/multi-url.md': refContent({
-        source_url: 'https://example.com/;https://example.com/research/article',
+        source_url: 'https://fixture.news-research.com/;https://fixture.news-research.com/research/article',
       }),
     });
     const result = isCountable('reference/multi-url.md', dir);
@@ -330,23 +330,23 @@ describe('countReferences', () => {
           {
             path: 'reference/countable-1.md',
             role: 'reference',
-            source_url: 'https://example.com/research/a',
+            source_url: 'https://fixture.news-research.com/research/a',
             source_slug: 's01_source',
-            content: referenceContent({ source_url: 'https://example.com/research/a' }),
+            content: referenceContent({ source_url: 'https://fixture.news-research.com/research/a' }),
           },
           {
             path: 'reference/countable-2.md',
             role: 'reference',
-            source_url: 'https://example.com/research/b',
+            source_url: 'https://fixture.news-research.com/research/b',
             source_slug: 's01_source',
-            content: referenceContent({ source_url: 'https://example.com/research/b' }),
+            content: referenceContent({ source_url: 'https://fixture.news-research.com/research/b' }),
           },
           {
             path: 'reference/countable-homepage.md',
             role: 'reference',
-            source_url: 'https://example.com/',
+            source_url: 'https://fixture.news-research.com/',
             source_slug: 's01_source',
-            content: referenceContent({ source_url: 'https://example.com/' }),
+            content: referenceContent({ source_url: 'https://fixture.news-research.com/' }),
           },
         ],
       });
@@ -366,14 +366,14 @@ describe('countReferences', () => {
         outputs: [{
           path: 'reference/00-shared-declared.md',
           role: 'reference',
-          source_url: 'https://example.com/research/declared',
+          source_url: 'https://fixture.news-research.com/research/declared',
           source_slug: 's01_source',
-          content: referenceContent({ source_url: 'https://example.com/research/declared' }),
+          content: referenceContent({ source_url: 'https://fixture.news-research.com/research/declared' }),
         }],
       });
       writeFileSync(
         join(dir, 'reference/00-shared-direct-orphan.md'),
-        referenceContent({ source_url: 'https://example.com/research/orphan' }),
+        referenceContent({ source_url: 'https://fixture.news-research.com/research/orphan' }),
       );
       const result = countReferences(dir, { targetGlob: 'reference/00-shared-*.md' });
       assert.strictEqual(result.count, 1, 'Orphan ref should not be counted in ledger mode');
@@ -387,7 +387,7 @@ describe('countReferences', () => {
   it('counts a backed Phase-owned Wave1 topic projection without delegated reference output', () => {
     const dir = tempWorkUnitBundle('cr-backed-projection-');
     try {
-      const sourceUrl = 'https://example.com/research/topic-a-projection';
+      const sourceUrl = 'https://fixture.news-research.com/research/topic-a-projection';
       const cacheTrail = '_cache/wave1/primary/topic-a/s01_source';
       const evidencePath = 'artifacts/wave1/topic-a/evidence-summary.md';
       claimAndSubmitWorkUnit(dir, {
@@ -436,7 +436,7 @@ describe('countReferences', () => {
     const dir = tempWorkUnitBundle('cr-wave0-backed-projection-');
     try {
       writeWave0ProjectionProfile(dir);
-      const sourceUrl = 'https://example.com/research/wave0-projection';
+      const sourceUrl = 'https://fixture.news-research.com/research/wave0-projection';
       const sourceYamlRef = 'artifacts/wave0/topic-a/source.yaml';
       const cacheTrail = '_cache/wave0/primary/queue-a/s01_projection';
       const submission = claimAndSubmitWorkUnit(dir, {
@@ -468,8 +468,8 @@ describe('countReferences', () => {
 
   it('diagnostic filesystem mode discovers all reference/ md files', () => {
     const dir = setupBundle('cr-filesystem', {
-      'reference/ref-a.md': refContent({ source_url: 'https://example.com/research/a' }),
-      'reference/ref-b.md': refContent({ source_url: 'https://example.com/research/b' }),
+      'reference/ref-a.md': refContent({ source_url: 'https://fixture.news-research.com/research/a' }),
+      'reference/ref-b.md': refContent({ source_url: 'https://fixture.news-research.com/research/b' }),
     });
     const result = countReferences(dir, { source: 'filesystem' });
     assert.strictEqual(result.count, 2, `Expected 2 in filesystem mode, got ${result.count}`);
@@ -484,16 +484,16 @@ describe('countReferences', () => {
           {
             path: 'reference/00-shared-foundation.md',
             role: 'reference',
-            source_url: 'https://example.com/research/shared',
+            source_url: 'https://fixture.news-research.com/research/shared',
             source_slug: 's01_source',
-            content: referenceContent({ source_url: 'https://example.com/research/shared' }),
+            content: referenceContent({ source_url: 'https://fixture.news-research.com/research/shared' }),
           },
           {
             path: 'reference/topic-a-specific.md',
             role: 'reference',
-            source_url: 'https://example.com/research/topic-a',
+            source_url: 'https://fixture.news-research.com/research/topic-a',
             source_slug: 's01_source',
-            content: referenceContent({ source_url: 'https://example.com/research/topic-a' }),
+            content: referenceContent({ source_url: 'https://fixture.news-research.com/research/topic-a' }),
           },
         ],
       });
@@ -514,20 +514,20 @@ describe('countReferences', () => {
           {
             path: 'reference/topic-a-source.md',
             role: 'reference',
-            source_url: 'https://example.com/research/topic-a',
+            source_url: 'https://fixture.news-research.com/research/topic-a',
             source_slug: 's01_source',
             content: referenceContent({
-              source_url: 'https://example.com/research/topic-a',
+              source_url: 'https://fixture.news-research.com/research/topic-a',
               related_topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000',
             }),
           },
           {
             path: 'reference/topic-b-source.md',
             role: 'reference',
-            source_url: 'https://example.com/research/topic-b',
+            source_url: 'https://fixture.news-research.com/research/topic-b',
             source_slug: 's01_source',
             content: referenceContent({
-              source_url: 'https://example.com/research/topic-b',
+              source_url: 'https://fixture.news-research.com/research/topic-b',
               related_topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174001',
             }),
           },
@@ -549,24 +549,24 @@ describe('countReferences', () => {
           {
             path: 'reference/good.md',
             role: 'reference',
-            source_url: 'https://example.com/research/good',
+            source_url: 'https://fixture.news-research.com/research/good',
             source_slug: 's01_good',
-            content: referenceContent({ source_url: 'https://example.com/research/good' }),
+            content: referenceContent({ source_url: 'https://fixture.news-research.com/research/good' }),
           },
           {
             path: 'reference/bad-invalid-url.md',
             role: 'reference',
-            source_url: 'https://example.com/research/bad-invalid-url',
+            source_url: 'https://fixture.news-research.com/research/bad-invalid-url',
             source_slug: 's02_bad_url',
             content: referenceContent({ source_url: 'not a url' }),
           },
           {
             path: 'reference/bad-thin.md',
             role: 'reference',
-            source_url: 'https://example.com/research/thin',
+            source_url: 'https://fixture.news-research.com/research/thin',
             source_slug: 's03_thin',
             content: referenceContent({
-              source_url: 'https://example.com/research/thin',
+              source_url: 'https://fixture.news-research.com/research/thin',
               coreContent: 'Short.',
             }),
           },
@@ -574,15 +574,15 @@ describe('countReferences', () => {
         cacheTrails: [
           {
             path: '_cache/wave0/primary/queue-a/s01_good',
-            url: 'https://example.com/research/good',
+            url: 'https://fixture.news-research.com/research/good',
           },
           {
             path: '_cache/wave0/primary/queue-a/s02_bad_url',
-            url: 'https://example.com/research/bad-invalid-url',
+            url: 'https://fixture.news-research.com/research/bad-invalid-url',
           },
           {
             path: '_cache/wave0/primary/queue-a/s03_thin',
-            url: 'https://example.com/research/thin',
+            url: 'https://fixture.news-research.com/research/thin',
           },
         ],
       });

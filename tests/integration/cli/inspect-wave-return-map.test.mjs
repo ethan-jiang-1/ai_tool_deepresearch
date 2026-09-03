@@ -84,7 +84,7 @@ ${body}
 
 function referenceWithReturnMap(extra = '') {
   return [
-    '- source_url: https://example.com/a',
+    '- source_url: https://fixture.news-research.com/a',
     '- acceptance_status: accepted',
     '- source_type: secondary',
     '- tier: Tier 2',
@@ -121,7 +121,7 @@ function referenceWithReturnMap(extra = '') {
 function richReference() {
   return [
     '---',
-    'source_url: "https://example.com/a"',
+    'source_url: "https://fixture.news-research.com/a"',
     'acceptance_status: accepted',
     'source_type: secondary',
     'tier: "Tier 2"',
@@ -207,11 +207,11 @@ describe('wave inspect return-map diagnostics', () => {
 
     const first = stageWave0(bundle, 'batch-a', { project: false, completion: false });
     const expandedSource = [
-      '- url: "https://research.example.org/batch-a"',
+      '- url: "https://research.fixture.news-research.com/batch-a"',
       '  title: "Continuity batch-a"',
       '  retrieved_date: "2026-07-15"',
       '  topic_tag: "topic-a"',
-      '- url: "https://research.example.org/batch-b"',
+      '- url: "https://research.fixture.news-research.com/batch-b"',
       '  title: "Continuity batch-b"',
       '  retrieved_date: "2026-07-15"',
       '  topic_tag: "topic-a"',
@@ -232,7 +232,7 @@ describe('wave inspect return-map diagnostics', () => {
       }],
       cacheTrails: [{
         path: '_cache/wave0/primary/wave0-batch-b/batch-b',
-        url: 'https://research.example.org/batch-b',
+        url: 'https://research.fixture.news-research.com/batch-b',
       }],
     });
     assert.equal(second.submitted.ok, true, JSON.stringify(second.submitted));
@@ -258,7 +258,7 @@ describe('wave inspect return-map diagnostics', () => {
   it('wave0 flags naked seed backfill evidence lists without changing gate authority', () => {
     const bundle = createTempDir('inspect-w0-rmap');
     writeCommon(bundle);
-    writeFileSync(join(bundle, 'artifacts/wave0/topic-a/source.yaml'), '- url: https://example.com/a\n  title: A\n  retrieved_date: 2026-06-15\n  topic_tag: topic-a\n');
+    writeFileSync(join(bundle, 'artifacts/wave0/topic-a/source.yaml'), '- url: https://fixture.news-research.com/a\n  title: A\n  retrieved_date: 2026-06-15\n  topic_tag: topic-a\n');
     writeFileSync(join(bundle, 'reference/00-shared-a.md'), referenceWithReturnMap());
     writeSeed(bundle, '## 本轮新增证据\n\n- reference/00-shared-a.md\n- _cache/wave0/primary/topic-a/a/');
 
@@ -314,7 +314,7 @@ describe('wave inspect return-map diagnostics', () => {
       '# Evidence Summary',
       '',
       '## Source URLs',
-      'https://example.com/a',
+      'https://fixture.news-research.com/a',
       '',
       '## Key Findings',
       '- The evidence is relevant.',

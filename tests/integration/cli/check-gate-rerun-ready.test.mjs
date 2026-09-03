@@ -398,7 +398,7 @@ describe('gate-rerun-ready — default count', () => {
       profile.research_access = {
         status: 'available',
         probed_at: '2026-07-10T00:00:00.000Z',
-        result_url: 'https://example.com/old-envelope',
+        result_url: 'https://fixture.news-research.com/old-envelope',
         fetch_outcome: 'success',
       };
     });

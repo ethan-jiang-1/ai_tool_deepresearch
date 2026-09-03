@@ -98,7 +98,7 @@ describe('unreviewed submitted supplementary Wave1 rows (WAI-009)', () => {
       queueItemId: 'topic-a-supp',
       topicUid: topicA.topic_uid,
       topicSlug: topicA.slug,
-      sourceUrl: 'https://example.com/supplement/article',
+      sourceUrl: 'https://fixture.news-research.com/supplement/article',
     });
     // depth review exists but does NOT list the supplementary work unit
     writeDepthReview(dir, topicA.slug, []);
@@ -120,7 +120,7 @@ describe('unreviewed submitted supplementary Wave1 rows (WAI-009)', () => {
       queueItemId: 'topic-a-supp2',
       topicUid: topicA.topic_uid,
       topicSlug: topicA.slug,
-      sourceUrl: 'https://example.com/supplement/article2',
+      sourceUrl: 'https://fixture.news-research.com/supplement/article2',
     });
     writeDepthReview(dir, topicA.slug, [submitted.paths.work_unit_dir]);
 
@@ -139,7 +139,7 @@ describe('unreviewed submitted supplementary Wave1 rows (WAI-009)', () => {
       queueItemId: 'topic-a-primary',
       topicUid: topicA.topic_uid,
       topicSlug: topicA.slug,
-      sourceUrl: 'https://example.com/primary/article',
+      sourceUrl: 'https://fixture.news-research.com/primary/article',
       assignmentMode: 'primary',
     });
     writeDepthReview(dir, topicA.slug, []);
@@ -159,7 +159,7 @@ describe('unreviewed submitted supplementary Wave1 rows (WAI-009)', () => {
       queueItemId: 'topic-a-supp-alternate-ref',
       topicUid: topicA.topic_uid,
       topicSlug: topicA.slug,
-      sourceUrl: 'https://example.com/supplement/alternate-coordinate',
+      sourceUrl: 'https://fixture.news-research.com/supplement/alternate-coordinate',
     });
     writeDepthReview(dir, topicA.slug, [`${submitted.work_id}/`]);
 

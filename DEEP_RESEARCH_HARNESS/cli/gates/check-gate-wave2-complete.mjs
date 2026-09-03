@@ -3,6 +3,7 @@
 // @impl GSK-001, GSK-002, GSK-004, GSK-013, RWG-006, RWG-007, RWG-008, RWG-017, RWG-018, RWG-021, RRM-007
 // Usage: node check-gate-wave2-complete.mjs --bundle <path> --current-node <fileRef> [--transitions <path>]
 
+import { basename } from 'node:path';
 import {
   buildGateResult,
   checkNodeGateBinding,
@@ -11,6 +12,7 @@ import {
   emitGateResult,
   parseGateCliArgs,
   readTraceEvents,
+  readCanonicalTraceEvents,
   resolveRouting,
   scanTemplateNotExpanded,
   tryLoadGateDefinition,
@@ -105,8 +107,11 @@ const projectionEvaluation = evaluateSeedTopicProjectionReadiness(bundlePath, { 
 const formalFindings = [...sharedEvaluation.findings, ...projectionEvaluation.findings];
 
 for (const rule of definition.rules.filter((candidate) => candidate.check === 'trace_event_present')) {
-  if (readTraceEvents(bundlePath, rule.target).length === 0) {
-    const detail = `Trace event "${rule.target}" not found in rb_trace.jsonl`;
+  // @impl TRW-007: only events with the canonical bundle basename (and, when present,
+  // an accepted writer identity) count as completion evidence; rb_status.json short-name
+  // events (the forged-event shape) do not satisfy the rule.
+  if (readCanonicalTraceEvents(bundlePath, rule.target).length === 0) {
+    const detail = `Trace event "${rule.target}" not found in rb_trace.jsonl (no entry matching the canonical bundle '${basename(bundlePath)}')`;
     formalFindings.push(makeContractFinding({
       id: rule.id,
       ruleId: rule.id,

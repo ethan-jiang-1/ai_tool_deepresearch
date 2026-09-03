@@ -323,7 +323,7 @@ describe('Gate dynamic threshold — wave1', () => {
     for (const t of ['01_test-topic-a', '02_test-topic-b']) {
       const ad = join(dir, 'artifacts', 'wave1', t);
       writeFileSync(join(ad, 'evidence-summary.md'),
-        '# Evidence Summary\n\n## Source URLs\n- [Test](https://example.com) — retrieved 2026-06-15\n\n## Key Findings\n1. **机制理解**: Test finding.\n\n## Open Questions\n1. [开放] Test question.\n');
+        '# Evidence Summary\n\n## Source URLs\n- [Test](https://fixture.news-research.com) — retrieved 2026-06-15\n\n## Key Findings\n1. **机制理解**: Test finding.\n\n## Open Questions\n1. [开放] Test question.\n');
       writeFileSync(join(ad, 'question-list.md'),
         '## Topic Investigation Targets\n\nOne deterministic target.\n\n## Question Reconciliation\n\nOne reconciled question.\n\n## Emergent Question Protocol\n\nChecked.\n\n## Exploration / Exploitation Decision\n\nContinue.\n');
     }
@@ -335,7 +335,7 @@ describe('Gate dynamic threshold — wave1', () => {
     for (const topic of topics) {
       const submissions = [];
       for (let ordinal = 1; ordinal <= 5; ordinal += 1) {
-        const sourceUrl = `https://example.com/${topic.slug}/deepening/${ordinal}`;
+        const sourceUrl = `https://fixture.news-research.com/${topic.slug}/deepening/${ordinal}`;
         const referencePath = `reference/${topic.id}-${topic.slug}-deepening-${ordinal}.md`;
         const sourceRef = `artifacts/wave1/${topic.slug}/evidence-summary.md`;
         const cacheTrail = `_cache/wave1/primary/${topic.slug}/deepening-${ordinal}`;

@@ -83,3 +83,19 @@ export function readTraceEvents(bundlePath, eventName = null) {
   if (eventName) return events.filter(e => e.event === eventName);
   return events;
 }
+
+// @impl TRW-007: trace events count as completion evidence only when they carry the
+// canonical bundle identity — the bundle directory basename (e.g. dpt_rb_<name>) —
+// NOT the rb_status.json#/bundle short name (which matches forged hand-written events).
+// A missing `writer` field is tolerated for pre-change historical events; a present
+// `writer` must be a non-empty string to be an accepted trace-writer identity.
+export function readCanonicalTraceEvents(bundlePath, eventName = null) {
+  const canonicalBundle = basename(bundlePath);
+  return readTraceEvents(bundlePath, eventName).filter((entry) => {
+    if (entry.bundle !== canonicalBundle) return false;
+    if (entry.writer !== undefined) {
+      return typeof entry.writer === 'string' && entry.writer.trim().length > 0;
+    }
+    return true;
+  });
+}

@@ -154,7 +154,7 @@ function createHeavyProvenanceBundle(name, { validLedger = true, validWorkUnit =
       path: 'artifacts/wave0/topic-a/source.yaml',
       role: 'source_yaml',
       content: [
-        '- url: https://example.com/article',
+        '- url: https://fixture.news-research.com/article',
         '  title: Example source',
         '  retrieved_date: 2026-01-01',
         '  topic_tag: topic-a',
@@ -163,7 +163,7 @@ function createHeavyProvenanceBundle(name, { validLedger = true, validWorkUnit =
     }],
     cacheTrails: [{
       path: '_cache/wave0/primary/topic_a/s01_source',
-      url: 'https://example.com/article',
+      url: 'https://fixture.news-research.com/article',
     }],
   });
   assert.equal(submitted?.ok, true, JSON.stringify(submitted));

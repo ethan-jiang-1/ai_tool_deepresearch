@@ -84,7 +84,8 @@ function assertCurrentNode(bundle, expected, context) {
 }
 
 function appendTrace(bundle, event) {
-  appendFileSync(tracePath(bundle), JSON.stringify({ ts: new Date().toISOString(), ...event }) + '\n');
+  //  TRW-007: mirror the engine writers — every event carries the canonical bundle identity.
+  appendFileSync(tracePath(bundle), JSON.stringify({ ts: new Date().toISOString(), bundle: basename(bundle), ...event }) + '\n');
 }
 
 function submittedWorkUnitCovers(bundle, outputPath) {
@@ -391,7 +392,7 @@ ${renderSeedProjectionAppendix()}
 }
 
 function wave0SourceYamlContent() {
-  return `- url: "https://research.example.org/articles/handoff-witnessing-study-2026"
+  return `- url: "https://research.fixture.news-research.com/articles/handoff-witnessing-study-2026"
   title: "Handoff Witnessing Reference"
   retrieved_date: "2026-07-05"
   topic_tag: "topic-a"
@@ -407,7 +408,7 @@ function ensureWave0Scaffold(bundle) {
     '| 00-shared-handoff.md | secondary | practitioner | Tier 2 | all | wave0_foundation | accepted | 2026-07-05 |\n');
   writeFileSync(join(bundle, 'reference/README.md'), '# Reference Evidence\n');
   writeFileSync(join(bundle, 'reference/00-shared-handoff.md'),
-    '- source_url: https://research.example.org/articles/handoff-witnessing-study-2026\n' +
+    '- source_url: https://research.fixture.news-research.com/articles/handoff-witnessing-study-2026\n' +
     '- acceptance_status: accepted\n' +
     '- source_type: secondary\n' +
     '- tier: Tier 2\n' +
@@ -435,7 +436,7 @@ function ensureWave0Scaffold(bundle) {
     topic_slug: 'topic-a',
     title: 'Handoff witnessing Wave0 source intake',
     output_path: 'reference/00-shared-handoff.md',
-    source_url: 'https://research.example.org/articles/handoff-witnessing-study-2026',
+    source_url: 'https://research.fixture.news-research.com/articles/handoff-witnessing-study-2026',
     source_slug: 'handoff-witnessing-study',
     extra_output_files: [
       { path: 'artifacts/wave0/topic-a/source.yaml', role: 'source_yaml' },
@@ -506,7 +507,7 @@ function stageWave1Pass(bundle) {
   writeFileSync(join(bundle, 'artifacts/wave1/topic-a/evidence-summary.md'), `# Evidence Summary: Topic A
 
 ## Source URLs
-- [Deepening Source](https://research.example.org/articles/topic-a-deepening-analysis-2026) — retrieved 2026-07-05
+- [Deepening Source](https://research.fixture.news-research.com/articles/topic-a-deepening-analysis-2026) — retrieved 2026-07-05
 
 ## Key Findings
 1. **机制理解**: Handoff witnessing requires source gate and target entry evidence.
@@ -520,7 +521,7 @@ function stageWave1Pass(bundle) {
 
 | target_id | target_question | origin | status | backing_refs | next_action |
 | --- | --- | --- | --- | --- | --- |
-| topic-a-T01 | How can stale handoffs be detected? | seed | 开放 | https://research.example.org/articles/topic-a-deepening-analysis-2026 | 移交 wave2 |
+| topic-a-T01 | How can stale handoffs be detected? | seed | 开放 | https://research.fixture.news-research.com/articles/topic-a-deepening-analysis-2026 | 移交 wave2 |
 
 ## Question Reconciliation
 
@@ -553,8 +554,8 @@ ${renderSeedProjectionAppendix()}
   const wave1Sources = Array.from({ length: 5 }, (_, index) => {
     const ordinal = index + 1;
     const sourceUrl = ordinal === 1
-      ? 'https://research.example.org/articles/topic-a-deepening-analysis-2026'
-      : `https://research.example.org/articles/topic-a-deepening-analysis-${ordinal}-2026`;
+      ? 'https://research.fixture.news-research.com/articles/topic-a-deepening-analysis-2026'
+      : `https://research.fixture.news-research.com/articles/topic-a-deepening-analysis-${ordinal}-2026`;
     return {
       sourceUrl,
       sourceSlug: `topic-a-deepening-analysis-${ordinal}`,

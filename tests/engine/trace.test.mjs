@@ -175,3 +175,49 @@ describe('trace edge cases', () => {
     if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true, force: true });
   });
 });
+
+describe('createTrace — writer identity + canonical bundle stamp @impl TRW-007', () => {
+  const bundleDirName = 'dpt_rb_trace-stamp-test';
+  const bundleRoot = join(TEST_DIR, bundleDirName);
+  const traceFile = join(bundleRoot, 'rb_trace.jsonl');
+  const trace = createTrace(traceFile, { consoleEcho: false });
+
+  after(() => {
+    trace.traceCleanup();
+    if (existsSync(TEST_DIR)) rmSync(TEST_DIR, { recursive: true, force: true });
+  });
+
+  it('stamps writer (default engine) and canonical bundle basename on every entry', () => {
+    mkdirSync(bundleRoot, { recursive: true });
+    trace.traceInit('stamp test');
+    trace.traceEntry('check', { source: 'test', passed: true });
+    const lines = readFileSync(traceFile, 'utf-8').trim().split('\n').map(JSON.parse);
+    for (const entry of lines) {
+      assert.equal(entry.writer, 'engine');
+      assert.equal(entry.bundle, bundleDirName, 'bundle must be the directory basename, not a rb_status short name');
+    }
+  });
+
+  it('honors a custom writer option', () => {
+    const customFile = join(TEST_DIR, bundleDirName, 'custom.jsonl');
+    const custom = createTrace(customFile, { consoleEcho: false, writer: 'cli' });
+    custom.traceEntry('cli_event', {});
+    const entry = JSON.parse(readFileSync(customFile, 'utf-8').trim());
+    assert.equal(entry.writer, 'cli');
+    assert.equal(entry.bundle, bundleDirName);
+  });
+
+  it('detail-provided writer/bundle cannot override the central stamp', () => {
+    trace.traceEntry('spoof_attempt', { source: 'test', writer: 'rogue', bundle: 'short-name' });
+    const entry = JSON.parse(readFileSync(traceFile, 'utf-8').trim().split('\n').pop());
+    assert.equal(entry.writer, 'engine', 'detail writer must be stripped');
+    assert.equal(entry.bundle, bundleDirName, 'detail bundle must be stripped');
+  });
+
+  it('stamped entries validate against TraceEntrySchema', () => {
+    const lines = readFileSync(traceFile, 'utf-8').trim().split('\n').map(JSON.parse);
+    for (const entry of lines) {
+      assert.ok(TraceEntrySchema.safeParse(entry).success);
+    }
+  });
+});

@@ -105,12 +105,12 @@ depends_on_topic_uids: []
 function writeLateSubmitFixture(dir, record) {
   const sourcePath = 'artifacts/wave0/topic-a/source.yaml';
   mkdirSync(join(dir, 'artifacts/wave0/topic-a'), { recursive: true });
-  writeFileSync(join(dir, sourcePath), '- url: https://example.com/source\n  title: Source\n  retrieved_date: 2026-07-20\n  topic_tag: topic-a\n');
+  writeFileSync(join(dir, sourcePath), '- url: https://fixture.news-research.com/source\n  title: Source\n  retrieved_date: 2026-07-20\n  topic_tag: topic-a\n');
   const cacheTrail = `_cache/wave0/primary/${record.queue_item_id}/s01_source`;
   mkdirSync(join(dir, cacheTrail), { recursive: true });
   writeFileSync(join(dir, cacheTrail, 'websearch.json'), '[]\n');
-  writeFileSync(join(dir, cacheTrail, 'page.md'), '# Captured Page\n\nFetched content capture for https://example.com/source.\n');
-  writeFileSync(join(dir, cacheTrail, 'meta.json'), '{"url":"https://example.com/source"}\n');
+  writeFileSync(join(dir, cacheTrail, 'page.md'), '# Captured Page\n\nFetched content capture for https://fixture.news-research.com/source.\n');
+  writeFileSync(join(dir, cacheTrail, 'meta.json'), '{"url":"https://fixture.news-research.com/source"}\n');
   writeFileSync(join(dir, record.paths.runtime_receipt_ref), `${JSON.stringify({
     event: 'work_done',
     work_id: record.work_id,
@@ -141,7 +141,7 @@ function writeLateSubmitFixture(dir, record) {
 }
 
 function submitWave1SourceBacking(dir, {
-  sourceUrl = 'https://example.com/research/topic-a-source',
+  sourceUrl = 'https://fixture.news-research.com/research/topic-a-source',
   topic = 'topic-a',
 } = {}) {
   const cacheTrail = `_cache/wave1/primary/${topic}/s01_source`;
@@ -335,7 +335,7 @@ describe('work-unit provenance gate helpers', () => {
 
   it('accepts a Wave1 Phase-owned topic reference backed by submitted source claims', () => {
     const dir = tempDir('wpg-wave1-projection-');
-    const sourceUrl = 'https://example.com/research/topic-a-source';
+    const sourceUrl = 'https://fixture.news-research.com/research/topic-a-source';
     submitWave1SourceBacking(dir, { sourceUrl, topic: 'topic-a' });
     writeIndex(dir, [
       '| reference/topic-a-source.md | primary | expert | Tier 2 | topic-a | wave1_topic | accepted | 2026-07-06 |',
@@ -367,7 +367,7 @@ describe('work-unit provenance gate helpers', () => {
       '| reference/topic-a-source.md | primary | expert | Tier 2 | topic-a | wave1_topic | accepted | 2026-07-06 |',
     ]);
     writeFileSync(join(dir, 'reference', 'topic-a-source.md'), referenceContent({
-      source_url: 'https://example.com/research/unsubmitted',
+      source_url: 'https://fixture.news-research.com/research/unsubmitted',
       related_topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000',
       coreContent: 'This reference names artifacts/wave1/topic-a/evidence-summary.md, but the URL is absent from submitted source claims, accepted URL surfaces, cache trails, and degraded capture backing.',
     }));
@@ -391,7 +391,7 @@ describe('work-unit provenance gate helpers', () => {
       outputs: [{
         path: 'reference/topic-a-source.md',
         role: 'reference',
-        source_url: 'https://example.com/research/article',
+        source_url: 'https://fixture.news-research.com/research/article',
         source_slug: 's01_source',
         content: '# Source\n',
       }],
@@ -429,7 +429,7 @@ describe('work-unit provenance gate helpers', () => {
     const dir = tempDir('wpg-superseded-bypass-');
     const predecessor = claimAndSubmitWorkUnit(dir, { phase: 'wave0', queueItemId: 'queue-superseded' });
     writeFileSync(join(dir, 'artifacts/wave0/topic-a/source.yaml'), [
-      '- url: https://example.com/research/article',
+      '- url: https://fixture.news-research.com/research/article',
       '  title: Corrected source capture',
       '  retrieved_date: 2026-07-20',
       '  topic_tag: topic-a',
@@ -487,7 +487,7 @@ describe('work-unit provenance gate helpers', () => {
 
   it('accepts an existing-backed Wave2 00-cross projection without a new Wave2 row', () => {
     const dir = tempDir('wpg-wave2-existing-backed-');
-    const sourceUrl = 'https://example.com/research/prior-source';
+    const sourceUrl = 'https://fixture.news-research.com/research/prior-source';
     submitWave1SourceBacking(dir, { sourceUrl, topic: 'topic-a' });
     mkdirSync(join(dir, 'artifacts', 'wave2'), { recursive: true });
     writeFileSync(join(dir, 'artifacts', 'wave2', 'finding-index.yaml'), [
@@ -527,7 +527,7 @@ describe('work-unit provenance gate helpers', () => {
 
   it('accepts a submitted Wave2 targeted-evidence row for a new 00-cross reference', () => {
     const dir = tempDir('wpg-wave2-targeted-');
-    const sourceUrl = 'https://example.com/research/new-wave2-targeted-source';
+    const sourceUrl = 'https://fixture.news-research.com/research/new-wave2-targeted-source';
     claimAndSubmitWorkUnit(dir, {
       phase: 'wave2',
       queueItemId: 'w2-targeted',
@@ -568,7 +568,7 @@ describe('work-unit provenance gate helpers', () => {
 
   it('rejects a Wave2 00-cross reference when source_layer and index coverage are the only authority', () => {
     const dir = tempDir('wpg-wave2-new-unsubmitted-');
-    const priorUrl = 'https://example.com/research/prior-source';
+    const priorUrl = 'https://fixture.news-research.com/research/prior-source';
     submitWave1SourceBacking(dir, { sourceUrl: priorUrl, topic: 'topic-a' });
     mkdirSync(join(dir, 'artifacts', 'wave2'), { recursive: true });
     writeFileSync(join(dir, 'artifacts', 'wave2', 'finding-index.yaml'), 'findings:\n  - id: W2F-002\n    decision: use_existing_evidence\n    search_required: false\n');
@@ -577,7 +577,7 @@ describe('work-unit provenance gate helpers', () => {
       '| reference/00-cross-w2f-002-new.md | primary | expert | Tier 2 | cross-topic | wave2_cross | accepted | 2026-07-06 |',
     ]);
     writeFileSync(join(dir, 'reference', '00-cross-w2f-002-new.md'), referenceContent({
-      source_url: 'https://example.com/research/new-wave2-source',
+      source_url: 'https://fixture.news-research.com/research/new-wave2-source',
       related_topic_uid: 'all',
       evidence_role: 'cross_topic_projection',
       coreContent: 'W2F-002 cites artifacts/wave2/finding-index.yaml, artifacts/wave2/cross-topic-ledger.md, artifacts/wave1/topic-a/evidence-summary.md, and _cache/wave1/primary/topic-a/s01_source, but the metadata source_url is newly introduced.',
@@ -602,7 +602,7 @@ describe('work-unit provenance gate helpers', () => {
 
   it('rejects a Wave2 00-cross reference backed only by another unbacked reference', () => {
     const dir = tempDir('wpg-wave2-ref-chain-');
-    const sourceUrl = 'https://example.com/research/prior-source';
+    const sourceUrl = 'https://fixture.news-research.com/research/prior-source';
     submitWave1SourceBacking(dir, { sourceUrl, topic: 'topic-a' });
     mkdirSync(join(dir, 'artifacts', 'wave2'), { recursive: true });
     writeFileSync(join(dir, 'artifacts', 'wave2', 'finding-index.yaml'), 'findings:\n  - id: W2F-003\n    decision: use_existing_evidence\n    search_required: false\n');
@@ -612,7 +612,7 @@ describe('work-unit provenance gate helpers', () => {
       '| reference/00-cross-w2f-003-chain.md | primary | expert | Tier 2 | cross-topic | wave2_cross | accepted | 2026-07-06 |',
     ]);
     writeFileSync(join(dir, 'reference', 'topic-b-unbacked.md'), referenceContent({
-      source_url: 'https://example.com/research/unbacked-chain-source',
+      source_url: 'https://fixture.news-research.com/research/unbacked-chain-source',
       related_topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000',
     }));
     writeFileSync(join(dir, 'reference', '00-cross-w2f-003-chain.md'), referenceContent({

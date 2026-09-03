@@ -151,31 +151,31 @@ function materializeWave0Projection(dir, submission, {
 }
 
 /** Write a valid ReferenceMetadata array YAML for a topic. */
-const VALID_REF = `- url: "https://example.com/article-1"
+const VALID_REF = `- url: "https://fixture.news-research.com/article-1"
   title: "Understanding AI Safety"
   retrieved_date: "2026-06-15"
   topic_tag: "topic-a"
   notes: "Good overview"
 `;
-const VALID_REF_B = `- url: "https://example.com/article-2"
+const VALID_REF_B = `- url: "https://fixture.news-research.com/article-2"
   title: "AI Alignment Basics"
   retrieved_date: "2026-06-16"
   topic_tag: "topic-b"
 `;
-const VALID_REF_SECOND = `- url: "https://example.com/article-3"
+const VALID_REF_SECOND = `- url: "https://fixture.news-research.com/article-3"
   title: "AI Safety Follow-up"
   retrieved_date: "2026-06-17"
   topic_tag: "topic-a"
 `;
 
-const TOPIC_A_SOURCE_URL = 'https://example.com/article-1';
-const TOPIC_B_SOURCE_URL = 'https://example.com/article-2';
+const TOPIC_A_SOURCE_URL = 'https://fixture.news-research.com/article-1';
+const TOPIC_B_SOURCE_URL = 'https://fixture.news-research.com/article-2';
 const TOPIC_A_CACHE = '_cache/wave0/primary/topic-a/source-yaml';
 const TOPIC_B_CACHE = '_cache/wave0/primary/topic-b/source-yaml';
 
 function sourceMetadataArray(count) {
   return Array.from({ length: count }, (_, index) => [
-    `- url: "https://example.com/article-${index + 1}"`,
+    `- url: "https://fixture.news-research.com/article-${index + 1}"`,
     `  title: "Wave0 Source ${index + 1}"`,
     '  retrieved_date: "2026-06-15"',
     '  topic_tag: "topic-a"',
@@ -300,7 +300,7 @@ function submitWave0Supplement(dir, sourceContent) {
     }],
     cacheTrails: [{
       path: '_cache/wave0/primary/topic-a/supplement',
-      url: 'https://example.com/research/ai-safety-supplement',
+      url: 'https://fixture.news-research.com/research/ai-safety-supplement',
     }],
   });
 }
@@ -746,7 +746,7 @@ describe('check-gate-wave0-complete', () => {
     const dir = restoredBundle();
     setupHappyPath(dir);
     // Mix: one valid entry + one invalid entry (empty url) = count_floor passes (2 entries) but schema_valid fails
-    writeFileSync(join(dir, 'artifacts/wave0/topic-a/source.yaml'), `- url: "https://example.com/ok"
+    writeFileSync(join(dir, 'artifacts/wave0/topic-a/source.yaml'), `- url: "https://fixture.news-research.com/ok"
   title: "OK"
   retrieved_date: "2026-06-15"
   topic_tag: "topic-a"
@@ -769,7 +769,7 @@ describe('check-gate-wave0-complete', () => {
     writeFileSync(join(dir, 'artifacts/wave0/topic-a/source.yaml'), `wave: 0
 topic: topic-a
 sources:
-  - url: "https://example.com/wrapped"
+  - url: "https://fixture.news-research.com/wrapped"
     title: "Wrapped"
     retrieved_date: "2026-06-15"
     topic_tag: "topic-a"
@@ -785,7 +785,7 @@ sources:
   it('6c. names the earliest missing source.yaml field coordinate', () => {
     const dir = restoredBundle();
     setupHappyPath(dir);
-    writeFileSync(join(dir, 'artifacts/wave0/topic-a/source.yaml'), `- url: "https://example.com/no-fields"
+    writeFileSync(join(dir, 'artifacts/wave0/topic-a/source.yaml'), `- url: "https://fixture.news-research.com/no-fields"
   title: "Missing fields"
 `);
     const result = runGate(dir);
@@ -870,7 +870,7 @@ sources:
     writeFileSync(join(dir, 'artifacts/wave0/topic-a/source.yaml'),
       '- url: "https://arxiv.org/abs/2305.18654"\n  title: "Real reference"\n  retrieved_date: "2026-01-15"\n  topic_tag: "topic-a"\n');
     writeFileSync(join(dir, 'artifacts/wave0/topic-b/source.yaml'),
-      '- url: "https://example.org/paper"\n  title: "Another real"\n  retrieved_date: "2026-01-15"\n  topic_tag: "topic-b"\n');
+      '- url: "https://fixture.news-research.com/paper"\n  title: "Another real"\n  retrieved_date: "2026-01-15"\n  topic_tag: "topic-b"\n');
     writeFileSync(join(dir, 'reference/00-shared-placeholder-test.md'),
       '---\nsource_url: "https://example.com"\nacceptance_status: accepted\n' +
       'source_type: supplementary\ntier: tier_3\nevidence_role: supporting\n' +
@@ -912,7 +912,7 @@ describe('RWG-018 Wave0 direct adapter parity', () => {
     const dir = restoredBundle();
     setupHappyPath(dir);
     const target = 'artifacts/wave0/topic-a/source.yaml';
-    writeFileSync(join(dir, target), 'url: https://example.com/not-an-array\n');
+    writeFileSync(join(dir, target), 'url: https://fixture.news-research.com/not-an-array\n');
 
     const direct = await evaluateDirect({
       bundleDir: dir,
@@ -996,7 +996,7 @@ describe('RWG-018 Wave0 direct adapter parity', () => {
       topicSlug: 'topic-z',
       sourceContent: VALID_REF_B.replaceAll('topic-b', 'topic-z').replaceAll('article-2', 'article-9'),
       cachePath: '_cache/wave0/primary/topic-z/source-yaml',
-      sourceUrl: 'https://example.com/article-9',
+      sourceUrl: 'https://fixture.news-research.com/article-9',
       preserveQueue: true,
     });
 

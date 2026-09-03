@@ -391,8 +391,8 @@ describe('Wave1→Wave2 carried-target receipt closure', () => {
   it('passes closure when all receipt targets have valid finding bindings', () => {
     const topicA = { topic_uid: 'tp_123e4567-e89b-4aaa-a456-426614174000', id: '01', slug: 'topic-a', title: 'Topic A', must_answer: ['Q?'], scope_role: 'primary', depends_on_topic_uids: [], previous_layouts: [] };
     const dir = createBundle(unique('valid'), [topicA]);
-    scaffoldTopic(dir, topicA, { sourceUrl: 'https://example.com/topic-a' });
-    const submitted = submitAndReview(dir, { slug: 'topic-a', topicUid: 'tp_123e4567-e89b-4aaa-a456-426614174000', sourceUrl: 'https://example.com/topic-a', queueItemId: 'topic-a' });
+    scaffoldTopic(dir, topicA, { sourceUrl: 'https://fixture.news-research.com/topic-a' });
+    const submitted = submitAndReview(dir, { slug: 'topic-a', topicUid: 'tp_123e4567-e89b-4aaa-a456-426614174000', sourceUrl: 'https://fixture.news-research.com/topic-a', queueItemId: 'topic-a' });
     setCarriedTargets(dir, 'topic-a', [{ target_id: 'q1', target_text: 'What is the evidence for X?' }]);
 
     writeWave0Handoff(dir);
@@ -425,8 +425,8 @@ describe('Wave1→Wave2 carried-target receipt closure', () => {
   it('passes with empty receipt (no carried targets declared)', () => {
     const topicA = { topic_uid: 'tp_123e4567-e89b-4aaa-a456-426614174000', id: '01', slug: 'topic-a', title: 'Topic A', must_answer: ['Q?'], scope_role: 'primary', depends_on_topic_uids: [], previous_layouts: [] };
     const dir = createBundle(unique('empty'), [topicA]);
-    scaffoldTopic(dir, topicA, { sourceUrl: 'https://example.com/topic-a' });
-    const submitted = submitAndReview(dir, { slug: 'topic-a', topicUid: 'tp_123e4567-e89b-4aaa-a456-426614174000', sourceUrl: 'https://example.com/topic-a', queueItemId: 'topic-a' });
+    scaffoldTopic(dir, topicA, { sourceUrl: 'https://fixture.news-research.com/topic-a' });
+    const submitted = submitAndReview(dir, { slug: 'topic-a', topicUid: 'tp_123e4567-e89b-4aaa-a456-426614174000', sourceUrl: 'https://fixture.news-research.com/topic-a', queueItemId: 'topic-a' });
     setCarriedTargets(dir, 'topic-a', []);
 
     writeWave0Handoff(dir);
@@ -445,8 +445,8 @@ describe('Wave1→Wave2 carried-target receipt closure', () => {
   it('reports uncovered targets when no finding binds them', () => {
     const topicA = { topic_uid: 'tp_123e4567-e89b-4aaa-a456-426614174000', id: '01', slug: 'topic-a', title: 'Topic A', must_answer: ['Q?'], scope_role: 'primary', depends_on_topic_uids: [], previous_layouts: [] };
     const dir = createBundle(unique('uncovered'), [topicA]);
-    scaffoldTopic(dir, topicA, { sourceUrl: 'https://example.com/topic-a' });
-    const submitted = submitAndReview(dir, { slug: 'topic-a', topicUid: 'tp_123e4567-e89b-4aaa-a456-426614174000', sourceUrl: 'https://example.com/topic-a', queueItemId: 'topic-a' });
+    scaffoldTopic(dir, topicA, { sourceUrl: 'https://fixture.news-research.com/topic-a' });
+    const submitted = submitAndReview(dir, { slug: 'topic-a', topicUid: 'tp_123e4567-e89b-4aaa-a456-426614174000', sourceUrl: 'https://fixture.news-research.com/topic-a', queueItemId: 'topic-a' });
     setCarriedTargets(dir, 'topic-a', [{ target_id: 'q1', target_text: 'What is the evidence for X?' }]);
 
     writeWave0Handoff(dir);
@@ -465,8 +465,8 @@ describe('Wave1→Wave2 carried-target receipt closure', () => {
   it('rejects stale bindings (wrong receipt_sha256)', () => {
     const topicA = { topic_uid: 'tp_123e4567-e89b-4aaa-a456-426614174000', id: '01', slug: 'topic-a', title: 'Topic A', must_answer: ['Q?'], scope_role: 'primary', depends_on_topic_uids: [], previous_layouts: [] };
     const dir = createBundle(unique('stale'), [topicA]);
-    scaffoldTopic(dir, topicA, { sourceUrl: 'https://example.com/topic-a' });
-    const submitted = submitAndReview(dir, { slug: 'topic-a', topicUid: 'tp_123e4567-e89b-4aaa-a456-426614174000', sourceUrl: 'https://example.com/topic-a', queueItemId: 'topic-a' });
+    scaffoldTopic(dir, topicA, { sourceUrl: 'https://fixture.news-research.com/topic-a' });
+    const submitted = submitAndReview(dir, { slug: 'topic-a', topicUid: 'tp_123e4567-e89b-4aaa-a456-426614174000', sourceUrl: 'https://fixture.news-research.com/topic-a', queueItemId: 'topic-a' });
     setCarriedTargets(dir, 'topic-a', [{ target_id: 'q1', target_text: 'What is the evidence for X?' }]);
 
     writeWave0Handoff(dir);
@@ -496,8 +496,8 @@ describe('Wave1→Wave2 carried-target receipt closure', () => {
   it('does not count same-topic origin_refs as target coverage', () => {
     const topicA = { topic_uid: 'tp_123e4567-e89b-4aaa-a456-426614174000', id: '01', slug: 'topic-a', title: 'Topic A', must_answer: ['Q?'], scope_role: 'primary', depends_on_topic_uids: [], previous_layouts: [] };
     const dir = createBundle(unique('origin-only'), [topicA]);
-    scaffoldTopic(dir, topicA, { sourceUrl: 'https://example.com/topic-a' });
-    const submitted = submitAndReview(dir, { slug: 'topic-a', topicUid: 'tp_123e4567-e89b-4aaa-a456-426614174000', sourceUrl: 'https://example.com/topic-a', queueItemId: 'topic-a' });
+    scaffoldTopic(dir, topicA, { sourceUrl: 'https://fixture.news-research.com/topic-a' });
+    const submitted = submitAndReview(dir, { slug: 'topic-a', topicUid: 'tp_123e4567-e89b-4aaa-a456-426614174000', sourceUrl: 'https://fixture.news-research.com/topic-a', queueItemId: 'topic-a' });
     setCarriedTargets(dir, 'topic-a', [{ target_id: 'q1', target_text: 'What is the evidence for X?' }]);
 
     writeWave0Handoff(dir);
@@ -520,8 +520,8 @@ describe('Wave1→Wave2 carried-target receipt closure', () => {
   it('short-circuits on intent drift before coverage check', () => {
     const topicA = { topic_uid: 'tp_123e4567-e89b-4aaa-a456-426614174000', id: '01', slug: 'topic-a', title: 'Topic A', must_answer: ['Q?'], scope_role: 'primary', depends_on_topic_uids: [], previous_layouts: [] };
     const dir = createBundle(unique('drift-e2e'), [topicA]);
-    scaffoldTopic(dir, topicA, { sourceUrl: 'https://example.com/topic-a' });
-    const submitted = submitAndReview(dir, { slug: 'topic-a', topicUid: 'tp_123e4567-e89b-4aaa-a456-426614174000', sourceUrl: 'https://example.com/topic-a', queueItemId: 'topic-a' });
+    scaffoldTopic(dir, topicA, { sourceUrl: 'https://fixture.news-research.com/topic-a' });
+    const submitted = submitAndReview(dir, { slug: 'topic-a', topicUid: 'tp_123e4567-e89b-4aaa-a456-426614174000', sourceUrl: 'https://fixture.news-research.com/topic-a', queueItemId: 'topic-a' });
     setCarriedTargets(dir, 'topic-a', [{ target_id: 'q1', target_text: 'What is the evidence for X?' }]);
 
     writeWave0Handoff(dir);
@@ -562,8 +562,8 @@ describe('Wave1→Wave2 carried-target receipt closure', () => {
     // This e2e test verifies the finding-index path still works with a valid receipt.
     const topicA = { topic_uid: 'tp_123e4567-e89b-4bbb-a456-426614174001', id: '01', slug: 'topic-a', title: 'Topic A', must_answer: ['Q?'], scope_role: 'primary', depends_on_topic_uids: [], previous_layouts: [] };
     const dir = createBundle(unique('layout-reuse'), [topicA]);
-    scaffoldTopic(dir, topicA, { sourceUrl: 'https://example.com/topic-a' });
-    const submitted = submitAndReview(dir, { slug: 'topic-a', topicUid: 'tp_123e4567-e89b-4bbb-a456-426614174001', sourceUrl: 'https://example.com/topic-a', queueItemId: 'topic-a' });
+    scaffoldTopic(dir, topicA, { sourceUrl: 'https://fixture.news-research.com/topic-a' });
+    const submitted = submitAndReview(dir, { slug: 'topic-a', topicUid: 'tp_123e4567-e89b-4bbb-a456-426614174001', sourceUrl: 'https://fixture.news-research.com/topic-a', queueItemId: 'topic-a' });
     setCarriedTargets(dir, 'topic-a', [{ target_id: 'q1', target_text: 'What is the evidence?' }]);
 
     writeWave0Handoff(dir);
@@ -589,8 +589,8 @@ describe('Wave1→Wave2 carried-target receipt closure', () => {
   it('requires at least one binding to have a legal decision and gap_status route for coverage', () => {
     const topicA = { topic_uid: 'tp_123e4567-e89b-4aaa-a456-426614174000', id: '01', slug: 'topic-a', title: 'Topic A', must_answer: ['Q?'], scope_role: 'primary', depends_on_topic_uids: [], previous_layouts: [] };
     const dir = createBundle(unique('no-route'), [topicA]);
-    scaffoldTopic(dir, topicA, { sourceUrl: 'https://example.com/topic-a' });
-    const submitted = submitAndReview(dir, { slug: 'topic-a', topicUid: 'tp_123e4567-e89b-4aaa-a456-426614174000', sourceUrl: 'https://example.com/topic-a', queueItemId: 'topic-a' });
+    scaffoldTopic(dir, topicA, { sourceUrl: 'https://fixture.news-research.com/topic-a' });
+    const submitted = submitAndReview(dir, { slug: 'topic-a', topicUid: 'tp_123e4567-e89b-4aaa-a456-426614174000', sourceUrl: 'https://fixture.news-research.com/topic-a', queueItemId: 'topic-a' });
     setCarriedTargets(dir, 'topic-a', [{ target_id: 'q1', target_text: 'What is the evidence for X?' }]);
 
     writeWave0Handoff(dir);

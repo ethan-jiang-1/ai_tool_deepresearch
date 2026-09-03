@@ -251,7 +251,7 @@ const CURRENT_TOPIC = {
 };
 
 const VALID_CURRENT_SOURCE_YAML = [
-  '- url: https://example.com/source',
+  '- url: https://fixture.news-research.com/source',
   '  title: Example source',
   '  retrieved_date: 2026-07-20',
   '  topic_tag: topic-a',
@@ -262,7 +262,7 @@ const PRESENTATION_EQUIVALENT_SOURCE_YAML = [
   '- topic_tag: topic-a',
   '  retrieved_date: 2026-07-20',
   '  title: Example source',
-  '  url: https://example.com/source',
+  '  url: https://fixture.news-research.com/source',
   '',
 ].join('\n');
 
@@ -336,8 +336,8 @@ function writeValidSubmitFiles(dir, record, { summary = 'done' } = {}) {
   const cacheTrail = `_cache/wave0/primary/${record.queue_item_id}/s01_source`;
   mkdirSync(path.join(dir, cacheTrail), { recursive: true });
   writeFileSync(path.join(dir, cacheTrail, 'websearch.json'), '[]\n');
-  writeFileSync(path.join(dir, cacheTrail, 'page.md'), '# Captured Page\n\nFetched content capture for https://example.com/source. This body preserves the source text used by the work unit.\n');
-  writeFileSync(path.join(dir, cacheTrail, 'meta.json'), '{"url":"https://example.com/source"}\n');
+  writeFileSync(path.join(dir, cacheTrail, 'page.md'), '# Captured Page\n\nFetched content capture for https://fixture.news-research.com/source. This body preserves the source text used by the work unit.\n');
+  writeFileSync(path.join(dir, cacheTrail, 'meta.json'), '{"url":"https://fixture.news-research.com/source"}\n');
 
   writeFileSync(path.join(dir, record.paths.runtime_receipt_ref), `${JSON.stringify({
     event: 'work_done',
@@ -353,7 +353,7 @@ function writeValidSubmitFiles(dir, record, { summary = 'done' } = {}) {
   const resultPath = path.join(dir, '_tmp', `${record.work_id}.result.json`);
   mkdirSync(path.dirname(resultPath), { recursive: true });
   const outputFiles = outputRole === 'reference'
-    ? [{ path: outputPath, role: 'reference', source_url: 'https://example.com/source', source_slug: 'source' }]
+    ? [{ path: outputPath, role: 'reference', source_url: 'https://fixture.news-research.com/source', source_slug: 'source' }]
     : [{ path: outputPath, role: outputRole }];
   for (const required of requiredOutputs) {
     if (required.path === outputPath) continue;
@@ -382,7 +382,7 @@ function writeValidSubmitFiles(dir, record, { summary = 'done' } = {}) {
 
 function writeValidWave1SubmitFiles(dir, record, {
   topicSlug = 'topic-a',
-  sourceUrl = 'https://example.com/wave1-new-source',
+  sourceUrl = 'https://fixture.news-research.com/wave1-new-source',
   includeClaimCacheRefs = true,
   acceptedSourceUrls = [sourceUrl],
   claimStatus = 'accepted',
@@ -444,7 +444,7 @@ function writeValidWave1SubmitFiles(dir, record, {
 
 function writeValidWave2SubmitFiles(dir, record, {
   findingId = 'W2F-001',
-  sourceUrl = 'https://example.com/wave2-targeted-source',
+  sourceUrl = 'https://fixture.news-research.com/wave2-targeted-source',
   role = 'evidence_summary',
   outputPath = `artifacts/wave2/targeted/${findingId}.md`,
 } = {}) {
@@ -489,7 +489,7 @@ function writeValidWave2SubmitFiles(dir, record, {
 
 function writeSupplementaryWave1SubmitFiles(dir, record, {
   sourceRef,
-  sourceUrl = 'https://example.com/wave1-supplementary-source',
+  sourceUrl = 'https://fixture.news-research.com/wave1-supplementary-source',
   includeAcceptedSourceClaim = true,
 } = {}) {
   const cacheTrail = `_cache/wave1/primary/${record.queue_item_id}/supplementary-source`;
@@ -612,7 +612,7 @@ describe('submitWorkUnit', () => {
       const firstDry = drySubmitWorkUnit(dir, { work_id: record.work_id, resultPath });
       assert.equal(firstDry.ok, true, JSON.stringify(firstDry.violations));
 
-      writeFileSync(path.join(dir, sourcePath), 'url: https://example.com/not-an-array\n');
+      writeFileSync(path.join(dir, sourcePath), 'url: https://fixture.news-research.com/not-an-array\n');
       const secondDry = drySubmitWorkUnit(dir, { work_id: record.work_id, resultPath });
       assert.equal(secondDry.ok, false);
       assert.ok(secondDry.violations.some((violation) => violation.repair_scope === 'semantic_content'));
@@ -620,7 +620,7 @@ describe('submitWorkUnit', () => {
 
       writeFileSync(path.join(dir, sourcePath), VALID_CURRENT_SOURCE_YAML);
       assert.equal(drySubmitWorkUnit(dir, { work_id: record.work_id, resultPath }).ok, true);
-      writeFileSync(path.join(dir, sourcePath), 'url: https://example.com/drift-after-dry\n');
+      writeFileSync(path.join(dir, sourcePath), 'url: https://fixture.news-research.com/drift-after-dry\n');
       const formal = submitWorkUnit(dir, { work_id: record.work_id, resultPath });
       assert.equal(formal.ok, false);
       assertNoLedger(dir);
@@ -726,7 +726,7 @@ describe('submitWorkUnit', () => {
       const resultPath = writeValidWave1SubmitFiles(dir, record);
       writeCurrentWave1DirectContent(dir);
       const result = readResult(resultPath);
-      result.source_claims[0].url = 'https://example.com/conflicting-source';
+      result.source_claims[0].url = 'https://fixture.news-research.com/conflicting-source';
       writeResult(resultPath, result);
 
       const dry = drySubmitWorkUnit(dir, { work_id: record.work_id, resultPath });
@@ -1143,8 +1143,8 @@ describe('submitWorkUnit', () => {
       const record = loadWorkUnitIndex(dir).work_units['wu-w1-b000-deep-i0001'];
       const resultPath = writeValidWave1SubmitFiles(dir, record);
       const result = readResult(resultPath);
-      result.source_claims[0].url = 'https://example.com/different-source';
-      result.accepted_source_urls = ['https://example.com/different-source'];
+      result.source_claims[0].url = 'https://fixture.news-research.com/different-source';
+      result.accepted_source_urls = ['https://fixture.news-research.com/different-source'];
       writeResult(resultPath, result);
 
       const dry = drySubmitWorkUnit(dir, { work_id: record.work_id, resultPath });
@@ -1157,8 +1157,8 @@ describe('submitWorkUnit', () => {
       // BUG-242: the recorded leaf urls are carried so the Agent can repair
       // without reading meta.json.
       assert.match(violation.missing_fact, /wave1-new-source/);
-      assert.deepEqual(violation.details?.recorded_leaf_urls, ['https://example.com/wave1-new-source']);
-      assert.equal(violation.details?.claim_url, 'https://example.com/different-source');
+      assert.deepEqual(violation.details?.recorded_leaf_urls, ['https://fixture.news-research.com/wave1-new-source']);
+      assert.equal(violation.details?.claim_url, 'https://fixture.news-research.com/different-source');
       assert.match(violation.rerun, /operate-work-unit\.mjs dry-submit/);
     } finally {
       cleanup(dir);
@@ -2048,7 +2048,7 @@ describe('submitWorkUnit', () => {
       const resultPath = writeValidSubmitFiles(dir, record);
       writeFileSync(path.join(dir, cacheTrailPath(record), 'page.md'), '# Cache page for blocked source\n\nDegraded capture: fetch-failure after HTTP 403 from source URL.\n');
       writeFileSync(path.join(dir, cacheTrailPath(record), 'meta.json'), JSON.stringify({
-        url: 'https://example.com/source',
+        url: 'https://fixture.news-research.com/source',
         capture_status: 'degraded',
         failure_reason: 'HTTP 403',
       }, null, 2));
@@ -2101,7 +2101,7 @@ describe('submitWorkUnit', () => {
       assert.equal(submitted.ok, true);
       const [row] = readWorkUnitLedgerRows(dir);
       assert.equal(row.source_claims.length, 1);
-      assert.deepEqual(row.accepted_source_urls, ['https://example.com/wave1-new-source']);
+      assert.deepEqual(row.accepted_source_urls, ['https://fixture.news-research.com/wave1-new-source']);
     } finally {
       cleanup(dir);
     }
@@ -2353,7 +2353,7 @@ describe('submitWorkUnit', () => {
       claimWorkUnits(dir, { phase: 'wave1', count: 1 });
       const record = loadWorkUnitIndex(dir).work_units['wu-w1-b000-deep-i0001'];
       const resultPath = writeValidWave1SubmitFiles(dir, record, {
-        acceptedSourceUrls: ['https://example.com/wave1-new-source', 'https://example.com/unclaimed'],
+        acceptedSourceUrls: ['https://fixture.news-research.com/wave1-new-source', 'https://fixture.news-research.com/unclaimed'],
       });
 
       const rejected = submitWorkUnit(dir, { work_id: record.work_id, resultPath });
@@ -2397,13 +2397,13 @@ describe('submitWorkUnit', () => {
       const resultPath = writeValidSubmitFiles(dir, record);
       const result = readResult(resultPath);
       result.source_claims = [{
-        url: 'https://example.com/source',
+        url: 'https://fixture.news-research.com/source',
         source_ref: result.output_files[0].path,
         acceptance_status: 'accepted',
         is_new_vs_wave0: true,
         cache_trail_refs: result.cache_trails,
       }];
-      result.accepted_source_urls = ['https://example.com/source'];
+      result.accepted_source_urls = ['https://fixture.news-research.com/source'];
       writeResult(resultPath, result);
 
       const rejected = submitWorkUnit(dir, { work_id: record.work_id, resultPath });

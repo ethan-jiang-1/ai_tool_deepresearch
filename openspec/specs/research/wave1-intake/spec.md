@@ -8,6 +8,7 @@
 
 Define wave1 topic-specific deepening via queue-driven three-stage execution. Each topic gets one deepening task card — Sub-agent executes WebSearch+WebFetch, writes `artifacts/wave1/{topic}/evidence-summary.md`, and Phase Agent immediately backfills the corresponding `seed_topics/{slug}.md` `__BACKFILL_*__` tokens. This replaces the foundation-placeholder skeleton with real evidence-backed deepening, while keeping search noise out of Phase Agent context via Sub-agent dispatch + `_cache/` isolation.
 ## Requirements
+
 ### Requirement: Wave1 phase uses queue-driven three-stage execution
 
 Wave1 SHALL use queue-driven execution with delegated topic deepening represented as queue demand items claimed into work units, submitted by `work_id`, and validated by gate coverage after phase drain.
@@ -533,3 +534,30 @@ wording, semantic quality, or permission.
 - **WHEN** an uncovered current commitment has an existing legal supplementary Wave1 repair
 - **THEN** the Phase Agent SHALL execute that queue/work-unit path and rerun the same inspect
 - **AND** it SHALL not mark the commitment limited merely to close the round
+
+### Requirement: Wave1 topic deepening submit SHALL require non-empty structured source claims or explicit degraded capture
+
+A `wave1_topic_deepening` work-unit result SHALL be rejected by `operate-work-unit submit` when its structured `source_claims[]` and `accepted_source_urls[]` are both empty and no explicit degraded-capture record is declared. This fail-fast SHALL run before ledger append, matching the existing contract that Wave1 results expose `source_claims[]` for gate coverage comparison (WAI-004).
+
+The claim floor SHALL be scoped by the work-unit output contract: it SHALL apply only to kinds whose output contract declares `source_claims.allowed === true` (currently `wave1_topic_deepening`). Kinds without a `source_claims` contract (e.g. `wave0_source_intake`, `wave2_targeted_evidence`) SHALL keep the existing empty-set pass-through and SHALL NOT be rejected for missing claims.
+
+The submit-time claim check SHALL treat a result as having claims when either `source_claims[]` is non-empty or `accepted_source_urls[]` is non-empty. It SHALL treat a result as degraded when it records an explicit degraded-capture/fetch-failure for the topic. A result with neither SHALL NOT reach the ledger.
+
+#### Scenario: Zero-claim Wave1 result is rejected at submit
+
+- **WHEN** a `wave1_topic_deepening` result declares `source_claims: []` and `accepted_source_urls: []` and no degraded-capture record
+- **THEN** `operate-work-unit submit` SHALL reject the result with a diagnostic naming the missing claims requirement
+- **AND** the ledger row SHALL NOT be appended
+- **AND** inline backfill SHALL NOT run for that queue demand
+
+#### Scenario: Result with claims passes claim validation
+
+- **WHEN** a `wave1_topic_deepening` result declares one or more `source_claims[]` entries or `accepted_source_urls[]` entries
+- **THEN** submit SHALL proceed to normal cache-trail, schema, and binding validation
+- **AND** the remaining coverage checks SHALL apply as before
+
+#### Scenario: Explicit degraded capture satisfies the claim floor
+
+- **WHEN** a `wave1_topic_deepening` result declares an explicit degraded-capture/fetch-failure reason for the topic instead of source claims
+- **THEN** submit SHALL accept the degraded declaration as satisfying the non-empty claim requirement
+- **AND** the result SHALL NOT present that topic as fully fetched content

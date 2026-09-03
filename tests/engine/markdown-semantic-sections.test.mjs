@@ -13,7 +13,7 @@ test('Key Findings with content only under descendant ### subsections is non-emp
     '# Evidence Summary',
     '',
     '## Source URLs',
-    '- [x](https://example.com/a)',
+    '- [x](https://fixture.news-research.com/a)',
     '',
     '## Key Findings',
     '',

@@ -227,7 +227,7 @@ describe('check-gate-setup-ready', () => {
     const bundleDir = createBundle(name);
     writeFileSync(join(bundleDir, 'rb_profile.yaml'), VALID_PROFILE
       .replace('plan_basename: test', `plan_basename: ${name}`)
-      .replace(CURRENT_AVAILABLE_ACCESS, `research_access:\n  status: available\n  probed_at: "2026-07-10T00:00:00.000Z"\n  result_url: "https://example.com/old-envelope"\n  fetch_outcome: success\n`));
+      .replace(CURRENT_AVAILABLE_ACCESS, `research_access:\n  status: available\n  probed_at: "2026-07-10T00:00:00.000Z"\n  result_url: "https://fixture.news-research.com/old-envelope"\n  fetch_outcome: success\n`));
     fillPlanBody(bundleDir);
 
     const output = JSON.parse(runGate(bundleDir).stdout);

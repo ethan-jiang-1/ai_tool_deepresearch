@@ -6,7 +6,7 @@ import {
   ReferenceMetadataArraySchema,
 } from '../../../DEEP_RESEARCH_HARNESS/schema/contracts/reference.mjs';
 
-const validEntry = { url: 'https://example.com', title: 'Example', retrieved_date: '2026-01-15', topic_tag: 'topic-a' };
+const validEntry = { url: 'https://fixture.news-research.com', title: 'Example', retrieved_date: '2026-01-15', topic_tag: 'topic-a' };
 
 describe('ReferenceMetadataSchema', () => {
   it('accepts valid entry', () => {

@@ -74,11 +74,11 @@ describe('work-unit actor provenance', () => {
       mkdirSync(path.join(dir, cacheTrail), { recursive: true });
       writeFileSync(path.join(dir, cacheTrail, 'websearch.json'), '[]\n');
       writeFileSync(path.join(dir, cacheTrail, 'page.md'), '# Capture\n\nFetched legacy source content.\n');
-      writeFileSync(path.join(dir, cacheTrail, 'meta.json'), '{"url":"https://example.com/legacy"}\n');
+      writeFileSync(path.join(dir, cacheTrail, 'meta.json'), '{"url":"https://fixture.news-research.com/legacy"}\n');
       writeFileSync(path.join(dir, legacyRecord.paths.runtime_receipt_ref), `${JSON.stringify({ event: 'work_done', work_id: workId, queue_item_id: 'queue-a', kind: legacyRecord.kind, receipt_nonce: legacyRecord.receipt_nonce })}\n`);
       const resultPath = path.join(dir, '_tmp', 'legacy-result.json');
       mkdirSync(path.dirname(resultPath), { recursive: true });
-      writeFileSync(resultPath, `${JSON.stringify({ schema_version: 'work-unit.result.v1', work_id: workId, queue_item_id: 'queue-a', kind: legacyRecord.kind, receipt_nonce: legacyRecord.receipt_nonce, summary: 'legacy', output_files: [{ path: outputPath, role: 'reference', source_url: 'https://example.com/legacy' }], cache_trails: [cacheTrail] })}\n`);
+      writeFileSync(resultPath, `${JSON.stringify({ schema_version: 'work-unit.result.v1', work_id: workId, queue_item_id: 'queue-a', kind: legacyRecord.kind, receipt_nonce: legacyRecord.receipt_nonce, summary: 'legacy', output_files: [{ path: outputPath, role: 'reference', source_url: 'https://fixture.news-research.com/legacy' }], cache_trails: [cacheTrail] })}\n`);
       const rejected = submitWorkUnit(dir, { work_id: workId, resultPath });
       assert.equal(rejected.ok, false);
       assert.equal(rejected.reason_code, 'unsupported_current_contract');

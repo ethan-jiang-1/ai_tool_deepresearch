@@ -59,7 +59,7 @@ function makeBundle(label) {
 
 function sourceArrayOfCount(topicSlug, count) {
   return Array.from({ length: count }, (_, index) => [
-    `- url: https://example.com/wave0/topic-a/source-${index + 1}`,
+    `- url: https://fixture.news-research.com/wave0/topic-a/source-${index + 1}`,
     `  title: Candidate ${index + 1}`,
     '  retrieved_date: 2026-07-27',
     `  topic_tag: ${topicSlug}`,
@@ -132,7 +132,7 @@ function submitWave0Authority(bundle, topic, {
       role: 'source_yaml',
       content: sourceContent,
     }],
-    cacheTrails: [{ path: '_cache/wave0/primary/topic-a/source', url: 'https://example.com/wave0/topic-a' }],
+    cacheTrails: [{ path: '_cache/wave0/primary/topic-a/source', url: 'https://fixture.news-research.com/wave0/topic-a' }],
   });
   assert.equal(submission.submitted.ok, true, JSON.stringify(submission.submitted));
   if (!existsSync(join(bundle, refPath))) {
@@ -149,7 +149,7 @@ function submitWave0Authority(bundle, topic, {
 
 function appendSourceCandidate(topicSlug) {
   return [
-    '- url: https://example.com/wave0/topic-a/third',
+    '- url: https://fixture.news-research.com/wave0/topic-a/third',
     '  title: Candidate three',
     '  retrieved_date: 2026-07-27',
     `  topic_tag: ${topicSlug}`,
@@ -472,7 +472,7 @@ describe('operate-topic-state projection packets', () => {
         role: 'source_yaml',
         content: sourceArray(topic.slug),
       }],
-      cacheTrails: [{ path: '_cache/wave0/primary/topic-a/unsubmitted', url: 'https://example.com/wave0/topic-a' }],
+      cacheTrails: [{ path: '_cache/wave0/primary/topic-a/unsubmitted', url: 'https://fixture.news-research.com/wave0/topic-a' }],
       submit: false,
     });
     authorizeWave0(bundle);

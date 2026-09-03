@@ -43,7 +43,7 @@ root_must_answer_set:
 research_access:
   status: available
   probed_at: "2026-07-10T00:00:00.000Z"
-  result_url: "https://example.com/case-133-fixture"
+  result_url: "https://fixture.news-research.com/case-133-fixture"
   fetch_outcome: success
 human_decision_checkpoints:
   hitl1:

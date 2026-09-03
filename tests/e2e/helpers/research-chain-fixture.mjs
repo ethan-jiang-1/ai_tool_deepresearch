@@ -101,7 +101,7 @@ function persistPhaseReference(bundle, refPath, content) {
 
 function submitFixture(bundle, phase, queueId, outputPath, content, extras = [], {
   role = 'reference',
-  sourceUrl = `https://research.example.org/${queueId}`,
+  sourceUrl = `https://research.fixture.news-research.com/${queueId}`,
 } = {}) {
   const result = claimAndSubmitFixtureWorkUnit(bundle, {
     phase, queue_item_id: queueId, topic_slug: 'topic-a', title: `${phase} deterministic fixture`, output_path: outputPath,
@@ -121,10 +121,10 @@ export function stageWave0(bundle, suffix = 'r1', { project = true, completion =
   const existingEntries = existingSource ? parseYaml(existingSource) : [];
   assert.ok(Array.isArray(existingEntries), 'Wave0 fixture source.yaml remains an array');
   const ordinal = existingEntries.length + 1;
-  const sourceEntry = `- url: "https://research.example.org/${suffix}"\n  title: "Continuity ${suffix}"\n  retrieved_date: "2026-07-15"\n  topic_tag: "topic-a"\n`;
+  const sourceEntry = `- url: "https://research.fixture.news-research.com/${suffix}"\n  title: "Continuity ${suffix}"\n  retrieved_date: "2026-07-15"\n  topic_tag: "topic-a"\n`;
   const source = `${existingSource.trimEnd()}${existingSource ? '\n' : ''}${sourceEntry}`;
   const refPath = `reference/00-shared-${suffix}.md`;
-  const ref = `---\nsource_url: "https://research.example.org/${suffix}"\nacceptance_status: accepted\nsource_type: secondary\ntier: "Tier 2"\nevidence_role: foundation\ntrust_level: practitioner\nwhy_it_matters: "Rerun continuity fixture."\naccessed_at: "2026-07-15"\nrelated_topic_uid: all\n---\n\n## Key Facts\n- Fact one.\n- Fact two.\n- Fact three.\n- Fact four.\n- Fact five.\n\n## Core Content Capture\nThis fixture is sufficiently substantive to exercise deterministic source and cache contracts without claiming real research quality.\n\n## Relevance To This Research\nRelevant.\n\n## Quotable Terms / Concepts\n- continuity\n\n## Risks And Limitations\n- Fixture only.\n`;
+  const ref = `---\nsource_url: "https://research.fixture.news-research.com/${suffix}"\nacceptance_status: accepted\nsource_type: secondary\ntier: "Tier 2"\nevidence_role: foundation\ntrust_level: practitioner\nwhy_it_matters: "Rerun continuity fixture."\naccessed_at: "2026-07-15"\nrelated_topic_uid: all\n---\n\n## Key Facts\n- Fact one.\n- Fact two.\n- Fact three.\n- Fact four.\n- Fact five.\n\n## Core Content Capture\nThis fixture is sufficiently substantive to exercise deterministic source and cache contracts without claiming real research quality.\n\n## Relevance To This Research\nRelevant.\n\n## Quotable Terms / Concepts\n- continuity\n\n## Risks And Limitations\n- Fixture only.\n`;
   writeFileSync(join(bundle, 'reference/README.md'), '# Reference Evidence\n');
   const submitted = submitFixture(
     bundle,
@@ -133,7 +133,7 @@ export function stageWave0(bundle, suffix = 'r1', { project = true, completion =
     'artifacts/wave0/topic-a/source.yaml',
     source,
     [],
-    { role: 'source_yaml', sourceUrl: `https://research.example.org/${suffix}` },
+    { role: 'source_yaml', sourceUrl: `https://research.fixture.news-research.com/${suffix}` },
   );
   const refWithNavigation = `${ref}\n## Submitted Backing\n- source_identity: ${submitted.record.work_id}/${ordinal}\n- source_yaml_ref: artifacts/wave0/topic-a/source.yaml\n- cache_trail_ref: ${submitted.cache_trails[0]}\n- result_ref: ${submitted.record.paths.result_ref}\n- work_unit_ref: ${submitted.record.paths.work_unit_dir}\n\n## Navigation Return Map\n- evidence_meaning: The reference supplies the shared Wave0 continuity foundation.\n  relationship: supports\n  refs: artifacts/wave0/topic-a/source.yaml\n  status: supported\n  next_hop: Read the source metadata before Wave1 deepening.\n`;
   persistPhaseReference(bundle, refPath, refWithNavigation);
@@ -160,9 +160,9 @@ export function stageWave0(bundle, suffix = 'r1', { project = true, completion =
 
 export function stageWave1(bundle, suffix = 'r1', { project = true, completion = true } = {}) {
   mkdirSync(join(bundle, 'artifacts/wave1/topic-a'), { recursive: true });
-  const sourceUrl = `https://research.example.org/${suffix}-deep`;
-  const summary = `# Evidence Summary: Topic A\n\n## Source URLs\n- [Continuity](https://research.example.org/${suffix}-deep)\n\n## Key Findings\n1. **Continuity**: Real checkpoints preserve rerun authority.\n\n## Open Questions\n1. [开放] Which direction is current?\n\n## Navigation Return Map\n- evidence_meaning: The summary records the current continuity mechanism.\n  relationship: supports\n  refs: artifacts/wave1/topic-a/evidence-summary.md\n  status: supported\n  next_hop: Use the question list to preserve the unresolved direction.\n`;
-  const questions = `# Question List - Topic A\n\n## Topic Investigation Targets\n| target_id | target_question | origin | status | backing_refs | next_action |\n| --- | --- | --- | --- | --- | --- |\n| T01 | Which direction is current? | rerun | 开放 | https://research.example.org/${suffix}-deep | 移交 wave2 |\n\n## Question Reconciliation\n- [部分进展] Count binding is deterministic.\n\n## Emergent Question Protocol\n- result: no_new_questions_after_protocol\n\n## Exploration / Exploitation Decision\n- decision: continue\n\n## Navigation Return Map\n- evidence_meaning: The question list preserves the current unresolved direction.\n  relationship: opens\n  refs: artifacts/wave1/topic-a/question-list.md\n  status: open\n  next_hop: Carry the question into Wave2 synthesis.\n`;
+  const sourceUrl = `https://research.fixture.news-research.com/${suffix}-deep`;
+  const summary = `# Evidence Summary: Topic A\n\n## Source URLs\n- [Continuity](https://research.fixture.news-research.com/${suffix}-deep)\n\n## Key Findings\n1. **Continuity**: Real checkpoints preserve rerun authority.\n\n## Open Questions\n1. [开放] Which direction is current?\n\n## Navigation Return Map\n- evidence_meaning: The summary records the current continuity mechanism.\n  relationship: supports\n  refs: artifacts/wave1/topic-a/evidence-summary.md\n  status: supported\n  next_hop: Use the question list to preserve the unresolved direction.\n`;
+  const questions = `# Question List - Topic A\n\n## Topic Investigation Targets\n| target_id | target_question | origin | status | backing_refs | next_action |\n| --- | --- | --- | --- | --- | --- |\n| T01 | Which direction is current? | rerun | 开放 | https://research.fixture.news-research.com/${suffix}-deep | 移交 wave2 |\n\n## Question Reconciliation\n- [部分进展] Count binding is deterministic.\n\n## Emergent Question Protocol\n- result: no_new_questions_after_protocol\n\n## Exploration / Exploitation Decision\n- decision: continue\n\n## Navigation Return Map\n- evidence_meaning: The question list preserves the current unresolved direction.\n  relationship: opens\n  refs: artifacts/wave1/topic-a/question-list.md\n  status: open\n  next_hop: Carry the question into Wave2 synthesis.\n`;
   const refPath = `reference/topic-a-${suffix}-deepening.md`;
   const ref = `---\nsource_url: "${sourceUrl}"\nacceptance_status: accepted\nsource_type: secondary\ntier: "Tier 2"\nevidence_role: deepening_reference\ntrust_level: practitioner\nwhy_it_matters: "Deepening fixture."\naccessed_at: "2026-07-15"\nrelated_topic_uid: tp_11111111-1111-4111-8111-111111111111\n---\n\n## Key Facts\n- Fact one.\n- Fact two.\n- Fact three.\n- Fact four.\n- Fact five.\n\n## Core Content Capture\nThis deterministic fixture provides sufficient backing for the real Wave1 gate and submitted work-unit contract.\n\n## Relevance To This Research\nRelevant.\n## Quotable Terms / Concepts\n- binding\n## Risks And Limitations\n- Fixture.\n`;
   const refWithNavigation = `${ref}\n## Navigation Return Map\n- evidence_meaning: The reference supplies the Wave1 continuity mechanism.\n  relationship: supports\n  refs: artifacts/wave1/topic-a/evidence-summary.md\n  status: supported\n  next_hop: Use the evidence summary during Wave2 synthesis.\n`;
@@ -230,7 +230,7 @@ export function stageWave2(bundle, { project = true, completion = true } = {}) {
   const wave1Suffix = rerunCount === 0 ? 'r1' : `r${rerunCount}`;
   const wave1Reference = canonicalWave1ReferencePath({
     topicSlug: 'topic-a',
-    sourceUrl: `https://research.example.org/${wave1Suffix}-deep`,
+    sourceUrl: `https://research.fixture.news-research.com/${wave1Suffix}-deep`,
   });
   assert.equal(wave1Reference.ok, true, JSON.stringify(wave1Reference));
   writeFileSync(join(bundle, 'artifacts/wave2/finding-index.yaml'), stringifyYaml({ version: '0.1', source_layer: 'wave2_cross_topic', ledger: 'artifacts/wave2/cross-topic-ledger.md', synthesis: 'artifacts/wave2/synthesis.md', scan: { topic_count: 1, pair_count_expected: 0, pair_count_checked: 0 }, findings: [{ id: 'W2F-001', type: 'cross_topic_resolution', priority: 'p2', status: 'resolved', decision: 'use_existing_evidence', affected_topics: ['topic-a'], created_in_rerun_count: rerunCount, origin_refs: ['artifacts/wave1/topic-a/evidence-summary.md'], trigger_refs: ['artifacts/wave1/topic-a/question-list.md'], search_required: false, subagent_receipt_refs: [], appears_in_synthesis: true, hitl2_handoff: false, confidence: 'medium', independent_backing_refs: [], gap_status: 'no_gap' }], synthesis_eligibility: { pure_synthesis_eligible: true, scan_matrix_present: true, scan_topic_pair_coverage: [], unresolved_search_required_count: 0, targeted_search_required_count: 0, targeted_search_submitted_count: 0, explicit_deferral_count: 0, profile_params_read: ['p0p1_independent_backing'], ineligibility_reasons: [] } }));

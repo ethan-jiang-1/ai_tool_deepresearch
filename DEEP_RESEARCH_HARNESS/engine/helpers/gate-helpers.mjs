@@ -30,6 +30,7 @@ export {
   writeGatePassDiagnostic,
   writePlanProgress,
   readTraceEvents,
+  readCanonicalTraceEvents,
 } from './gate-helpers-core.mjs';
 
 // Readers

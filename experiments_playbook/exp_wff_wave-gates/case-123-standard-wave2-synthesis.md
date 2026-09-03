@@ -83,7 +83,7 @@ EOF
 # Pre-seed Wave0 thin YAML (in artifacts/wave0/)
 mkdir -p $B/artifacts/wave0/topic-a
 cat > $B/artifacts/wave0/topic-a/source.yaml << 'EOF'
-- url: "https://example.com/ai-safety"
+- url: "https://fixture.news-research.com/ai-safety"
   title: "Understanding AI Safety"
   retrieved_date: "2026-06-15"
   topic_tag: "topic-a"
@@ -105,7 +105,7 @@ capability: foundation-placeholder
 EOF
 cat > $B/artifacts/wave1/topic-a/evidence-summary.md << 'EOF'
 ## Key Findings
-1. AI safety is an active field [Source](https://example.com/ai-safety)
+1. AI safety is an active field [Source](https://fixture.news-research.com/ai-safety)
 EOF
 cat > $B/artifacts/wave1/topic-a/question-list.md << 'EOF'
 ## Topic Investigation Targets

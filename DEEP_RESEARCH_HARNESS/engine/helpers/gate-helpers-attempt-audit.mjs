@@ -199,7 +199,8 @@ export function writeGateAttempt(bundlePath, result, options = {}) {
   try {
     applyEngineAttemptDiagnostics(bundlePath, result);
     const { check, routing, inspect, advice } = result;
-    const bundle = readBundleName(bundlePath);
+    // TRW-007: canonical bundle identity = directory basename (not rb_status.json short name)
+    const bundle = basename(bundlePath);
     const phase = derivePhaseFromGate(check.gate);
     const routedWave1Pass = check.gate === 'wave1-complete' && check.passed === true && check.next != null;
     const routedHitl2Proceed = check.gate === 'hitl2-recorded'
@@ -273,6 +274,7 @@ export function writeGateAttempt(bundlePath, result, options = {}) {
       const ts = new Date().toISOString();
       const traceEntry = {
         ts,
+        writer: 'engine',
         bundle,
         event: 'gate_attempt',
         kind: 'gate_attempt',
@@ -397,7 +399,8 @@ export function writeSetupReadyStagedAttempt(bundlePath, result) {
     const binding = writeSetupRoutePendingCheckpoint(bundlePath, result, gateAttemptId);
     const traceEntry = {
       ts: new Date().toISOString(),
-      bundle: readBundleName(bundlePath),
+      writer: 'engine',
+      bundle: basename(bundlePath),
       event: 'gate_attempt',
       kind: 'gate_attempt',
       gate: check.gate,
@@ -627,7 +630,8 @@ export function writeGateFailureDiagnostic(bundlePath, result, precomputedPath =
       const tracePath = join(bundlePath, 'rb_trace.jsonl');
       const traceEntry = JSON.stringify({
         ts: iso,
-        bundle,
+        writer: 'engine',
+        bundle: basename(bundlePath),
         event: 'diagnostic',
         kind: 'gate_failure_detail',
         gate: check.gate,

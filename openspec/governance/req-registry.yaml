@@ -316,6 +316,7 @@ ARP-005: artifact-persistence-recovery — Final auxiliary directories bind to t
 # bundle/bundle-data-isolation
 BUI-001: bundle-data-isolation — Multi-bundle coexistence
 BUI-002: bundle-data-isolation — Runtime output paths stay under current run bundle root and repo-root leaks are diagnosed
+BUI-003: bundle-data-isolation — Run bundle content is informationally self-contained
 
 # bundle/bundle-map
 BUM-001: bundle-map — BUNDLE_MAP.md is the canonical passive bundle map
@@ -338,6 +339,7 @@ CRC-005: cache-raw-web-content — cache_trails SHALL be Engine-populated during
 CRC-006: cache-raw-web-content — Gate cache_coverage rule cross-validates declaration cache_trails with filesystem
 CRC-007: cache-raw-web-content — Declared cache trails preserve fetched content or explicit degraded-capture records
 CRC-008: cache-raw-web-content — Cache leaf validation uses one Engine-owned contract projection
+CRC-009: cache-raw-web-content — Declared cache leaves fail submit-time validation on placeholder or filler content
 
 # bundle/cmd-bundle-instantiation
 CMI-001: cmd-bundle-instantiation — Command playbook for bundle production
@@ -349,6 +351,7 @@ CMI-006: cmd-bundle-instantiation — rb_status.json template includes current_n
 CMI-007: "cmd-bundle-instantiation — retired framework_version creation stamp; never reuse [DEPRECATED]"
 CMI-008: cmd-bundle-instantiation — Production creator rejects malformed argv before filesystem side effects
 CMI-009: cmd-bundle-instantiation — Bundle creators render actual framework navigation coordinates
+CMI-010: cmd-bundle-instantiation — Additional bundle creation carries an explicit user decision
 
 # bundle/file-observability
 FIO-001: file-observability — Engine audits phase-owned directories with stable file finding classifications
@@ -500,6 +503,8 @@ TRW-003: trace-writer — Trace entries include bundle field for cross-sink corr
 TRW-004: trace-writer — Run start trace marker (run_start at bundle creation; run_end terminal marker deferred to Phase 2)
 TRW-005: trace-writer — Agent Autorun surfaces use one rb_trace.jsonl sink with trace-bound native completion
 TRW-006: trace-writer — Successful Wave1 gate attempt explicitly projects its normalized carried-target receipt into the routed trace handoff
+TRW-007: trace-writer — Trace events carry writer identity and bundle consistency
+TRW-008: trace-writer — Audit verifies trace completion events have passed gate witnesses
 
 # engine/transition-table
 TRT-001: transition-table — File naming convention transitions.chain.json
@@ -788,6 +793,7 @@ WAI-009: wave1-intake — Reference-floor-deficit feedback names the depth-revie
 WAI-010: wave1-intake — Wave1 reference-floor inspect surfaces canonical reference targets
 WAI-011: wave1-intake — Evidence-summary Key Findings semantic section includes nested descendant subsection content
 WAI-012: wave1-intake — Focus coverage derives from current accepted intent and current-round backing
+WAI-013: wave1-intake — Wave1 topic deepening submit requires non-empty structured source claims or explicit degraded capture
 
 # research/wave2-synthesis
 WTS-001: wave2-synthesis — Wave2 phase queue-driven three-stage execution

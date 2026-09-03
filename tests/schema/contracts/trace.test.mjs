@@ -22,6 +22,33 @@ describe('TraceEntrySchema', () => {
   it('rejects entry missing event', () => {
     assert.ok(!TraceEntrySchema.safeParse({ ts: '2026-01-01T00:00:00.000Z' }).success);
   });
+
+  it('accepts optional writer + bundle fields (TRW-007)', () => {
+    const r = TraceEntrySchema.safeParse({
+      ts: '2026-01-01T00:00:00.000Z',
+      event: 'wave1_completion',
+      writer: 'cli',
+      bundle: 'dpt_rb_glm-5-3-deepseek-v4-domestic-chips',
+    });
+    assert.ok(r.success);
+    assert.equal(r.data.writer, 'cli');
+    assert.equal(r.data.bundle, 'dpt_rb_glm-5-3-deepseek-v4-domestic-chips');
+  });
+
+  it('accepts pre-change historical events without writer/bundle (backward compatible)', () => {
+    assert.ok(TraceEntrySchema.safeParse({ ts: '2026-01-01T00:00:00.000Z', event: 'wave0_completion', bundle: 'dpt_rb_glm-5-3-deepseek-v4-domestic-chips', detail: { topic_count: 11 } }).success);
+    assert.ok(TraceEntrySchema.safeParse({ ts: '2026-01-01T00:00:00.000Z', event: 'run_start', source: 'trace' }).success);
+  });
+
+  it('rejects empty/whitespace writer or bundle values when present', () => {
+    assert.ok(!TraceEntrySchema.safeParse({ ts: '2026-01-01T00:00:00.000Z', event: 'check', writer: '  ' }).success);
+    assert.ok(!TraceEntrySchema.safeParse({ ts: '2026-01-01T00:00:00.000Z', event: 'check', bundle: '' }).success);
+  });
+
+  it('rejects non-string writer/bundle values', () => {
+    assert.ok(!TraceEntrySchema.safeParse({ ts: '2026-01-01T00:00:00.000Z', event: 'check', writer: 7 }).success);
+    assert.ok(!TraceEntrySchema.safeParse({ ts: '2026-01-01T00:00:00.000Z', event: 'check', bundle: { name: 'x' } }).success);
+  });
 });
 
 describe('TraceSchema', () => {

@@ -115,7 +115,7 @@ root_must_answer_set:
 research_access:
   status: available
   probed_at: "2026-07-10T00:00:00.000Z"
-  result_url: "https://example.com/case-203-fixture"
+  result_url: "https://fixture.news-research.com/case-203-fixture"
   fetch_outcome: success
 human_decision_checkpoints:
   hitl1:
@@ -379,7 +379,7 @@ echo "=== Creating Wave1-style per-topic reference files ==="
 
 cat > "$B/reference/01_meal-timing-and-metabolism-chrononutrition.md" << 'EOF'
 # Chrononutrition Review
-- source_url: https://example.com/chrononutrition-review
+- source_url: https://fixture.news-research.com/chrononutrition-review
 - acceptance_status: accepted
 - source_type: secondary
 - tier: Tier 2
@@ -408,7 +408,7 @@ EOF
 
 cat > "$B/reference/02_exercise-protocols-and-recovery-strength.md" << 'EOF'
 # Strength Training Recovery Meta-Analysis
-- source_url: https://example.com/strength-recovery-meta
+- source_url: https://fixture.news-research.com/strength-recovery-meta
 - acceptance_status: accepted
 - source_type: secondary
 - tier: Tier 2
@@ -437,7 +437,7 @@ EOF
 
 cat > "$B/reference/00-shared-metabolic-pathways.md" << 'EOF'
 # Shared Metabolic Pathways Overview
-- source_url: https://example.com/metabolic-pathways
+- source_url: https://fixture.news-research.com/metabolic-pathways
 - acceptance_status: accepted
 - source_type: secondary
 - tier: Tier 1

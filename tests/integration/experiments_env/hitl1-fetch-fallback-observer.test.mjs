@@ -197,7 +197,7 @@ describe('case-115 isolated HITL1 direct-sample probe observer', () => {
     const unauthorized = [...fetchEvents(), toolUse('search-1', 'WebSearch', { query: 'other query' }), toolResult('search-1', 'links')];
     const unauthorizedCase = createCase({ events: unauthorized, access: directObservation({ available: true }) });
     const wrongUrl = fetchEvents();
-    wrongUrl[0] = toolUse('fetch-0', 'WebFetch', { url: 'https://example.com/not-declared' });
+    wrongUrl[0] = toolUse('fetch-0', 'WebFetch', { url: 'https://fixture.news-research.com/not-declared' });
     wrongUrl[1] = toolResult('fetch-0', '<html><body>x</body></html>');
     const urlCase = createCase({ events: wrongUrl, access: directObservation({ available: true }) });
     try {

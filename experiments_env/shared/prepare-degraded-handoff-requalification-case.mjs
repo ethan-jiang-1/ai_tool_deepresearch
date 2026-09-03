@@ -124,7 +124,7 @@ function writeBaseline(bundle, stem) {
     },
     research_access: {
       status: 'available', probed_at: '2026-08-05T00:00:00.000Z',
-      result_url: 'https://research.example.org/case-154/setup-only-probe', fetch_outcome: 'success',
+      result_url: 'https://research.fixture.news-research.com/case-154/setup-only-probe', fetch_outcome: 'success',
     },
     human_decision_checkpoints: {
       hitl1: { status: 'recorded', recorded_at: '2026-08-05T00:00:00.000Z', research_profile: 'debug', root_must_answer_set: TOPICS.flatMap((topic) => topic.must_answer), answerability_class: 'ready_substantive' },
@@ -169,10 +169,10 @@ function stageDegradedWave0(bundle) {
   const submissions = TOPICS.map((topic) => claimAndSubmitFixtureWorkUnit(bundle, {
     phase: 'wave0', queue_item_id: `case-154-wave0-${topic.slug}`, topic_slug: topic.slug,
     output_path: `artifacts/wave0/${topic.slug}/source.yaml`, role: 'source_yaml',
-    source_url: `https://research.example.org/case-154/wave0/${topic.slug}`,
+    source_url: `https://research.fixture.news-research.com/case-154/wave0/${topic.slug}`,
     source_slug: topic.slug,
     output_content: [
-      `- url: "https://research.example.org/case-154/wave0/${topic.slug}"`,
+      `- url: "https://research.fixture.news-research.com/case-154/wave0/${topic.slug}"`,
       `  title: "Case 154 ${topic.title} setup source"`, '  retrieved_date: "2026-08-05"', `  topic_tag: "${topic.slug}"`, '',
     ].join('\n'),
     extra_output_files: [],
@@ -190,7 +190,7 @@ function stageDegradedWave0(bundle) {
 
 function stageWave1Predecessor(bundle) {
   for (const topic of TOPICS) {
-    const sourceUrl = `https://research.example.org/case-154/wave1/${topic.slug}`;
+    const sourceUrl = `https://research.fixture.news-research.com/case-154/wave1/${topic.slug}`;
     const ref = `reference/01-case-154-${topic.slug}.md`;
     const summary = wave1EvidenceSummaryContent({ topic_slug: topic.slug, title: topic.title, source_url: sourceUrl });
     const questions = wave1QuestionListContent({ topic_slug: topic.slug, source_url: sourceUrl });

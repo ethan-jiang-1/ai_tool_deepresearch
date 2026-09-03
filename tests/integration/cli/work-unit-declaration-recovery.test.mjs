@@ -68,7 +68,7 @@ depends_on_topic_uids: []
 # Topic A
 `);
 
-  const sourceUrl = 'https://docs.example.org/research/wave0-source';
+  const sourceUrl = 'https://docs.fixture.news-research.com/research/wave0-source';
   mkdirSync(path.join(dir, 'artifacts/wave0/topic-a'), { recursive: true });
   writeFileSync(path.join(dir, 'artifacts/wave0/topic-a/source.yaml'), `- url: ${sourceUrl}
   title: Wave0 source

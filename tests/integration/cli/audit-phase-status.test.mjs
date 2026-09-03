@@ -229,3 +229,61 @@ describe('audit-phase-status CLI', () => {
     assert.equal(output.outcome, 'passed');
   });
 });
+
+describe('trace completion integrity @impl TRW-008', () => {
+  it('flags completion events without a passed gate_attempt witness', () => {
+    const bundle = makeBundle('audit-trace-witness', { current_gate: 'wave2_complete', next_gate: 'hitl1_recorded' });
+    const shortName = 'audit-trace-witness';
+    writeTrace(bundle, [
+      { ts: '2026-01-01T00:00:00.000Z', event: 'final_report_complete', bundle: 'no-canonical' },
+      { ts: '2026-01-01T00:00:01.000Z', event: 'wave2_completion', bundle: 'no-canonical' },
+    ]);
+    const { output } = runAudit(bundle);
+    const findings = output.trace_integrity?.findings || [];
+    assert.ok(findings.some((f) => f.event === 'final_report_complete' && /no framework gate identity/.test(f.detail)), JSON.stringify(findings));
+    assert.ok(findings.some((f) => f.event === 'wave2_completion' && /no passed gate_attempt witness for gate 'wave2-complete'/.test(f.detail)), JSON.stringify(findings));
+    assert.equal(output.trace_integrity.ok, false);
+  });
+
+  it('flags a completion event whose bundle is the rb_status.json short name', () => {
+    const bundle = makeBundle('audit-trace-bundle', { current_gate: 'wave1_complete', next_gate: 'wave2_complete' });
+    // rb_status.json#/bundle is the label ('audit-trace-bundle'), which differs from the
+    // canonical directory basename ('audit-trace-bundle-<random>') — the forged-event shape.
+    writeTrace(bundle, [
+      { ts: '2026-01-01T00:00:00.000Z', event: 'gate_attempt', gate: 'wave1-complete', phase: 'wave1', passed: true, bundle: 'audit-trace-bundle' },
+      { ts: '2026-01-01T00:00:01.000Z', event: 'wave1_completion', bundle: 'audit-trace-bundle' },
+    ]);
+    const { output } = runAudit(bundle);
+    const findings = output.trace_integrity?.findings || [];
+    assert.ok(
+      findings.some((f) => f.event === 'wave1_completion' && f.reason_code === 'trace_integrity_unsupported_completion' && /not the canonical bundle basename/.test(f.detail)),
+      JSON.stringify(findings),
+    );
+    // The gate_attempt witness itself must NOT be flagged (historical short-name bundle).
+    assert.ok(!findings.some((f) => f.event === 'gate_attempt'), JSON.stringify(findings));
+  });
+
+  it('flags a non-monotonic completion timestamp appended after later events', () => {
+    const bundle = makeBundle('audit-trace-mono', { current_gate: 'wave1_complete', next_gate: 'wave2_complete' });
+    writeTrace(bundle, [
+      { ts: '2026-01-01T00:00:00.000Z', event: 'gate_attempt', gate: 'wave1-complete', phase: 'wave1', passed: true },
+      { ts: '2026-01-01T00:00:02.000Z', event: 'diagnostic', kind: 'gate_failure_detail' },
+      { ts: '2026-01-01T00:00:01.000Z', event: 'wave1_completion', bundle: bundle.split('/').pop() },
+    ]);
+    const { output } = runAudit(bundle);
+    const findings = output.trace_integrity?.findings || [];
+    assert.ok(findings.some((f) => f.reason_code === 'trace_integrity_non_monotonic_ts'), JSON.stringify(findings));
+  });
+
+  it('accepts a legitimate gate-backed completion with the canonical bundle', () => {
+    const bundle = makeBundle('audit-trace-legal', { current_gate: 'wave1_complete', next_gate: 'wave2_complete' });
+    writeTrace(bundle, [
+      { ts: '2026-01-01T00:00:00.000Z', event: 'gate_attempt', gate: 'wave1-complete', phase: 'wave1', passed: true },
+      { ts: '2026-01-01T00:00:01.000Z', event: 'wave1_completion', bundle: bundle.split('/').pop() },
+    ]);
+    const { output } = runAudit(bundle);
+    assert.equal(output.trace_integrity.ok, true, JSON.stringify(output.trace_integrity));
+    assert.deepEqual(output.trace_integrity.findings, []);
+    assert.equal(output.trace_integrity.canonical_bundle, bundle.split('/').pop());
+  });
+});

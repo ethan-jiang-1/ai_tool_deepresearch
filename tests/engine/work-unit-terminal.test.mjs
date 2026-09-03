@@ -152,15 +152,15 @@ function writeSubmitReadyCandidate(dir, record, { resultPath = path.join(dir, re
       throw new Error(`terminal fixture only supports the current Wave0 source_yaml assignment, got ${output.role}`);
     }
     mkdirSync(path.dirname(path.join(dir, output.path)), { recursive: true });
-    writeFileSync(path.join(dir, output.path), `- url: https://example.com/source\n  title: Source\n  retrieved_date: 2026-07-20\n  topic_tag: ${topicSlug}\n`);
+    writeFileSync(path.join(dir, output.path), `- url: https://fixture.news-research.com/source\n  title: Source\n  retrieved_date: 2026-07-20\n  topic_tag: ${topicSlug}\n`);
     return { path: output.path, role: output.role };
   });
 
   const cacheTrail = `_cache/wave0/primary/${record.queue_item_id}/s01_source`;
   mkdirSync(path.join(dir, cacheTrail), { recursive: true });
   writeFileSync(path.join(dir, cacheTrail, 'websearch.json'), '[]\n');
-  writeFileSync(path.join(dir, cacheTrail, 'page.md'), '# Captured Page\n\nFetched content for https://example.com/source.\n');
-  writeFileSync(path.join(dir, cacheTrail, 'meta.json'), '{"url":"https://example.com/source"}\n');
+  writeFileSync(path.join(dir, cacheTrail, 'page.md'), '# Captured Page\n\nFetched content for https://fixture.news-research.com/source.\n');
+  writeFileSync(path.join(dir, cacheTrail, 'meta.json'), '{"url":"https://fixture.news-research.com/source"}\n');
   writeReceiptProgress(dir, record, { event: 'work_done', observedMs });
 
   mkdirSync(path.dirname(resultPath), { recursive: true });
@@ -184,7 +184,7 @@ function writeRepairableCandidate(dir, record) {
   const resultPath = path.join(dir, record.paths.result_ref);
   const sourcePath = 'artifacts/wave0/topic-a/source.yaml';
   mkdirSync(path.join(dir, 'artifacts/wave0/topic-a'), { recursive: true });
-  writeFileSync(path.join(dir, sourcePath), '- url: https://example.com/source\n  title: Source\n  retrieved_date: 2026-07-20\n  topic_tag: topic-a\n');
+  writeFileSync(path.join(dir, sourcePath), '- url: https://fixture.news-research.com/source\n  title: Source\n  retrieved_date: 2026-07-20\n  topic_tag: topic-a\n');
   mkdirSync(path.dirname(resultPath), { recursive: true });
   writeFileSync(resultPath, `${JSON.stringify({
     schema_version: 'work-unit.result.v1',

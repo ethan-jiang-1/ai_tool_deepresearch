@@ -21,11 +21,11 @@ import {
 const TOPIC_UID = 'tp_123e4567-e89b-42d3-a456-426614174010';
 const bundles = [];
 const DUPLICATE_SOURCE_YAML = [
-  '- url: https://example.com/duplicate',
+  '- url: https://fixture.news-research.com/duplicate',
   '  title: Duplicate source one',
   '  retrieved_date: 2026-07-20',
   '  topic_tag: current-topic',
-  '- url: https://example.com/duplicate',
+  '- url: https://fixture.news-research.com/duplicate',
   '  title: Duplicate source two',
   '  retrieved_date: 2026-07-20',
   '  topic_tag: current-topic',
@@ -34,7 +34,7 @@ const DUPLICATE_SOURCE_YAML = [
 
 function sourceArray(count, slug = 'current-topic') {
   return Array.from({ length: count }, (_, index) => [
-    `- url: https://example.com/source-${index + 1}`,
+    `- url: https://fixture.news-research.com/source-${index + 1}`,
     `  title: Source ${index + 1}`,
     '  retrieved_date: 2026-07-20',
     `  topic_tag: ${slug}`,
@@ -436,7 +436,7 @@ describe('eligible work-unit projection', () => {
     const dir = bundle();
     const cacheTrail = '_cache/wave0/primary/queue-wave0/s01_duplicate';
     const submitted = submitWave0(dir, {
-      cacheTrails: [{ path: cacheTrail, url: 'https://example.com/duplicate' }],
+      cacheTrails: [{ path: cacheTrail, url: 'https://fixture.news-research.com/duplicate' }],
     });
     const entryId = `${submitted.record.work_id}/2`;
 
@@ -450,7 +450,7 @@ describe('eligible work-unit projection', () => {
       work_id: submitted.record.work_id,
       entry_id: entryId,
       source_ordinal: 2,
-      source_url: 'https://example.com/duplicate',
+      source_url: 'https://fixture.news-research.com/duplicate',
       source_yaml_ref: 'artifacts/wave0/current-topic/source.yaml',
       cache_trail_refs: [cacheTrail],
       result_ref: submitted.record.paths.result_ref,
@@ -470,7 +470,7 @@ describe('eligible work-unit projection', () => {
     const dir = bundle();
     const submitted = submitWave0(dir);
 
-    const urlOnly = readSubmittedWave0Backing(dir, { source_url: 'https://example.com/duplicate' });
+    const urlOnly = readSubmittedWave0Backing(dir, { source_url: 'https://fixture.news-research.com/duplicate' });
     assert.equal(urlOnly.passed, false);
     assert.match(urlOnly.root_findings[0].missing_fact, /safe work_id/i);
 

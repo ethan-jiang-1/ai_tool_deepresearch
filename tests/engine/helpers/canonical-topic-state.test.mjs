@@ -544,7 +544,7 @@ describe('canonical topic state', () => {
       phase: 'wave1',
       queueItemId: 'q-history',
       queueItemOverrides: { payload: { topic_uid: topic.topic_uid, topic_slug: topic.slug } },
-      outputs: [{ path: `reference/${topic.slug}-source.md`, role: 'reference', source_url: 'https://example.com/history', source_slug: 'history', content: '# Historical source\n' }],
+      outputs: [{ path: `reference/${topic.slug}-source.md`, role: 'reference', source_url: 'https://fixture.news-research.com/history', source_slug: 'history', content: '# Historical source\n' }],
     });
     assert.equal(historical.submitted.ok, true);
     mkdirSync(join(dir, 'artifacts/wave0', topic.slug), { recursive: true });

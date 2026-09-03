@@ -36,21 +36,21 @@ describe('Write-side YAML roundtrip (11.1)', () => {
   it('roundtrips objects with special characters through yaml.stringify → readYamlArraySafe', () => {
     const testData = [
       {
-        url: 'https://example.com/article?id=123&ref=456',
+        url: 'https://fixture.news-research.com/article?id=123&ref=456',
         title: '点球｜亚洲球队遭遇"滑铁卢" — 新华报业网',
         retrieved_date: '2026-07-03',
         topic_tag: 'test-topic',
         notes: 'Line 1\nLine 2 with : colon',
       },
       {
-        url: 'https://example.com/emoji-test',
+        url: 'https://fixture.news-research.com/emoji-test',
         title: '🚀 Launch Week — CJK: 日本語テスト',
         retrieved_date: '2026-07-03',
         topic_tag: 'emoji-topic',
         notes: 'Contains emoji and CJK',
       },
       {
-        url: 'https://example.com/plain',
+        url: 'https://fixture.news-research.com/plain',
         title: 'Plain ASCII title',
         retrieved_date: '2026-07-03',
         topic_tag: 'plain-topic',
@@ -78,7 +78,7 @@ describe('Write-side YAML roundtrip (11.1)', () => {
   it('roundtrips CJK-heavy titles correctly', () => {
     const testData = [
       {
-        url: 'https://example.com/cjk',
+        url: 'https://fixture.news-research.com/cjk',
         title: '深度学习在自然语言处理中的应用研究',
         retrieved_date: '2026-07-03',
         topic_tag: 'cjk',
@@ -96,7 +96,7 @@ describe('Write-side YAML roundtrip (11.1)', () => {
   it('roundtrips URLs with query and fragment components', () => {
     const testData = [
       {
-        url: 'https://example.com/path?q=search&lang=en&filter=date#section-3',
+        url: 'https://fixture.news-research.com/path?q=search&lang=en&filter=date#section-3',
         title: 'URL Test',
       },
     ];
@@ -117,7 +117,7 @@ describe('Write-side YAML roundtrip (11.1)', () => {
 describe('Write-side JSON roundtrip (11.2)', () => {
   it('roundtrips objects with special characters through JSON.stringify → readJsonFileSafe', () => {
     const testData = {
-      url: 'https://example.com/article?id=123',
+      url: 'https://fixture.news-research.com/article?id=123',
       title: '点球｜亚洲球队遭遇"滑铁卢"',
       notes: 'Line 1\nLine 2',
       meta: { emoji: '🚀', cjk: '日本語' },
@@ -166,9 +166,9 @@ describe('Read-side YAML parse failure diagnostics (11.3)', () => {
     const filePath = join(TMP, 'bad-indent.yaml');
     // YAML with broken indentation
     writeFileSync(filePath, [
-      '- url: https://example.com',
+      '- url: https://fixture.news-research.com',
       '  title: valid',
-      '- url: https://example.com/2',
+      '- url: https://fixture.news-research.com/2',
       ' title: bad indent',  // missing one space
     ].join('\n'));
 
@@ -182,7 +182,7 @@ describe('Read-side YAML parse failure diagnostics (11.3)', () => {
     const filePath = join(TMP, 'bad-syntax.yaml');
     // YAML with a syntax error: colon in a bad place
     writeFileSync(filePath, [
-      '- url: https://example.com',
+      '- url: https://fixture.news-research.com',
       '  title: valid',
       '- key: : value',  // invalid YAML syntax
     ].join('\n'));
@@ -215,7 +215,7 @@ describe('Read-side YAML repair (11.3b)', () => {
     const filePath = join(TMP, 'bug-018-case.yaml');
     // This is the exact BUG-018 pattern: Chinese quotation marks that resolve to U+0022
     writeFileSync(filePath, [
-      '- url: https://example.com/1',
+      '- url: https://fixture.news-research.com/1',
       '  title: "点球｜亚洲球队遭遇"滑铁卢" — 新华报业网"',
       '  retrieved_date: "2026-07-03"',
       '  topic_tag: "test"',
@@ -234,7 +234,7 @@ describe('Read-side YAML repair (11.3b)', () => {
   it('repairs multiple unescaped quotes in a single value', () => {
     const filePath = join(TMP, 'multi-quote.yaml');
     writeFileSync(filePath, [
-      '- url: https://example.com',
+      '- url: https://fixture.news-research.com',
       '  title: "foo "bar" baz"',
       '  retrieved_date: "2026-07-03"',
       '  topic_tag: "test"',
@@ -250,7 +250,7 @@ describe('Read-side YAML repair (11.3b)', () => {
   it('repairs nested quotes pattern: he said "hello" and "goodbye"', () => {
     const filePath = join(TMP, 'nested-quote.yaml');
     writeFileSync(filePath, [
-      '- url: https://example.com',
+      '- url: https://fixture.news-research.com',
       '  title: "notes: "he said "hello" and "goodbye"""',
       '  retrieved_date: "2026-07-03"',
       '  topic_tag: "test"',
@@ -264,7 +264,7 @@ describe('Read-side YAML repair (11.3b)', () => {
   it('does not trigger repair on valid YAML', () => {
     const filePath = join(TMP, 'valid-no-repair.yaml');
     const data = [
-      { url: 'https://example.com', title: 'Normal title', retrieved_date: '2026-07-03', topic_tag: 'test' },
+      { url: 'https://fixture.news-research.com', title: 'Normal title', retrieved_date: '2026-07-03', topic_tag: 'test' },
     ];
     writeFileSync(filePath, yaml.stringify(data));
 
@@ -277,7 +277,7 @@ describe('Read-side YAML repair (11.3b)', () => {
     const filePath = join(TMP, 'unrepairable.yaml');
     // YAML block mapping with invalid indentation that can't be auto-repaired
     writeFileSync(filePath, [
-      '- url: https://example.com',
+      '- url: https://fixture.news-research.com',
       '    title: deeply indented',  // valid sub-indent
       '  nested:',
       '   - item1',
@@ -370,7 +370,7 @@ describe('template_not_expanded detection (11.5)', () => {
     mkdirSync(artifactsDir, { recursive: true });
     writeFileSync(join(artifactsDir, 'source.yaml'), yaml.stringify([
       { url: '${url}', title: 'Template not expanded', retrieved_date: '2026-07-03', topic_tag: 'test' },
-      { url: 'https://real.example.com', title: 'Normal entry', retrieved_date: '2026-07-03', topic_tag: 'test' },
+      { url: 'https://real.fixture.news-research.com', title: 'Normal entry', retrieved_date: '2026-07-03', topic_tag: 'test' },
     ]));
 
     // Also need minimal rb_status.json and other control files for scanTemplateNotExpanded
@@ -393,7 +393,7 @@ describe('template_not_expanded detection (11.5)', () => {
     mkdirSync(refDir, { recursive: true });
     writeFileSync(join(refDir, '00-shared-test.md'), [
       '---',
-      'source_url: "https://example.com/${topic_slug}/article"',
+      'source_url: "https://fixture.news-research.com/${topic_slug}/article"',
       '---',
       '# Test Reference',
     ].join('\n'));
@@ -411,7 +411,7 @@ describe('template_not_expanded detection (11.5)', () => {
     const artifactsDir = join(TMP, 'artifacts', 'wave0', 'clean-topic');
     mkdirSync(artifactsDir, { recursive: true });
     writeFileSync(join(artifactsDir, 'source.yaml'), yaml.stringify([
-      { url: 'https://real.example.com/article', title: 'Clean title', retrieved_date: '2026-07-03', topic_tag: 'clean' },
+      { url: 'https://real.fixture.news-research.com/article', title: 'Clean title', retrieved_date: '2026-07-03', topic_tag: 'clean' },
     ]));
 
     writeFileSync(join(TMP, 'rb_status.json'), JSON.stringify({ bundle: 'test-clean' }));
@@ -437,11 +437,11 @@ describe('Integration: malformed source.yaml (11.6)', () => {
     // Mixed: one entry with unescaped quotes, one normal entry
     const filePath = join(artifactsDir, 'source.yaml');
     writeFileSync(filePath, [
-      '- url: https://example.com/good',
+      '- url: https://fixture.news-research.com/good',
       '  title: "Normal Title"',
       '  retrieved_date: "2026-07-03"',
       '  topic_tag: "mixed"',
-      '- url: https://example.com/bad',
+      '- url: https://fixture.news-research.com/bad',
       '  title: "点球｜亚洲球队遭遇"滑铁卢" — 新华报业网"',
       '  retrieved_date: "2026-07-03"',
       '  topic_tag: "mixed"',
@@ -451,8 +451,8 @@ describe('Integration: malformed source.yaml (11.6)', () => {
     assert.ok(result.ok, `Expected repair of mixed file to succeed: ${result.error}`);
     assert.ok(result.repaired, 'Should indicate repair was performed');
     assert.equal(result.data.length, 2, 'Both entries should be returned after repair');
-    assert.equal(result.data[0].url, 'https://example.com/good');
-    assert.equal(result.data[1].url, 'https://example.com/bad');
+    assert.equal(result.data[0].url, 'https://fixture.news-research.com/good');
+    assert.equal(result.data[1].url, 'https://fixture.news-research.com/bad');
   });
 
   it('parse error diagnostic pinpoints the problem in a malformed file', () => {

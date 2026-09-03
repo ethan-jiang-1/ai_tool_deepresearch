@@ -1,0 +1,106 @@
+schema_version: verification-routing/v1
+change: bundle-isolation-and-creation-consent
+test_classes:
+  unit:
+    status: selected
+    rationale: Deterministic contract tests for the two new seams (creator sibling preflight incl. argv acknowledgment parsing; cross-bundle reference content scan).
+  integration:
+    status: selected
+    rationale: End-to-end creator refusal/acknowledgment and inspect/audit diagnostic surfacing exercised through CLI surfaces on temporary target directories and fixture bundles.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: Change is bounded to creator preflight and inspect/audit diagnostic seams; the integration claims cover the full CLI surface and add no further verdict.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: No new agent-driven runtime behavior; playbook text edits are reviewable artifacts whose enforcement claims are the deterministic CLI checks above.
+claims:
+  - id: sibling-preflight-detection
+    statement: >-
+      The creator's sibling preflight flags a requested name that shares a
+      kebab-case prefix relation with an existing dpt_rb_* sibling (e.g. x vs
+      x-v2), and independently flags any sibling whose rb_status.json does not
+      evidence a Final node (missing/unreadable status fails closed); a Final
+      sibling with no prefix relation does not trigger.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/instantiate-sibling-preflight.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: acknowledge-argv-contract
+    statement: >-
+      --acknowledge-existing-bundle <name> is accepted at most once; unknown
+      options, repeats, and missing values fail before filesystem side effects
+      with a single diagnostic, consistent with the CMI-008 argv shape.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/instantiate-sibling-preflight.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: creator-consent-refusal-and-pass
+    statement: >-
+      Instantiating an additional bundle over a flagged sibling exits nonzero
+      before any filesystem side effect with one diagnostic naming the sibling
+      and the consent path; rerun with --acknowledge-existing-bundle for that
+      sibling succeeds with unchanged creation output and leaves no ack trace
+      inside the created bundle; an ack naming an unflagged or nonexistent
+      bundle is rejected before mutation.
+    test_class: integration
+    proof_subject: cli_surface
+    asset:
+      kind: node_test
+      path: tests/integration/cli/instantiate-run-bundle-consent.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: cross-bundle-reference-scan
+    statement: >-
+      The scan module reports dpt_rb_* citation tokens in rb_plan.md,
+      seed_topics/, artifacts/, reference/, and final/ content, excluding the
+      selected bundle's own name, aggregating {file, citedBundle} hits.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/cross-bundle-reference-scan.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: inspect-audit-isolation-diagnostic
+    statement: >-
+      inspect-bundle and audit-phase-status surface the cross-bundle reference
+      diagnostic naming the citing file and cited bundle with the existing
+      cleanup/blocker severity split, without altering their other outputs.
+    test_class: integration
+    proof_subject: cli_surface
+    asset:
+      kind: node_test
+      path: tests/integration/cli/inspect-bundle-cross-reference.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

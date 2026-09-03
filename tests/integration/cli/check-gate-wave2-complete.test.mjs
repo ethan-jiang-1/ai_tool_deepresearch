@@ -49,7 +49,7 @@ function createBundle(name) {
 
   // Create reference target files (Wave0 artifacts)
   mkdirSync(join(dir, 'reference', 'topic-a'), { recursive: true });
-  writeFileSync(join(dir, 'reference/topic-a/source.yaml'), `- url: "https://example.com/ref"
+  writeFileSync(join(dir, 'reference/topic-a/source.yaml'), `- url: "https://fixture.news-research.com/ref"
   title: "Test Reference"
   retrieved_date: "2026-06-15"
   topic_tag: "topic-a"
@@ -57,7 +57,7 @@ function createBundle(name) {
 
   // Create Wave1 evidence-summary and question-list target files
   mkdirSync(join(dir, 'artifacts', 'wave1', 'topic-a'), { recursive: true });
-  writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), '# Topic A Evidence Summary\n\n## Source URLs\n\n- [Source A](https://example.com/a)\n\n## Key Findings\n\n1. **机制理解**: Finding A\n\n## Open Questions\n\n1. [开放] Question 1\n');
+  writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), '# Topic A Evidence Summary\n\n## Source URLs\n\n- [Source A](https://fixture.news-research.com/a)\n\n## Key Findings\n\n1. **机制理解**: Finding A\n\n## Open Questions\n\n1. [开放] Question 1\n');
   writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), '# Topic A Question List\n\n## Topic Investigation Targets\n\n## Question Reconciliation\n\n## Emergent Question Protocol\n\n## Exploration / Exploitation Decision\n');
 
   // Create wave2 directory
@@ -194,7 +194,7 @@ topic_registry:
 `);
 
   mkdirSync(join(dir, 'artifacts', 'wave1', 'topic-b'), { recursive: true });
-  writeFileSync(join(dir, 'artifacts/wave1/topic-b/evidence-summary.md'), '# Topic B Evidence Summary\n\n## Source URLs\n\n- [Source B](https://example.com/news/b)\n\n## Key Findings\n\n1. **机制理解**: Finding B\n\n## Open Questions\n\n1. [开放] Question B\n');
+  writeFileSync(join(dir, 'artifacts/wave1/topic-b/evidence-summary.md'), '# Topic B Evidence Summary\n\n## Source URLs\n\n- [Source B](https://fixture.news-research.com/news/b)\n\n## Key Findings\n\n1. **机制理解**: Finding B\n\n## Open Questions\n\n1. [开放] Question B\n');
   writeFileSync(join(dir, 'artifacts/wave1/topic-b/question-list.md'), '# Topic B Question List\n\n## Topic Investigation Targets\n\n## Question Reconciliation\n\n## Emergent Question Protocol\n\n## Exploration / Exploitation Decision\n');
 
   writeFileSync(join(dir, 'seed_topics/topic-a.md'), `# Topic A
@@ -229,7 +229,7 @@ function configureThreeTopicActionAddRerun(dir) {
     '  - slug: topic-b\n    label: Topic B\n  - slug: topic-c\n    label: Topic C',
   ));
   mkdirSync(join(dir, 'artifacts', 'wave1', 'topic-c'), { recursive: true });
-  writeFileSync(join(dir, 'artifacts/wave1/topic-c/evidence-summary.md'), '# Topic C Evidence Summary\n\n## Source URLs\n\n- [Source C](https://example.com/news/c)\n\n## Key Findings\n\n1. Finding C\n');
+  writeFileSync(join(dir, 'artifacts/wave1/topic-c/evidence-summary.md'), '# Topic C Evidence Summary\n\n## Source URLs\n\n- [Source C](https://fixture.news-research.com/news/c)\n\n## Key Findings\n\n1. Finding C\n');
   writeFileSync(join(dir, 'artifacts/wave1/topic-c/question-list.md'), '# Topic C Question List\n');
   writeFileSync(join(dir, 'seed_topics/topic-c.md'), '# Topic C\n\n## Wave2 Judgment\nReviewed in full rerun.\n\n## Pending Questions\nNone.\n');
 }
@@ -347,11 +347,11 @@ function submitWave2CrossReference(dir) {
     outputs: [{
       path: 'reference/00-cross-market-shift.md',
       role: 'reference',
-      source_url: 'https://example.com/research/market-shift',
+      source_url: 'https://fixture.news-research.com/research/market-shift',
       source_slug: 'market-shift',
       content: [
         '---',
-        'source_url: "https://example.com/research/market-shift"',
+        'source_url: "https://fixture.news-research.com/research/market-shift"',
         'acceptance_status: accepted',
         'source_type: primary',
         'tier: "Tier 2"',
@@ -372,7 +372,7 @@ function submitWave2CrossReference(dir) {
     }],
     cacheTrails: [{
       path: '_cache/wave2/primary/cross-market/market-shift',
-      url: 'https://example.com/research/market-shift',
+      url: 'https://fixture.news-research.com/research/market-shift',
     }],
   });
   writeFileSync(join(dir, 'reference', '_INDEX.md'), [
@@ -851,7 +851,7 @@ W2F-001: Full scan integrates [Topic A](../wave1/topic-a/evidence-summary.md) an
     createMinIndex(dir);
     createMinBackfill(dir);
     writeFileSync(join(dir, 'reference/00-cross-market-shift.md'), referenceContent({
-      source_url: 'https://example.com/research/market-shift',
+      source_url: 'https://fixture.news-research.com/research/market-shift',
       related_topic_uids: ['tp_123e4567-e89b-12d3-a456-426614174000'],
       evidence_role: 'targeted_evidence',
     }));

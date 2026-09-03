@@ -70,7 +70,7 @@ const profileFor = (row) => ({
   root_must_answer_set: row.questions,
   research_access: {
     status: 'available', probed_at: '2026-07-10T00:00:00.000Z',
-    result_url: 'https://example.com/deterministic-hitl1-fixture', fetch_outcome: 'success',
+    result_url: 'https://fixture.news-research.com/deterministic-hitl1-fixture', fetch_outcome: 'success',
   },
   human_decision_checkpoints: {
     hitl1: { status: row.hitl1, ...(row.hitl1 === 'recorded' ? { recorded_at: '2026-06-21T15:00:00.000Z' } : {}) },

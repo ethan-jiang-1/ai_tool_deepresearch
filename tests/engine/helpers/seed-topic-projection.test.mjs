@@ -133,7 +133,7 @@ function submitCurrentWork(bundle, topic, phase, {
   const refPath = referencePath || (phase === 'wave0'
     ? 'reference/00-shared-topic-a.md'
     : 'reference/topic-a-deepening.md');
-  const sourceUrl = `https://example.com/${phase}/topic-a`;
+  const sourceUrl = `https://fixture.news-research.com/${phase}/topic-a`;
   const submittedWave0Sources = wave0Sources || [{
     url: sourceUrl,
     title: 'Current Wave0 source',
@@ -269,13 +269,13 @@ describe('seed-topic projection materialization', () => {
   it('accepts a current Wave0 append entry beside a valid retained historical entry', () => {
     const { bundle, topic } = makeBundle('seed-projection-historical-wave0');
     const initialSource = {
-      url: 'https://example.com/wave0/topic-a-initial',
+      url: 'https://fixture.news-research.com/wave0/topic-a-initial',
       title: 'Initial Wave0 source',
       retrieved_date: '2026-07-27',
       topic_tag: topic.slug,
     };
     const appendedSource = {
-      url: 'https://example.com/wave0/topic-a-appended',
+      url: 'https://fixture.news-research.com/wave0/topic-a-appended',
       title: 'Appended Wave0 source',
       retrieved_date: '2026-07-28',
       topic_tag: topic.slug,

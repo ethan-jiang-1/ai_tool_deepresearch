@@ -37,7 +37,7 @@ export function recursiveAuthoritySnapshot(targetPath, { excluded = new Set(['rb
 
 export function referenceContent(overrides = {}) {
   const opts = {
-    source_url: 'https://example.com/research/article',
+    source_url: 'https://fixture.news-research.com/research/article',
     acceptance_status: 'accepted',
     source_type: 'primary',
     tier: 'Tier 2',
@@ -289,13 +289,13 @@ export function claimAndSubmitWorkUnit(dir, {
     : [{
         path: 'reference/topic-a-source.md',
         role: 'reference',
-        source_url: 'https://example.com/research/article',
+        source_url: 'https://fixture.news-research.com/research/article',
         source_slug: 's01_source',
         content: referenceContent(),
       }]);
   const requestedCacheTrails = cacheTrails ?? [{
     path: `_cache/${phase}/primary/${queueItemId}/s01_source`,
-    url: requestedOutputs.find((output) => output.source_url)?.source_url || 'https://example.com/research/article',
+    url: requestedOutputs.find((output) => output.source_url)?.source_url || 'https://fixture.news-research.com/research/article',
   }];
   const planPath = path.join(dir, 'rb_plan.md');
   const planText = existsSync(planPath) ? readFileSync(planPath, 'utf8') : '';
@@ -357,7 +357,7 @@ export function claimAndSubmitWorkUnit(dir, {
   for (const required of requiredOutputs) {
     if (effectiveOutputs.some((output) => output.path === required.path)) continue;
     const content = required.direct_contract === 'wave0.source-metadata-array.v1'
-      ? `- url: https://example.com/research/article\n  title: Example source\n  retrieved_date: 2026-07-20\n  topic_tag: ${queueItem.payload.topic_slug}\n`
+      ? `- url: https://fixture.news-research.com/research/article\n  title: Example source\n  retrieved_date: 2026-07-20\n  topic_tag: ${queueItem.payload.topic_slug}\n`
       : required.direct_contract === 'wave1.evidence-summary.v1'
         ? '## Key Findings\n\n- One supported finding.\n'
         : '## Topic Investigation Targets\n\nOne target.\n\n## Question Reconciliation\n\nOne reconciliation.\n\n## Emergent Question Protocol\n\nOne protocol.\n\n## Exploration / Exploitation Decision\n\nExplore.\n';
@@ -396,6 +396,19 @@ export function claimAndSubmitWorkUnit(dir, {
 
   const resultPath = path.join(dir, '_tmp', `${record.work_id}.result.json`);
   mkdirSync(path.dirname(resultPath), { recursive: true });
+  // @impl WAI-013: wave1 submissions carry a valid structured source claim by default
+  // (the claim floor rejects zero-claim results without explicit degraded capture).
+  // Callers can still override source_claims/accepted_source_urls via resultOverrides
+  // or opt into the degraded outlet by providing a degraded cache trail.
+  const defaultSourceClaims = kind === 'wave1_topic_deepening' && effectiveOutputs.length > 0
+    ? [{
+        url: requestedCacheTrails[0].url,
+        source_ref: effectiveOutputs[0].path,
+        acceptance_status: 'accepted',
+        is_new_vs_wave0: true,
+        cache_trail_refs: [requestedCacheTrails[0].path],
+      }]
+    : undefined;
   writeFileSync(resultPath, `${JSON.stringify({
     schema_version: 'work-unit.result.v1',
     work_id: record.work_id,
@@ -407,6 +420,7 @@ export function claimAndSubmitWorkUnit(dir, {
     summary: 'done',
     output_files: effectiveOutputs.map(({ content: _content, ...entry }) => entry),
     cache_trails: requestedCacheTrails.map((trail) => trail.path),
+    ...(defaultSourceClaims ? { source_claims: defaultSourceClaims, accepted_source_urls: [requestedCacheTrails[0].url] } : {}),
     ...resultOverrides,
   }, null, 2)}\n`);
 

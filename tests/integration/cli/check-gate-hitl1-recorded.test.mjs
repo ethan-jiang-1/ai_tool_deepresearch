@@ -418,7 +418,7 @@ ${CURRENT_AVAILABLE_ACCESS}human_decision_checkpoints:
     writeProfileYaml(bundleDir, VALID_PROFILE.replace(CURRENT_AVAILABLE_ACCESS, `research_access:
   status: available
   probed_at: "2026-07-10T00:00:00.000Z"
-  result_url: "https://example.com/"
+  result_url: "https://fixture.news-research.com/"
   fetch_outcome: success
 `));
     materializeCanonicalTopic(bundleDir);

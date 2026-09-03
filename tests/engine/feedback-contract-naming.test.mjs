@@ -8,7 +8,7 @@ import { readReferenceMetadata } from '../../DEEP_RESEARCH_HARNESS/engine/helper
 test('frontmatter YAML failure names the offending frontmatter line', () => {
   const md = [
     '---',
-    'source_url: "https://example.com/agent-taxonomy"',
+    'source_url: "https://fixture.news-research.com/agent-taxonomy"',
     'acceptance_status: accepted :warning:',
     'tier: "Tier 2"',
     '---',
@@ -27,7 +27,7 @@ test('frontmatter YAML failure names the offending frontmatter line', () => {
 test('quoted acceptance_status warning marker parses', () => {
   const md = [
     '---',
-    'source_url: "https://example.com/agent-taxonomy"',
+    'source_url: "https://fixture.news-research.com/agent-taxonomy"',
     'acceptance_status: "accepted :warning:"',
     'tier: "Tier 2"',
     'related_topic_uid: all',

@@ -55,4 +55,5 @@ export {
 export {
   writePlanProgress,
   readTraceEvents,
+  readCanonicalTraceEvents,
 } from './gate-helpers-plan-progress.mjs';

@@ -93,11 +93,11 @@ function canonicalWave0BundleWithTopics(topics) {
 
 function sourceArrayYaml(topicSlug) {
   return [
-    '- url: https://example.com/duplicate',
+    '- url: https://fixture.news-research.com/duplicate',
     '  title: Duplicate one',
     '  retrieved_date: 2026-07-20',
     `  topic_tag: ${topicSlug}`,
-    '- url: https://example.com/duplicate',
+    '- url: https://fixture.news-research.com/duplicate',
     '  title: Duplicate two',
     '  retrieved_date: 2026-07-20',
     `  topic_tag: ${topicSlug}`,
@@ -145,7 +145,7 @@ describe('return-map diagnostics', () => {
 
   it('reports missing minimum fields as blocking when the finding is counted into inspect failure', () => {
     const result = validateReturnMapContent(
-      '- https://example.com/source\n- reference/00-shared-source.md\n',
+      '- https://fixture.news-research.com/source\n- reference/00-shared-source.md\n',
       'seed_topics/topic-a.md',
     );
 

@@ -151,7 +151,9 @@ export function kindContractForQueueItem(queueItem, kind) {
 
 export function traceWorkUnitEvent(bundleDir, event, detail) {
   const trace = createTrace(path.join(bundleDir, 'rb_trace.jsonl'), { consoleEcho: false });
-  trace.traceEntry(event, { source: 'work-unit', bundle: readBundleName(bundleDir), ...detail });
+  // TRW-007: writer/bundle are centrally stamped by traceEntry (canonical basename);
+  // no hand-passed readBundleName bundle here anymore.
+  trace.traceEntry(event, { source: 'work-unit', ...detail });
 }
 
 export function emitWorkUnitInspectDiagnostics(bundleDir, { issues, source = 'work-unit-inspect' } = {}) {
@@ -164,14 +166,12 @@ export function emitWorkUnitInspectDiagnostics(bundleDir, { issues, source = 'wo
     const trace = createTrace(path.join(bundleDir, 'rb_trace.jsonl'), { consoleEcho: false });
     trace.traceEntry('diagnostic', {
       source,
-      bundle: readBundleName(bundleDir),
       kind: 'work_unit_inspect_failed',
       ...diagnostic,
     });
     if (issues.some((issue) => /transaction/i.test(issue))) {
       trace.traceEntry('diagnostic', {
         source,
-        bundle: readBundleName(bundleDir),
         kind: 'work_unit_transaction_mismatch',
         ...diagnostic,
       });
@@ -179,7 +179,6 @@ export function emitWorkUnitInspectDiagnostics(bundleDir, { issues, source = 'wo
     if (issues.some((issue) => /ledger|provenance|output file|cache trail|submitted result|unsupported delegated ledger/i.test(issue))) {
       trace.traceEntry('diagnostic', {
         source,
-        bundle: readBundleName(bundleDir),
         kind: 'work_unit_provenance_mismatch',
         ...diagnostic,
       });

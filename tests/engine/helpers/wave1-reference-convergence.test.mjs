@@ -95,19 +95,19 @@ after(() => createdBundles.splice(0).forEach(cleanupWorkUnitBundle));
 describe('Wave1 reference identity', () => {
   it('normalizes fragments without changing canonical identity', () => {
     assert.equal(
-      normalizeWave1ReferenceUrl('https://example.com/paper#section'),
-      normalizeWave1ReferenceUrl('https://example.com/paper'),
+      normalizeWave1ReferenceUrl('https://fixture.news-research.com/paper#section'),
+      normalizeWave1ReferenceUrl('https://fixture.news-research.com/paper'),
     );
   });
 
   it('derives a repeatable full-current-slug path with a collision-safe qualifier', () => {
     const input = {
       topicSlug: '01_meal-timing-blood-glucose-insulin',
-      sourceUrl: 'https://example.com/research/paper',
+      sourceUrl: 'https://fixture.news-research.com/research/paper',
     };
     const first = canonicalWave1ReferencePath(input);
     const second = canonicalWave1ReferencePath(input);
-    const different = canonicalWave1ReferencePath({ ...input, sourceUrl: 'https://example.com/research/other-paper' });
+    const different = canonicalWave1ReferencePath({ ...input, sourceUrl: 'https://fixture.news-research.com/research/other-paper' });
 
     assert.equal(first.ok, true);
     assert.equal(first.path, second.path);
@@ -118,7 +118,7 @@ describe('Wave1 reference identity', () => {
   it('keeps canonical, legacy, and current misnamed paths distinct', () => {
     const input = {
       topicSlug: '01_meal-timing-blood-glucose-insulin',
-      sourceUrl: 'https://example.com/research/paper',
+      sourceUrl: 'https://fixture.news-research.com/research/paper',
     };
     const canonical = canonicalWave1ReferencePath(input);
 
@@ -128,7 +128,7 @@ describe('Wave1 reference identity', () => {
   });
 
   it('rejects a non-http submitted backing URL', () => {
-    assert.equal(canonicalWave1ReferencePath({ topicSlug: '01_topic', sourceUrl: 'mailto:team@example.com' }).ok, false);
+    assert.equal(canonicalWave1ReferencePath({ topicSlug: '01_topic', sourceUrl: 'mailto:team@fixture.news-research.com' }).ok, false);
   });
 
   it('keeps the current normalized long-URL locator stable as an implementation regression', () => {
@@ -139,7 +139,7 @@ describe('Wave1 reference identity', () => {
 
     assert.deepEqual(locator, {
       ok: true,
-      normalized_url: 'https://example.com/a-very-long-path-segment-with-many-words-and-unicode-like-characters---plus-query?ignored=1',
+      normalized_url: "https://example.com/a-very-long-path-segment-with-many-words-and-unicode-like-characters---plus-query?ignored=1",
       qualifier: 'example-com-a-very-long-path-segment-with-many-w-f4d8b6306a70',
       path: 'reference/topic-a-example-com-a-very-long-path-segment-with-many-w-f4d8b6306a70.md',
     });
@@ -156,13 +156,13 @@ describe('reviewed Wave1 submitted backing', () => {
       queueItemId: 'topic-a-one',
       topicUid: topicA.topic_uid,
       topicSlug: topicA.slug,
-      sourceUrl: 'https://example.com/paper#overview',
+      sourceUrl: 'https://fixture.news-research.com/paper#overview',
     });
     const second = submitWave1Candidate(dir, {
       queueItemId: 'topic-a-two',
       topicUid: topicA.topic_uid,
       topicSlug: topicA.slug,
-      sourceUrl: 'https://example.com/paper',
+      sourceUrl: 'https://fixture.news-research.com/paper',
     });
     writeDepthReview(dir, topicA.slug, [first.paths.work_unit_dir, second.paths.work_unit_dir]);
 
@@ -171,7 +171,7 @@ describe('reviewed Wave1 submitted backing', () => {
     assert.equal(resolved.ok, true);
     assert.deepEqual(resolved.topic, { topic_uid: topicA.topic_uid, topic_slug: topicA.slug });
     assert.equal(resolved.candidates.length, 1);
-    assert.equal(resolved.candidates[0].normalized_url, 'https://example.com/paper');
+    assert.equal(resolved.candidates[0].normalized_url, 'https://fixture.news-research.com/paper');
     assert.deepEqual(resolved.candidates[0].work_ids, [first.work_id, second.work_id].sort());
   });
 
@@ -184,7 +184,7 @@ describe('reviewed Wave1 submitted backing', () => {
       queueItemId: 'topic-a-one',
       topicUid: topicA.topic_uid,
       topicSlug: topicA.slug,
-      sourceUrl: 'https://example.com/paper',
+      sourceUrl: 'https://fixture.news-research.com/paper',
     });
     writeDepthReview(dir, topicA.slug, [record.paths.work_unit_dir]);
     const backing = resolveReviewedWave1SubmittedBacking(dir, { topic: topicA.slug, topicRegistryFact: topicRegistryFact(dir) });
@@ -233,7 +233,7 @@ describe('reviewed Wave1 submitted backing', () => {
       queueItemId: 'topic-b-one',
       topicUid: topicB.topic_uid,
       topicSlug: topicB.slug,
-      sourceUrl: 'https://example.com/topic-b/paper',
+      sourceUrl: 'https://fixture.news-research.com/topic-b/paper',
     });
     writeDepthReview(dir, topicA.slug, [otherTopic.paths.work_unit_dir]);
 
@@ -261,7 +261,7 @@ describe('Wave1 reference convergence priority', () => {
   const topicFact = { topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000', topic_slug: 'topic-a' };
   const backing = {
     ok: true,
-    candidates: [{ normalized_url: 'https://example.com/a' }, { normalized_url: 'https://example.com/b' }],
+    candidates: [{ normalized_url: 'https://fixture.news-research.com/a' }, { normalized_url: 'https://fixture.news-research.com/b' }],
   };
   const closedProjections = backing.candidates.map((candidate) => ({
     ...candidate,
@@ -281,7 +281,7 @@ describe('Wave1 reference convergence priority', () => {
       index: { valid: false, stale: true },
     });
     assert.equal(result.outcome, 'materialize_projection');
-    assert.deepEqual(result.candidates.map((candidate) => candidate.normalized_url), ['https://example.com/b']);
+    assert.deepEqual(result.candidates.map((candidate) => candidate.normalized_url), ['https://fixture.news-research.com/b']);
   });
 
   it('keeps a concrete unusable submitted-backing root ahead of synthetic guards', () => {
@@ -355,7 +355,7 @@ describe('Wave1 reference convergence priority', () => {
 
     const cases = [[6, 2], [5, 3], [5, 3], [6, 2]];
     for (const [observed, deficit] of cases) {
-      const candidates = Array.from({ length: observed }, (_, index) => ({ normalized_url: `https://example.com/${index}` }));
+      const candidates = Array.from({ length: observed }, (_, index) => ({ normalized_url: `https://fixture.news-research.com/${index}` }));
       const projections = candidates.map((candidate) => ({
         ...candidate,
         path_class: 'canonical_current',

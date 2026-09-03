@@ -29,7 +29,7 @@ function bundle() {
 }
 
 function submitReviewedCandidate(dir, topic) {
-  const sourceUrl = 'https://example.com/research/current-source';
+  const sourceUrl = 'https://fixture.news-research.com/research/current-source';
   const submitted = claimAndSubmitWorkUnit(dir, {
     phase: 'wave1',
     queueItemId: 'topic-a-primary',
@@ -55,7 +55,7 @@ function submitReviewedCandidate(dir, topic) {
 }
 
 function submitSupplementaryPriorCandidate(dir, topic, priorEvidencePath) {
-  const sourceUrl = 'https://example.com/research/supplementary-source';
+  const sourceUrl = 'https://fixture.news-research.com/research/supplementary-source';
   const submitted = claimAndSubmitWorkUnit(dir, {
     phase: 'wave1',
     queueItemId: 'topic-a-supplementary',
@@ -129,7 +129,7 @@ describe('Wave1 reference convergence commands', () => {
     const record = submitReviewedCandidate(dir, topic);
     assert.equal(sync(dir).verdict, 'committed');
     writeFileSync(join(dir, 'reference/01-wave1-legacy.md'), referenceContent({
-      source_url: 'https://example.com/research/current-source', related_topic: topic.slug,
+      source_url: 'https://fixture.news-research.com/research/current-source', related_topic: topic.slug,
       coreContent: `Historical backing: reference/submitted-source.md _cache/wave1/primary/topic-a-primary/source ${record.work_id}.`,
     }));
     const legacyPath = join(dir, 'reference/01-wave1-legacy.md');
@@ -160,12 +160,12 @@ describe('Wave1 reference convergence commands', () => {
     assert.equal(resolveReviewedWave1SubmittedBacking(dir, { topic: topic.slug, topicRegistryFact: registry }).ok, true);
 
     const cacheMeta = join(dir, '_cache/wave1/primary/topic-a-supplementary/source/meta.json');
-    writeFileSync(cacheMeta, '{"url":"https://example.com/not-the-submitted-url"}\n');
+    writeFileSync(cacheMeta, '{"url":"https://fixture.news-research.com/not-the-submitted-url"}\n');
     const badCache = resolveReviewedWave1SubmittedBacking(dir, { topic: topic.slug, topicRegistryFact: registry });
     assert.equal(badCache.ok, false);
     assert.equal(badCache.root.code, 'submitted_backing_cache_mapping_invalid');
 
-    writeFileSync(cacheMeta, '{"url":"https://example.com/research/supplementary-source"}\n');
+    writeFileSync(cacheMeta, '{"url":"https://fixture.news-research.com/research/supplementary-source"}\n');
     rmSync(join(dir, priorEvidencePath));
     const missingProjection = resolveReviewedWave1SubmittedBacking(dir, { topic: topic.slug, topicRegistryFact: registry });
     assert.equal(missingProjection.ok, false);

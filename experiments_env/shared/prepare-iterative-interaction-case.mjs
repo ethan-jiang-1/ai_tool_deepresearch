@@ -182,7 +182,7 @@ function submitFixture(bundle, phase, queueId, outputPath, content, extras = [],
     title: `${phase} setup-only predecessor`,
     output_path: outputPath,
     role,
-    source_url: `https://research.example.org/iterative/${queueId}`,
+    source_url: `https://research.fixture.news-research.com/iterative/${queueId}`,
     source_slug: queueId,
     output_content: content,
     extra_output_files: extras,
@@ -193,9 +193,9 @@ function submitFixture(bundle, phase, queueId, outputPath, content, extras = [],
 
 function stageWave0(bundle) {
   mkdirSync(join(bundle, 'artifacts/wave0/capital-constraints'), { recursive: true });
-  const source = '- url: "https://research.example.org/iterative/wave0"\n  title: "Setup-only baseline"\n  retrieved_date: "2026-07-17"\n  topic_tag: "capital-constraints"\n';
+  const source = '- url: "https://research.fixture.news-research.com/iterative/wave0"\n  title: "Setup-only baseline"\n  retrieved_date: "2026-07-17"\n  topic_tag: "capital-constraints"\n';
   const refPath = 'reference/00-shared-iterative-baseline.md';
-  const ref = '- source_url: https://research.example.org/iterative/wave0\n- acceptance_status: accepted\n- source_type: secondary\n- tier: Tier 2\n- evidence_role: foundation\n- trust_level: practitioner\n- why_it_matters: Setup-only predecessor evidence.\n- accessed_at: 2026-07-17\n- related_topic_uid: tp_71271371-2713-4713-8713-712713712713\n\n## Key Facts\n- Capital affects feasible choices.\n- Constraints change timing.\n- Evidence is incomplete.\n- Scenario analysis is useful.\n- Further research can target the gap.\n\n## Core Content Capture\nSetup-only content sufficient for predecessor Gate checks.\n\n## Relevance To This Research\nRelevant.\n\n## Quotable Terms / Concepts\n- capital constraint\n\n## Risks And Limitations\n- Fixture-backed predecessor only.\n';
+  const ref = '- source_url: https://research.fixture.news-research.com/iterative/wave0\n- acceptance_status: accepted\n- source_type: secondary\n- tier: Tier 2\n- evidence_role: foundation\n- trust_level: practitioner\n- why_it_matters: Setup-only predecessor evidence.\n- accessed_at: 2026-07-17\n- related_topic_uid: tp_71271371-2713-4713-8713-712713712713\n\n## Key Facts\n- Capital affects feasible choices.\n- Constraints change timing.\n- Evidence is incomplete.\n- Scenario analysis is useful.\n- Further research can target the gap.\n\n## Core Content Capture\nSetup-only content sufficient for predecessor Gate checks.\n\n## Relevance To This Research\nRelevant.\n\n## Quotable Terms / Concepts\n- capital constraint\n\n## Risks And Limitations\n- Fixture-backed predecessor only.\n';
   writeFileSync(join(bundle, 'artifacts/wave0/capital-constraints/source.yaml'), source);
   writeFileSync(join(bundle, refPath), ref);
   writeFileSync(join(bundle, 'reference/README.md'), '# Reference Evidence\n');
@@ -211,7 +211,7 @@ function stageWave0(bundle) {
 
 function stageWave1(bundle) {
   mkdirSync(join(bundle, 'artifacts/wave1/capital-constraints'), { recursive: true });
-  const w1SourceUrl = 'https://research.example.org/iterative/iterative-wave1';
+  const w1SourceUrl = 'https://research.fixture.news-research.com/iterative/iterative-wave1';
   const summary = `# Evidence Summary: Capital Constraints\n\n## Source URLs\n- [Setup baseline](${w1SourceUrl})\n\n## Key Findings\n1. **Constraint sensitivity**: available capital changes the feasible decision set.\n\n## Open Questions\n1. [开放] How large is the constraint effect?\n`;
   const questions = `# Question List - Capital Constraints\n\n## Topic Investigation Targets\n| target_id | target_question | origin | status | backing_refs | next_action |\n| --- | --- | --- | --- | --- | --- |\n| T01 | How large is the constraint effect? | baseline | 开放 | ${w1SourceUrl} | 移交 wave2 |\n\n## Question Reconciliation\n- [部分进展] Direction is known, magnitude remains open.\n\n## Emergent Question Protocol\n- result: no_new_questions_after_protocol\n\n## Exploration / Exploitation Decision\n- decision: continue\n`;
   const refPath = 'reference/capital-constraints-deepening.md';

@@ -26,9 +26,9 @@ describe('selected research-access adapter', () => {
 
   it('fails closed when fetch or result URL differs from the selected returned candidate', () => {
     const binding = validateSelectedAdapterSameUrlBinding({
-      candidateUrl: 'https://example.com/returned',
-      fetchTargetUrl: 'https://example.net/invented',
-      resultUrl: 'https://example.com/returned',
+      candidateUrl: 'https://fixture.news-research.com/returned',
+      fetchTargetUrl: 'https://fixture.news-research.net/invented',
+      resultUrl: 'https://fixture.news-research.com/returned',
     });
 
     assert.deepEqual(binding, {
@@ -41,8 +41,8 @@ describe('selected research-access adapter', () => {
   it('fails closed when search supplied no eligible candidate', () => {
     const binding = validateSelectedAdapterSameUrlBinding({
       candidateUrl: 'not a URL',
-      fetchTargetUrl: 'https://example.com/returned',
-      resultUrl: 'https://example.com/returned',
+      fetchTargetUrl: 'https://fixture.news-research.com/returned',
+      resultUrl: 'https://fixture.news-research.com/returned',
     });
 
     assert.deepEqual(binding, {
@@ -69,9 +69,9 @@ describe('selected research-access adapter', () => {
 
   it('does not claim cross-executor permission or availability from the canary contract', () => {
     const binding = validateSelectedAdapterSameUrlBinding({
-      candidateUrl: 'https://example.com/returned',
-      fetchTargetUrl: 'https://example.com/returned',
-      resultUrl: 'https://example.com/returned',
+      candidateUrl: 'https://fixture.news-research.com/returned',
+      fetchTargetUrl: 'https://fixture.news-research.com/returned',
+      resultUrl: 'https://fixture.news-research.com/returned',
     });
 
     assert.equal(binding.same_url_bound, true);
@@ -93,9 +93,9 @@ describe('selected research-access adapter', () => {
 
   it('does not turn a deterministic same-URL success into provider availability evidence', () => {
     const binding = validateSelectedAdapterSameUrlBinding({
-      candidateUrl: 'https://example.com/returned',
-      fetchTargetUrl: 'https://example.com/returned',
-      resultUrl: 'https://example.com/returned',
+      candidateUrl: 'https://fixture.news-research.com/returned',
+      fetchTargetUrl: 'https://fixture.news-research.com/returned',
+      resultUrl: 'https://fixture.news-research.com/returned',
     });
 
     assert.equal(binding.same_url_bound, true);

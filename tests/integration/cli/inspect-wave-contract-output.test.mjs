@@ -57,7 +57,7 @@ function writeBundle() {
 
 function completeReference(bindingLine) {
   return [
-    '- source_url: https://example.com/reference',
+    '- source_url: https://fixture.news-research.com/reference',
     '- acceptance_status: accepted',
     '- source_type: secondary',
     '- tier: Tier 2',

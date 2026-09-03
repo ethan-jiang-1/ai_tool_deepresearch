@@ -45,7 +45,7 @@ function makeGateResult(passed, gate = 'test-gate') {
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe('writeGateAttempt (GSK-005, TRW-003)', () => {
-  it('writes gate_attempt to rb_trace.jsonl with bundle field', () => {
+  it('writes gate_attempt to rb_trace.jsonl with the canonical bundle basename and writer identity (@impl TRW-007)', () => {
     const b = setupBundle('test-gate-trace');
     const result = makeGateResult(true);
     writeGateAttempt(b, result);
@@ -57,7 +57,10 @@ describe('writeGateAttempt (GSK-005, TRW-003)', () => {
     assert.strictEqual(entry.event, 'gate_attempt');
     assert.strictEqual(entry.gate, 'test-gate');
     assert.strictEqual(entry.passed, true);
-    assert.strictEqual(entry.bundle, 'test-gate-trace');
+    // Canonical bundle identity is the directory basename (dpt_rb_<name>), not the
+    // rb_status.json short name.
+    assert.strictEqual(entry.bundle, 'dpt_rb_test-gate-trace');
+    assert.strictEqual(entry.writer, 'engine');
   });
 
   it('writes gate_attempt to _logs/run.log with unified envelope and bundle', () => {
@@ -107,14 +110,16 @@ describe('writeGateAttempt (GSK-005, TRW-003)', () => {
     assert.doesNotThrow(() => writeGateAttempt(b, makeGateResult(true), { strictTrace: false }));
   });
 
-  it('bundle matches rb_status.json value', () => {
+  it('trace bundle is the canonical basename while the run.log envelope keeps the rb_status.json value (@impl TRW-007)', () => {
     const b = setupBundle('test-gate-match');
     writeGateAttempt(b, makeGateResult(true));
 
     const traceContent = readFileSync(join(b, 'rb_trace.jsonl'), 'utf-8');
     const traceEntry = JSON.parse(traceContent.trim().split('\n')[0]);
-    assert.strictEqual(traceEntry.bundle, 'test-gate-match');
+    // Trace events carry the canonical bundle identity (directory basename).
+    assert.strictEqual(traceEntry.bundle, 'dpt_rb_test-gate-match');
 
+    // The run.log envelope keeps stamping the rb_status.json bundle value.
     const logContent = readFileSync(join(b, '_logs', 'run.log'), 'utf-8');
     assert.ok(logContent.includes('bundle=test-gate-match'));
   });

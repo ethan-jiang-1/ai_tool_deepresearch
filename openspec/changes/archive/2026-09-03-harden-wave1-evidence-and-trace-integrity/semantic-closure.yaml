@@ -1,0 +1,62 @@
+schema_version: semantic-closure/v1
+change: harden-wave1-evidence-and-trace-integrity
+status: affected
+catalog_additions: []
+affected:
+  - family: work-unit.source-claim-provenance
+    fact: >-
+      Whether a submitted work-unit result's source_claims[] /
+      accepted_source_urls[] set is accepted as legal delegated coverage when
+      both arrays are empty and no explicit degraded-capture record exists.
+      This change makes empty-without-degraded fail at submit time (fail-fast)
+      instead of being admitted to the ledger and only rejected later by the
+      wave gate (fail-late, 49 attempts).
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/work-unit-validation.mjs#validateSourceClaims
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-submit.mjs#submitWorkUnit
+    consumers:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/wave1-reference-convergence.mjs#validateSubmittedClaimBacking
+      - DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-provenance.mjs#scanDelegatedBypassSuspicion
+    overlap:
+      - coordinate: DEEP_RESEARCH_HARNESS/engine/helpers/cache-leaf-contract.mjs#inspectCacheLeaf
+        relation: derived
+        detail: >-
+          Placeholder/filler cache-leaf detection is a derived input to
+          source-claim provenance: a claim backed only by a placeholder leaf
+          must not count as legal coverage; this change extends the placeholder
+          heuristic (empty or filler-only pages such as "Deep research
+          content.", placeholder-domain URLs such as example.com).
+    verification:
+      truth_table: tests/engine/work-unit-validation.test.mjs
+      cross_surface: tests/integration/cli/operate-work-unit.test.mjs
+  - family: lifecycle.gate-status-trace-handoff
+    fact: >-
+      Whether a rb_trace.jsonl completion event (waveN_completion /
+      final_report_complete) constitutes legal lifecycle evidence of a passed
+      gate. This change requires trace events to carry writer identity and a
+      bundle field equal to the canonical bundle basename (not the
+      rb_status.json#/bundle short name), and requires audit to verify
+      completion events have a matching passed gate_attempt witness, monotonic
+      ts, and consistent bundle before treating them as lifecycle evidence.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/trace.mjs#traceEntry
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/trace.mjs
+      - DEEP_RESEARCH_HARNESS/cli/audit-phase-status.mjs
+      - DEEP_RESEARCH_HARNESS/engine/helpers/phase-status-audit.mjs#evaluateTraceCompletionIntegrity
+    consumers:
+      - DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave0-complete.mjs
+      - DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave1-complete.mjs
+      - DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave2-complete.mjs
+    overlap:
+      - coordinate: DEEP_RESEARCH_HARNESS/schema/contracts/trace.mjs#TraceEntrySchema
+        relation: derived
+        detail: >-
+          The Zod schema validates event format; it does not decide whether an
+          event has a passed-gate witness. Writer identity and bundle
+          consistency are enforced at write/read time by trace.mjs and the
+          gate/audit readers.
+    verification:
+      truth_table: tests/engine/trace.test.mjs
+      cross_surface: tests/integration/cli/audit-phase-status.test.mjs

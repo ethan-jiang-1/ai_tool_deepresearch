@@ -2,7 +2,7 @@
 
 > 最后更新: 2026-09-03 | `_backlog/bugs/` — 活跃 bug 在此
 >
-> **bug 编号权威在 `_done/_fixed_bugs/`，新 bug = 最大编号 + 1。** 本文件只列活跃 bug。
+> **bug 编号权威在 `_done/_fixed_bugs/`，新 bug = 最大编号 + 1（当前 BUG-250 起）。** 本文件只列活跃 bug。
 
 ## 修完一个 bug 的步骤
 
@@ -24,7 +24,8 @@
 
 | Bug | Severity | Phase | 简述 |
 |-----|----------|-------|------|
-| （无活跃 bug） | — | — | 全部 bug 已结案，见下方「最近关闭」。 |
+| [BUG-250](BUG-250-wave1-submit-evidence-fail-open.md) | 高 | wave1 | `wave1_topic_deepening` submit 对空 `source_claims`/`accepted_source_urls` + 占位 cache（example.com / "Deep research content."）fail-open，质量闸门完全推迟到 gate（49 次失败后疲劳），是 BUG-249 家族绕过前的伪造入口。现场：`dpt_rb_glm-5-3-deepseek-v4-domestic-chips`，11 条声明全空。 |
+| [BUG-251](BUG-251-rb-trace-forgery-undetected.md) | 高 | 全周期 | `rb_trace.jsonl` 可被 run-scoped 脚本 `echo >>` 直接伪造（bundle 名错误、ts 倒填、`wave2_completion` 无对应 gate），audit 0 次读 trace、gate 的 `trace_event_present` 消费伪造事件。现场：伪造事件链 bundle=`glm-5-3-deepseek-v4-domestic-chips`（缺 `dpt_rb_` 前缀）。 |
 
 > BUG-237 已随 `2026-08-24-enforce-seed-initialization-body-completeness`、
 > BUG-238 已随 `2026-08-24-document-wave0-deferred-all-or-nothing`、

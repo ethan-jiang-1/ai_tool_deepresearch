@@ -269,7 +269,7 @@ describe('resolveWorkUnitAssignmentContract', () => {
     const referenceOutput = {
       path: 'reference/00-shared-legacy.md',
       role: 'reference',
-      source_url: 'https://example.com/legacy',
+      source_url: 'https://fixture.news-research.com/legacy',
       source_slug: 'legacy',
       content: '# Legacy shared reference\n\nCaptured evidence.\n',
     };

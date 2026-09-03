@@ -9,7 +9,7 @@ import { describe, it } from 'node:test';
 
 const FOUR_MIB = 4 * 1024 * 1024;
 const VALID_SOURCE_YAML = [
-  '- url: https://example.com/source',
+  '- url: https://fixture.news-research.com/source',
   '  title: Example source',
   '  retrieved_date: 2026-07-20',
   '  topic_tag: topic-a',
@@ -236,7 +236,7 @@ describe('evaluateDirectOutputTarget direct facts', () => {
         assert.ok(valid.snapshot_meta.validated_array_length >= 0);
         assertNoSourceExposure(valid);
       }
-      for (const content of ['[unterminated\n', 'url: https://example.com\n', '- url: https://example.com\n']) {
+      for (const content of ['[unterminated\n', 'url: https://fixture.news-research.com\n', '- url: https://fixture.news-research.com\n']) {
         writeTarget(bundleDir, target, content);
         const invalid = await evaluate({ bundleDir, target, contractId: 'wave0.source-metadata-array.v1' });
         assertSingleRoot(invalid, {

@@ -74,7 +74,7 @@ function bundle() {
 }
 
 function submitReviewedCandidate(dir) {
-  const sourceUrl = 'https://example.org/research/current-source';
+  const sourceUrl = 'https://fixture.news-research.com/research/current-source';
   const sourceRef = 'reference/submitted-source.md';
   const cacheTrail = '_cache/wave1/primary/topic-a/source';
   const submitted = claimAndSubmitWorkUnit(dir, {
@@ -153,7 +153,7 @@ describe('Wave1 convergence feedback projection', () => {
     assert.ok(finding, JSON.stringify(evaluation.findings, null, 2));
     assert.equal(finding.masked_by_rule_id, null);
     assert.match(finding.write_to, new RegExp(expected.path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-    assert.match(finding.write_to, /source_url=https:\/\/example\.org\/research\/current-source/);
+    assert.match(finding.write_to, /source_url=https:\/\/fixture.news-research.com\/research\/current-source/);
     assert.match(finding.write_to, new RegExp(record.work_id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
     assert.match(finding.write_to, /work_unit_refs=\[/);
     assert.match(finding.write_to, /source_refs=\[reference\/submitted-source\.md\]/);
@@ -190,9 +190,9 @@ describe('Wave1 convergence feedback projection', () => {
     const postCloseoutFloor = evaluateWave1ReferenceConvergence({
       topic,
       requiredFloor: 2,
-      submittedBacking: { ok: true, candidates: [{ normalized_url: 'https://example.org/research/current-source' }] },
+      submittedBacking: { ok: true, candidates: [{ normalized_url: 'https://fixture.news-research.com/research/current-source' }] },
       projections: [{
-        normalized_url: 'https://example.org/research/current-source',
+        normalized_url: 'https://fixture.news-research.com/research/current-source',
         path_class: 'canonical_current',
         candidate_binding: true,
         format_valid: true,

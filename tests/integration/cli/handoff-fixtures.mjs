@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, basename } from 'node:path';
 
 export function setStatusWindow(bundlePath, currentGate, nextGate) {
   const statusPath = join(bundlePath, 'rb_status.json');
@@ -41,5 +41,14 @@ export function witnessedHandoffEvents({
 }
 
 export function writeTraceEvents(bundlePath, events) {
-  writeFileSync(join(bundlePath, 'rb_trace.jsonl'), events.map(e => JSON.stringify(e)).join('\n') + '\n');
+  // @impl TRW-007: mirror the post-change engine writers — every event carries the
+  // canonical bundle identity (directory basename) and a writer stamp. Events that
+  // already carry an explicit `bundle`/`writer` keep them, so tests can deliberately
+  // write forged shapes (e.g. rb_status.json short-name bundles).
+  const canonicalBundle = basename(bundlePath);
+  writeFileSync(join(bundlePath, 'rb_trace.jsonl'), events.map((e) => JSON.stringify({
+    writer: 'engine',
+    bundle: canonicalBundle,
+    ...e,
+  })).join('\n') + '\n');
 }

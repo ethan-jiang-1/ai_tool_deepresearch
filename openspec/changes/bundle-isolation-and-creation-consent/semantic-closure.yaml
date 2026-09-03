@@ -1,0 +1,79 @@
+schema_version: semantic-closure/v1
+change: bundle-isolation-and-creation-consent
+status: affected
+catalog_additions:
+  - id: bundle.information-self-containment
+    bounded_question: >-
+      During a selected run bundle operation, does every plan, evidence,
+      reference, or final content item resolve inside the selected current run
+      bundle's own produced evidence or an explicit user-supplied input, with no
+      other run bundle cited, imported, or used as a baseline?
+  - id: bundle.creation-consent
+    bounded_question: >-
+      Does instantiating an additional production run bundle (collision retry,
+      mid-run restart, re-scope, or sibling of a non-Final bundle) carry an
+      explicit user decision, and does the creator CLI's sibling preflight
+      verdict match that decision state?
+affected:
+  - family: bundle.information-self-containment
+    fact: >-
+      Whether a run bundle's plan/evidence/reference/final content may cite,
+      import, or treat another run bundle's content (e.g. a sibling bundle's
+      final report) as an evidence source or research baseline. This change
+      makes such citations isolation violations reported by inspect/audit
+      content scans, instead of unconstrained Agent discretion.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs#crossBundleReferenceScan
+    established_by:
+      - DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs#crossBundleReferenceScan
+      - DEEP_RESEARCH_HARNESS/cli/audit-phase-status.mjs#crossBundleReferenceScan
+    consumers:
+      - DEEP_RESEARCH_HARNESS/cli/audit-phase-status.mjs#auditPhaseStatus
+    overlap:
+      - coordinate: DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs
+        relation: derived
+        detail: >-
+          Existing repo-root leak diagnostics (BUI-002) report path-level
+          isolation violations; the content-reference scan is a derived,
+          same-surface extension from filesystem paths to in-content
+          dpt_rb_* citations, reusing the same cleanup/blocker severity split.
+      - coordinate: openspec/specs/bundle/bundle-data-isolation/spec.md
+        relation: derived
+        detail: >-
+          The accepted BUI-001/002 requirements own filesystem coexistence and
+          path ownership; the new BUI-003 requirement extends the same
+          capability to information-level containment without changing BUI-001/002.
+    verification:
+      truth_table: tests/engine/cross-bundle-reference-scan.test.mjs
+      cross_surface: tests/integration/cli/inspect-bundle-cross-reference.test.mjs
+  - family: bundle.creation-consent
+    fact: >-
+      Whether an additional production run bundle may be instantiated without
+      an explicit user decision when sibling bundles exist (name-similar or
+      non-Final). This change makes the creator CLI refuse instantiation with a
+      consent diagnostic unless an explicit --acknowledge-existing-bundle
+      acknowledgment is supplied, instead of the current playbook-instructed
+      silent collision-safe rename retry.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/cli/instantiate-run-bundle.mjs#siblingPreflight
+    established_by:
+      - DEEP_RESEARCH_HARNESS/cli/instantiate-run-bundle.mjs#siblingPreflight
+    consumers:
+      - DEEP_RESEARCH_HARNESS/command_playbook/instantiate-run-bundle.md
+    overlap:
+      - coordinate: DEEP_RESEARCH_HARNESS/command_playbook/instantiate-run-bundle.md
+        relation: derived
+        detail: >-
+          The playbook currently instructs silent collision-safe renaming and
+          forbids asking the user for a name mid-execution; this change keeps
+          name derivation autonomous (CMI-005) while replacing only the
+          create-another-bundle decision path with a user-consent stop.
+      - coordinate: DEEP_RESEARCH_HARNESS/command_playbook/continue-run-bundle.md
+        relation: derived
+        detail: >-
+          Entry Selection already forbids creating a bundle as an
+          unsupported-entry fallback; the consent gate is the same boundary
+          restated at the creator CLI, not a second entry authority.
+    verification:
+      truth_table: tests/engine/instantiate-sibling-preflight.test.mjs
+      cross_surface: tests/integration/cli/instantiate-run-bundle-consent.test.mjs

@@ -128,7 +128,7 @@ if (!record) throw new Error(`missing work unit ${workId}`);
 const outputPath = 'reference/topic-a-declared.md';
 mkdirSync(join(bundle, dirname(outputPath)), { recursive: true });
 writeFileSync(join(bundle, outputPath), `# Declared Ref
-- source_url: https://example.com/research/declared
+- source_url: https://fixture.news-research.com/research/declared
 - acceptance_status: accepted
 - source_type: primary
 - tier: Tier 2
@@ -162,7 +162,7 @@ const cacheTrail = `_cache/wave1/primary/${record.queue_item_id}/declared`;
 mkdirSync(join(bundle, cacheTrail), { recursive: true });
 writeFileSync(join(bundle, cacheTrail, 'websearch.json'), '[]\n');
 writeFileSync(join(bundle, cacheTrail, 'page.md'), '# Cached Page\n');
-writeFileSync(join(bundle, cacheTrail, 'meta.json'), '{"url":"https://example.com/research/declared"}\n');
+writeFileSync(join(bundle, cacheTrail, 'meta.json'), '{"url":"https://fixture.news-research.com/research/declared"}\n');
 
 writeFileSync(join(bundle, record.paths.runtime_receipt_ref), `${JSON.stringify({
   event: 'work_done',
@@ -184,7 +184,7 @@ writeFileSync(resultPath, `${JSON.stringify({
   output_files: [{
     path: outputPath,
     role: 'reference',
-    source_url: 'https://example.com/research/declared',
+    source_url: 'https://fixture.news-research.com/research/declared',
     source_slug: 'declared'
   }],
   cache_trails: [cacheTrail]

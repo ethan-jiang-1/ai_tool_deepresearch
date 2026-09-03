@@ -62,7 +62,7 @@ ${topics}
 function submitWave1Source(dir, {
   topic = 'topic-a',
   topicUid = 'tp_123e4567-e89b-12d3-a456-426614174000',
-  sourceUrl = 'https://example.com/topic-a/new-source',
+  sourceUrl = 'https://fixture.news-research.com/topic-a/new-source',
   cacheTrail = `_cache/wave1/primary/${topic}/new-source`,
   degraded = false,
 } = {}) {
@@ -164,7 +164,7 @@ function writeWave2Index(dir, data) {
 
 function writeWave2CrossReference(dir, {
   id = 'W2F-001',
-  sourceUrl = 'https://example.com/topic-a/new-source',
+  sourceUrl = 'https://fixture.news-research.com/topic-a/new-source',
   slug = 'resolved-finding',
 } = {}) {
   const refPath = path.join(dir, 'reference', `00-cross-${id.toLowerCase()}-${slug}.md`);
@@ -328,7 +328,7 @@ describe('wave depth contract helpers', () => {
 
   it('passes a minimal Wave1 depth review by deriving source/cache/novelty/floor from reviewed rows', () => {
     const dir = setupBundle();
-    const submitted = submitWave1Source(dir, { sourceUrl: 'https://example.com/topic-a/deep/path' });
+    const submitted = submitWave1Source(dir, { sourceUrl: 'https://fixture.news-research.com/topic-a/deep/path' });
     writeDepthReview(dir, {
       record: submitted.record,
     });
@@ -339,7 +339,7 @@ describe('wave depth contract helpers', () => {
 
   it('canonicalizes harmless trailing slash reviewed work-unit refs before submitted-row comparison', () => {
     const dir = setupBundle();
-    const submitted = submitWave1Source(dir, { sourceUrl: 'https://example.com/topic-a/trailing-slash' });
+    const submitted = submitWave1Source(dir, { sourceUrl: 'https://fixture.news-research.com/topic-a/trailing-slash' });
     writeDepthReview(dir, {
       record: submitted.record,
       reviewedRefs: [`${submitted.record.paths.work_unit_dir}/`],
@@ -353,7 +353,7 @@ describe('wave depth contract helpers', () => {
 
   it('keeps unsafe and unsubmitted reviewed work-unit refs fail-closed', () => {
     const unsafeDir = setupBundle();
-    const unsafeSubmitted = submitWave1Source(unsafeDir, { sourceUrl: 'https://example.com/topic-a/unsafe' });
+    const unsafeSubmitted = submitWave1Source(unsafeDir, { sourceUrl: 'https://fixture.news-research.com/topic-a/unsafe' });
     writeDepthReview(unsafeDir, {
       record: unsafeSubmitted.record,
       reviewedRefs: ['/tmp/not-a-bundle-ref'],
@@ -363,7 +363,7 @@ describe('wave depth contract helpers', () => {
     assert.match(unsafe.inspect.join('\n'), /reviewed work-unit ref is unsafe/);
 
     const missingDir = setupBundle();
-    const missingSubmitted = submitWave1Source(missingDir, { sourceUrl: 'https://example.com/topic-a/missing' });
+    const missingSubmitted = submitWave1Source(missingDir, { sourceUrl: 'https://fixture.news-research.com/topic-a/missing' });
     writeDepthReview(missingDir, {
       record: missingSubmitted.record,
       reviewedRefs: ['_work_units/wave1/not-submitted/'],
@@ -381,7 +381,7 @@ describe('wave depth contract helpers', () => {
     const otherTopic = submitWave1Source(dir, {
       topic: 'topic-b',
       topicUid: 'tp_123e4567-e89b-12d3-a456-426614174001',
-      sourceUrl: 'https://example.com/topic-b/not-topic-a',
+      sourceUrl: 'https://fixture.news-research.com/topic-b/not-topic-a',
     });
     writeDepthReview(dir, {
       topic: 'topic-a',
@@ -457,7 +457,7 @@ describe('wave depth contract helpers', () => {
 
   it('derives exact URL novelty from Wave0 authority and ignores copied novelty flags', () => {
     const dir = setupBundle();
-    const submitted = submitWave1Source(dir, { sourceUrl: 'https://example.com/topic-a/same' });
+    const submitted = submitWave1Source(dir, { sourceUrl: 'https://fixture.news-research.com/topic-a/same' });
     writeWave0Sources(dir, 'topic-a', [submitted.sourceUrl]);
     writeDepthReview(dir, {
       record: submitted.record,
@@ -474,12 +474,12 @@ describe('wave depth contract helpers', () => {
 
   it('does not let review-only claims or filesystem-only cache expand submitted coverage', () => {
     const dir = setupBundle();
-    const submitted = submitWave1Source(dir, { sourceUrl: 'https://example.com/topic-a/submitted' });
+    const submitted = submitWave1Source(dir, { sourceUrl: 'https://fixture.news-research.com/topic-a/submitted' });
     const manualTrail = '_cache/wave1/primary/topic-a/manual-only';
     mkdirSync(path.join(dir, manualTrail), { recursive: true });
     writeFileSync(path.join(dir, manualTrail, 'websearch.json'), '[]\n');
     writeFileSync(path.join(dir, manualTrail, 'page.md'), '# Manual cache\n\nFilesystem-only content.\n');
-    writeJson(path.join(dir, manualTrail, 'meta.json'), { url: 'https://example.com/topic-a/manual-only' });
+    writeJson(path.join(dir, manualTrail, 'meta.json'), { url: 'https://fixture.news-research.com/topic-a/manual-only' });
     writeFileSync(path.join(dir, 'rb_profile.yaml'), `research_style_params:
   wave1_per_topic_ref_floor: 4
   topic_unique_ratio: 0.5
@@ -491,13 +491,13 @@ describe('wave depth contract helpers', () => {
       record: submitted.record,
       legacyProjection: {
         source_claims: [{
-          url: 'https://example.com/topic-a/manual-only',
+          url: 'https://fixture.news-research.com/topic-a/manual-only',
           source_ref: 'artifacts/wave1/topic-a/evidence-summary.md',
           acceptance_status: 'accepted',
           is_new_vs_wave0: true,
           cache_trail_refs: [manualTrail],
         }],
-        new_source_urls: [submitted.sourceUrl, 'https://example.com/topic-a/manual-only'],
+        new_source_urls: [submitted.sourceUrl, 'https://fixture.news-research.com/topic-a/manual-only'],
         new_source_floor: { required: 2, observed: 2, source: 'manual' },
       },
     });
@@ -532,7 +532,7 @@ describe('wave depth contract helpers', () => {
 
     const degradedDir = setupBundle();
     const degraded = submitWave1Source(degradedDir, {
-      sourceUrl: 'https://example.com/topic-a/blocked',
+      sourceUrl: 'https://fixture.news-research.com/topic-a/blocked',
       cacheTrail: '_cache/wave1/primary/topic-a/blocked',
       degraded: true,
     });
@@ -637,13 +637,13 @@ describe('wave depth contract helpers', () => {
       outputs: [{
         path: 'reference/00-cross-w2f-001.md',
         role: 'reference',
-        source_url: 'https://example.com/wave2/targeted',
+        source_url: 'https://fixture.news-research.com/wave2/targeted',
         source_slug: 'targeted',
-        content: referenceContent({ source_url: 'https://example.com/wave2/targeted' }),
+        content: referenceContent({ source_url: 'https://fixture.news-research.com/wave2/targeted' }),
       }],
       cacheTrails: [{
         path: '_cache/wave2/primary/targeted-w2f-001/source',
-        url: 'https://example.com/wave2/targeted',
+        url: 'https://fixture.news-research.com/wave2/targeted',
       }],
     });
     assert.equal(submitted.ok, true, JSON.stringify(submitted));

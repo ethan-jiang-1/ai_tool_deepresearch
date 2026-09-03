@@ -103,7 +103,7 @@ function submitFixture(bundle, phase, queueId, outputPath, content, extras = [])
     title: `${phase} case-318 setup fixture`,
     output_path: outputPath,
     role: 'reference',
-    source_url: `https://research.example.org/case-318/${queueId}`,
+    source_url: `https://research.fixture.news-research.com/case-318/${queueId}`,
     source_slug: queueId,
     output_content: content,
     extra_output_files: extras,
@@ -140,7 +140,7 @@ function writePlanProfileAndSeed(bundle, planBasename) {
     research_access: {
       status: 'available',
       probed_at: '2026-07-15T00:00:00.000Z',
-      result_url: 'https://research.example.org/case-318/probe',
+      result_url: 'https://research.fixture.news-research.com/case-318/probe',
       fetch_outcome: 'success',
     },
     human_decision_checkpoints: {
@@ -168,9 +168,9 @@ function writePlanProfileAndSeed(bundle, planBasename) {
 function stageWave0(bundle) {
   mkdirSync(join(bundle, 'artifacts/wave0/topic-a'), { recursive: true });
   mkdirSync(join(bundle, 'reference'), { recursive: true });
-  const source = '- url: "https://research.example.org/case-318/wave0"\n  title: "Case 318 baseline"\n  retrieved_date: "2026-07-15"\n  topic_tag: "topic-a"\n';
+  const source = '- url: "https://research.fixture.news-research.com/case-318/wave0"\n  title: "Case 318 baseline"\n  retrieved_date: "2026-07-15"\n  topic_tag: "topic-a"\n';
   const refPath = 'reference/00-shared-case-318.md';
-  const ref = '- source_url: https://research.example.org/case-318/wave0\n- acceptance_status: accepted\n- source_type: secondary\n- tier: Tier 2\n- evidence_role: foundation\n- trust_level: practitioner\n- why_it_matters: Setup-only predecessor evidence.\n- accessed_at: 2026-07-15\n- related_topic: all\n\n## Key Facts\n- Fact one.\n- Fact two.\n- Fact three.\n- Fact four.\n- Fact five.\n\n## Core Content Capture\nA setup-only fixture with enough substance for production predecessor gates.\n\n## Relevance To This Research\nRelevant.\n\n## Quotable Terms / Concepts\n- continuity\n\n## Risks And Limitations\n- Fixture only.\n';
+  const ref = '- source_url: https://research.fixture.news-research.com/case-318/wave0\n- acceptance_status: accepted\n- source_type: secondary\n- tier: Tier 2\n- evidence_role: foundation\n- trust_level: practitioner\n- why_it_matters: Setup-only predecessor evidence.\n- accessed_at: 2026-07-15\n- related_topic: all\n\n## Key Facts\n- Fact one.\n- Fact two.\n- Fact three.\n- Fact four.\n- Fact five.\n\n## Core Content Capture\nA setup-only fixture with enough substance for production predecessor gates.\n\n## Relevance To This Research\nRelevant.\n\n## Quotable Terms / Concepts\n- continuity\n\n## Risks And Limitations\n- Fixture only.\n';
   writeFileSync(join(bundle, 'artifacts/wave0/topic-a/source.yaml'), source);
   writeFileSync(join(bundle, refPath), ref);
   writeFileSync(join(bundle, 'reference/README.md'), '# Reference Evidence\n');
@@ -186,9 +186,9 @@ function stageWave0(bundle) {
 
 function stageWave1(bundle) {
   mkdirSync(join(bundle, 'artifacts/wave1/topic-a'), { recursive: true });
-  const summary = '# Evidence Summary: Rerun Continuity\n\n## Source URLs\n- [Case 318](https://research.example.org/case-318/case318-wave1)\n\n## Key Findings\n1. **Recovery**: Direction/profile binding is observable.\n\n## Open Questions\n1. [开放] Can an Agent recover the crash window?\n';
-  const questions = '# Question List - Rerun Continuity\n\n## Topic Investigation Targets\n| target_id | target_question | origin | status | backing_refs | next_action |\n| --- | --- | --- | --- | --- | --- |\n| T01 | Can an Agent recover the crash window? | rerun | 开放 | https://research.example.org/case-318/case318-wave1 | 移交 wave2 |\n\n## Question Reconciliation\n- [部分进展] The deterministic boundary exists.\n\n## Emergent Question Protocol\n- result: no_new_questions_after_protocol\n\n## Exploration / Exploitation Decision\n- decision: continue\n';
-  const sourceUrl = 'https://research.example.org/case-318/case318-wave1';
+  const summary = '# Evidence Summary: Rerun Continuity\n\n## Source URLs\n- [Case 318](https://research.fixture.news-research.com/case-318/case318-wave1)\n\n## Key Findings\n1. **Recovery**: Direction/profile binding is observable.\n\n## Open Questions\n1. [开放] Can an Agent recover the crash window?\n';
+  const questions = '# Question List - Rerun Continuity\n\n## Topic Investigation Targets\n| target_id | target_question | origin | status | backing_refs | next_action |\n| --- | --- | --- | --- | --- | --- |\n| T01 | Can an Agent recover the crash window? | rerun | 开放 | https://research.fixture.news-research.com/case-318/case318-wave1 | 移交 wave2 |\n\n## Question Reconciliation\n- [部分进展] The deterministic boundary exists.\n\n## Emergent Question Protocol\n- result: no_new_questions_after_protocol\n\n## Exploration / Exploitation Decision\n- decision: continue\n';
+  const sourceUrl = 'https://research.fixture.news-research.com/case-318/case318-wave1';
   const canonicalPath = 'reference/topic-a-research-example-org-case-318-case318-wave1-2c140f24eb8f.md';
   const ref = `- source_url: ${sourceUrl}\n- acceptance_status: accepted\n- source_type: secondary\n- tier: Tier 2\n- evidence_role: deepening_reference\n- trust_level: practitioner\n- why_it_matters: Setup-only Wave1 predecessor evidence.\n- accessed_at: 2026-07-15\n- related_topic: topic-a\n\n## Key Facts\n- Fact one.\n- Fact two.\n- Fact three.\n- Fact four.\n- Fact five.\n\n## Core Content Capture\nA setup-only deepening fixture sufficient for the real Wave1 gate.\n\n## Relevance To This Research\nRelevant.\n\n## Quotable Terms / Concepts\n- recovery\n\n## Risks And Limitations\n- Fixture only.\n`;
   writeFileSync(join(bundle, 'artifacts/wave1/topic-a/evidence-summary.md'), summary);

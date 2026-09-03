@@ -32,7 +32,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const TMP = join(__dirname, '.test-gate-helpers-checks-tmp');
 
 function canonicalReferenceFrontmatter({
-  sourceUrl = 'https://example.com/news/a',
+  sourceUrl = 'https://fixture.news-research.com/news/a',
   relatedTopicUid = 'all',
   coreContent = 'Narrative capture.',
 } = {}) {
@@ -182,7 +182,7 @@ describe('reference file gate helpers', () => {
   it('preserves related_topic_uids frontmatter arrays at the binding boundary', () => {
     const metadata = readReferenceMetadata([
       '---',
-      'source_url: https://example.com/news/a',
+      'source_url: https://fixture.news-research.com/news/a',
       'related_topic_uids:',
       '  - tp_123e4567-e89b-12d3-a456-426614174000',
       '  - tp_123e4567-e89b-12d3-a456-426614174001',
@@ -222,7 +222,7 @@ describe('reference file gate helpers', () => {
       '---',
     ].join('\n'));
     writeFileSync(join(dir, 'reference', 'topic-a-uid.md'), [
-      '- source_url: https://example.com/news/a',
+      '- source_url: https://fixture.news-research.com/news/a',
       '- acceptance_status: accepted',
       '- source_type: primary',
       '- tier: Tier 2',
@@ -271,7 +271,7 @@ describe('reference file gate helpers', () => {
       '---',
     ].join('\n'));
     writeFileSync(join(dir, 'reference', 'topic-a-conflict.md'), [
-      '- source_url: https://example.com/news/a',
+      '- source_url: https://fixture.news-research.com/news/a',
       '- acceptance_status: accepted',
       '- source_type: primary',
       '- tier: Tier 2',
@@ -306,7 +306,7 @@ describe('reference file gate helpers', () => {
     const dir = join(__dirname, '.test-gh-ref-tolerant-sections');
     mkdirSync(join(dir, 'reference'), { recursive: true });
     writeFileSync(join(dir, 'reference', 'topic-a-tolerant.md'), [
-      '- source_url: https://example.com/news/a',
+      '- source_url: https://fixture.news-research.com/news/a',
       '- acceptance_status: accepted',
       '- source_type: primary',
       '- tier: Tier 2',
@@ -347,14 +347,14 @@ describe('reference file gate helpers', () => {
       body: '<body class="page">',
       script: '<script src="app.js">',
       style: '</style>',
-      iframe: '<iframe src="https://example.com/embed">',
+      iframe: '<iframe src="https://fixture.news-research.com/embed">',
     };
     try {
       for (const [name, signature] of Object.entries(signatures)) {
         const fileName = `topic-a-${name}.md`;
         const path = join(dir, 'reference', fileName);
         const content = canonicalReferenceFrontmatter({
-          sourceUrl: `https://example.com/document/${name}`,
+          sourceUrl: `https://fixture.news-research.com/document/${name}`,
           coreContent: `Interpreted fact placeholder.\n${signature}`,
         });
         writeFileSync(path, content);
@@ -453,15 +453,15 @@ describe('reference file gate helpers', () => {
       const format = checkReferenceFormatFiles(files);
       const urls = checkReferenceSourceUrls(files);
       const canonical = readReferenceMetadata(readFileSync(join(dir, 'reference', 'topic-a-canonical.md'), 'utf8'));
-      const legacy = readReferenceMetadata('- source_url: https://example.com/legacy\n- acceptance_status: accepted\n\n## Key Facts\n- Fact\n');
+      const legacy = readReferenceMetadata('- source_url: https://fixture.news-research.com/legacy\n- acceptance_status: accepted\n\n## Key Facts\n- Fact\n');
 
       assert.equal(format.passed, true, format.inspect.join('; '));
       assert.equal(urls.passed, true, urls.inspect.join('; '));
       assert.equal(canonical.presentation, 'frontmatter');
-      assert.equal(canonical.metadata.get('source_url'), 'https://example.com/news/a');
+      assert.equal(canonical.metadata.get('source_url'), 'https://fixture.news-research.com/news/a');
       assert.equal(parseReferenceMetadata(readFileSync(join(dir, 'reference', 'topic-a-canonical.md'), 'utf8')).get('related_topic_uid'), 'all');
       assert.equal(legacy.presentation, 'legacy_bullets');
-      assert.equal(legacy.metadata.get('source_url'), 'https://example.com/legacy');
+      assert.equal(legacy.metadata.get('source_url'), 'https://fixture.news-research.com/legacy');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -472,7 +472,7 @@ describe('reference file gate helpers', () => {
     mkdirSync(join(dir, 'reference'), { recursive: true });
     const cases = {
       malformed: `---\nsource_url: [unterminated\n---\n${REFERENCE_SEMANTIC_BODY}`,
-      non_mapping: `---\n- source_url: https://example.com/news/a\n---\n${REFERENCE_SEMANTIC_BODY}`,
+      non_mapping: `---\n- source_url: https://fixture.news-research.com/news/a\n---\n${REFERENCE_SEMANTIC_BODY}`,
     };
     try {
       for (const [name, content] of Object.entries(cases)) {
@@ -514,7 +514,7 @@ describe('reference file gate helpers', () => {
   it('classifies a Wave1 topic reference as a backed Phase-owned projection', () => {
     const dir = tempWorkUnitBundle('gh-ref-wave1-backed-');
     try {
-      const sourceUrl = 'https://example.com/research/topic-a-source';
+      const sourceUrl = 'https://fixture.news-research.com/research/topic-a-source';
       const cacheTrail = '_cache/wave1/primary/topic-a/s01_source';
       const evidencePath = 'artifacts/wave1/topic-a/evidence-summary.md';
       claimAndSubmitWorkUnit(dir, {
@@ -567,7 +567,7 @@ describe('reference file gate helpers', () => {
     const projectionDir = tempWorkUnitBundle('gh-ref-wave0-backed-');
     try {
       writeWave0ProjectionProfile(projectionDir);
-      const sourceUrl = 'https://example.com/research/wave0-duplicate';
+      const sourceUrl = 'https://fixture.news-research.com/research/wave0-duplicate';
       const sourceYamlRef = 'artifacts/wave0/topic-a/source.yaml';
       const cacheTrail = '_cache/wave0/primary/queue-a/duplicate';
       const submission = claimAndSubmitWorkUnit(projectionDir, {
@@ -603,7 +603,7 @@ describe('reference file gate helpers', () => {
     const dir = tempWorkUnitBundle('gh-ref-wave0-unbacked-');
     try {
       writeWave0ProjectionProfile(dir);
-      const sourceUrl = 'https://example.com/research/wave0-duplicate';
+      const sourceUrl = 'https://fixture.news-research.com/research/wave0-duplicate';
       const sourceYamlRef = 'artifacts/wave0/topic-a/source.yaml';
       const cacheTrail = '_cache/wave0/primary/queue-a/duplicate';
       const submission = claimAndSubmitWorkUnit(dir, {
@@ -661,7 +661,7 @@ describe('reference file gate helpers', () => {
         '| reference/topic-a-source.md | primary | expert | Tier 2 | topic-a | wave1_topic | accepted | 2026-07-06 |',
       ].join('\n'));
       writeFileSync(join(dir, 'reference', 'topic-a-source.md'), referenceContent({
-        source_url: 'https://example.com/research/unsubmitted',
+        source_url: 'https://fixture.news-research.com/research/unsubmitted',
         related_topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000',
         coreContent: 'This legal-looking reference has an index row, but no submitted source claim, cache trail, degraded capture, or accepted source URL backs it.',
       }));
@@ -685,7 +685,7 @@ describe('reference file gate helpers', () => {
         '| reference/other-source.md | primary | practitioner | Tier 2 | topic-b | wave1_topic | accepted | 2026-07-14 |',
       ].join('\n'));
       writeFileSync(join(dir, 'reference', 'topic-a-source.md'), referenceContent({
-        source_url: 'https://example.com/research/source',
+        source_url: 'https://fixture.news-research.com/research/source',
         related_topic_uid: 'tp_123e4567-e89b-12d3-a456-426614174000',
       }));
 
@@ -741,13 +741,13 @@ describe('cache coverage work-unit authority', () => {
         outputs: [{
           path: 'reference/topic-a-source.md',
           role: 'reference',
-          source_url: 'https://example.com/research/topic-a',
+          source_url: 'https://fixture.news-research.com/research/topic-a',
           source_slug: 's01_source',
-          content: referenceContent({ source_url: 'https://example.com/research/topic-a' }),
+          content: referenceContent({ source_url: 'https://fixture.news-research.com/research/topic-a' }),
         }],
         cacheTrails: [{
           path: '_cache/wave0/primary/topic-a/s01_source',
-          url: 'https://example.com/research/topic-a',
+          url: 'https://fixture.news-research.com/research/topic-a',
         }],
       });
       const result = checkCacheCoverage(dir);
@@ -762,7 +762,7 @@ describe('cache coverage work-unit authority', () => {
     mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, 'rb_output_declarations.jsonl'), `${JSON.stringify({
       work_id: 'w1',
-      output_files: [{ path: 'reference/a.md', role: 'reference', source_url: 'https://example.com/research/a' }],
+      output_files: [{ path: 'reference/a.md', role: 'reference', source_url: 'https://fixture.news-research.com/research/a' }],
       cache_trails: ['_cache/wave0/primary/a/s01_source'],
     })}\n`);
     try {
@@ -782,13 +782,13 @@ describe('cache coverage work-unit authority', () => {
         outputs: [{
           path: 'reference/topic-a-source.md',
           role: 'reference',
-          source_url: 'https://example.com/research/article',
+          source_url: 'https://fixture.news-research.com/research/article',
           source_slug: 's01_source',
-          content: referenceContent({ source_url: 'https://example.com/research/article' }),
+          content: referenceContent({ source_url: 'https://fixture.news-research.com/research/article' }),
         }],
         cacheTrails: [{
           path: '_cache/wave0/primary/topic-a/s01_source',
-          url: 'https://example.com/research/article',
+          url: 'https://fixture.news-research.com/research/article',
         }],
       });
       rmSync(join(dir, '_cache/wave0/primary/topic-a/s01_source/meta.json'), { force: true });
@@ -808,13 +808,13 @@ describe('cache coverage work-unit authority', () => {
         outputs: [{
           path: 'reference/topic-a-source.md',
           role: 'reference',
-          source_url: 'https://example.com/research/article',
+          source_url: 'https://fixture.news-research.com/research/article',
           source_slug: 's01_source',
-          content: referenceContent({ source_url: 'https://example.com/research/article' }),
+          content: referenceContent({ source_url: 'https://fixture.news-research.com/research/article' }),
         }],
         cacheTrails: [{
           path: '_cache/wave0/primary/topic-a/s01_source',
-          url: 'https://example.com/research/article',
+          url: 'https://fixture.news-research.com/research/article',
         }],
       });
       writeFileSync(join(dir, '_cache/wave0/primary/topic-a/s01_source/page.md'), '# Page\n');
@@ -835,20 +835,20 @@ describe('cache coverage work-unit authority', () => {
         outputs: [{
           path: 'reference/topic-a-source.md',
           role: 'reference',
-          source_url: 'https://example.com/research/topic-a',
+          source_url: 'https://fixture.news-research.com/research/topic-a',
           source_slug: 'topic-a-source',
-          content: referenceContent({ source_url: 'https://example.com/research/topic-a' }),
+          content: referenceContent({ source_url: 'https://fixture.news-research.com/research/topic-a' }),
         }],
         cacheTrails: [{
           path: '_cache/wave0/primary/topic-a/unrelated',
-          url: 'https://example.com/research/other',
+          url: 'https://fixture.news-research.com/research/other',
         }],
       });
       const result = checkCacheCoverage(dir);
       assert.equal(result.passed, false);
       const joined = result.inspect.join('\n');
       assert.match(joined, /reference\/topic-a-source\.md/);
-      assert.match(joined, /source_url: https:\/\/example\.com\/research\/topic-a/);
+      assert.match(joined, /source_url: https:\/\/fixture.news-research.com\/research\/topic-a/);
       assert.match(joined, /meta\.json\.url\/source_url\/final_url\/fetched_url or source_slug/);
       assert.match(joined, /websearch\.json, page\.md, meta\.json/);
     } finally {

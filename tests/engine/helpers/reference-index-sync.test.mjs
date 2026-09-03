@@ -37,7 +37,7 @@ function writeReference(dir, name, options) {
 function uidSubsetReference(uids) {
   return [
     '---',
-    'source_url: https://example.com/research/cross-topic',
+    'source_url: https://fixture.news-research.com/research/cross-topic',
     'acceptance_status: accepted',
     'source_type: mixed',
     'tier: "Tier 2"',

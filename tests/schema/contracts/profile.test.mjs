@@ -192,7 +192,7 @@ describe('ProfileSchema', () => {
 
   it('rejects every retired access-envelope field family', () => {
     const legacyFields = [
-      ['result_url', 'https://example.com/returned'],
+      ['result_url', 'https://fixture.news-research.com/returned'],
       ['fetch_outcome', 'success'],
       ['search_surface', 'WebSearch'],
       ['fetch_surface', 'WebFetch'],

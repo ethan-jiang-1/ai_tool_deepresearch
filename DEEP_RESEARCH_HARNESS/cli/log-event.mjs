@@ -187,6 +187,7 @@ if (values.event) {
   const traceEntry = {
     ts: new Date().toISOString(),
     event: values.event,
+    writer: 'cli',
     bundle: values.bundle.split('/').pop(),
     ...(detail ? { detail } : {}),
   };

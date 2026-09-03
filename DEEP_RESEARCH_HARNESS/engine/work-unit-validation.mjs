@@ -696,7 +696,33 @@ export function validateSourceClaims(bundleDir, result, outputContract, {
 } = {}) {
   const claims = result.source_claims || [];
   const acceptedUrls = result.accepted_source_urls || [];
-  if (claims.length === 0 && acceptedUrls.length === 0) return;
+  if (claims.length === 0 && acceptedUrls.length === 0) {
+    // @impl WAI-013: fail-fast claim floor for kinds whose output contract accepts
+    // source claims (currently wave1_topic_deepening). Kinds without a source_claims
+    // contract (wave0_source_intake / wave2_targeted_evidence) keep the empty
+    // pass-through — the floor is scoped by outputContract.source_claims.allowed,
+    // not by kind name, so future kinds declaring the contract get the same check.
+    if (outputContract?.source_claims?.allowed === true) {
+      const recordsDegradedCapture = (result.cache_trails || []).some((trail) => {
+        try {
+          return cacheTrailMapping(bundleDir, trail, { virtualCachePages }).degraded === true;
+        } catch {
+          return false;
+        }
+      });
+      if (!recordsDegradedCapture) {
+        throw validationRepairError(
+          'source_claims[] and accepted_source_urls[] are both empty and no explicit degraded capture is recorded: this work-unit kind accepts source claims, so submit requires at least one structured source claim or an explicit degraded-capture/fetch-failure record in a declared cache leaf',
+          {
+            repair_kind: 'agent_action',
+            json_pointer: '/source_claims',
+            write_to: 'source_claims[] / accepted_source_urls[] or a degraded-capture record in a declared cache leaf',
+          },
+        );
+      }
+    }
+    return;
+  }
 
   const contract = outputContract?.source_claims || {};
   if (contract.allowed !== true) {

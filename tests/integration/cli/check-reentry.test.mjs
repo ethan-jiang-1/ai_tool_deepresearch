@@ -469,7 +469,7 @@ describe('check-reentry CLI', () => {
         current_gate: 'wave0_complete',
         next_gate: 'wave1_complete',
       });
-      const sourceUrl = 'https://example.com/research/topic-a-source';
+      const sourceUrl = 'https://fixture.news-research.com/research/topic-a-source';
       const cacheTrail = '_cache/wave1/primary/topic-a/s01_source';
       const evidencePath = 'artifacts/wave1/topic-a/evidence-summary.md';
       // The work-unit helper establishes the canonical UID-bound seed via the normal claim path.

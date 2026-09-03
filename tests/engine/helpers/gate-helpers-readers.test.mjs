@@ -102,13 +102,13 @@ function afterDeadline(record) {
 function writeReaderSubmitFiles(dir, record) {
   const sourcePath = 'artifacts/wave0/topic-a/source.yaml';
   mkdirSync(join(dir, 'artifacts/wave0/topic-a'), { recursive: true });
-  writeFileSync(join(dir, sourcePath), '- url: https://example.com/source\n  title: Source\n  retrieved_date: 2026-07-20\n  topic_tag: topic-a\n');
+  writeFileSync(join(dir, sourcePath), '- url: https://fixture.news-research.com/source\n  title: Source\n  retrieved_date: 2026-07-20\n  topic_tag: topic-a\n');
 
   const cacheTrail = `_cache/wave0/primary/${record.queue_item_id}/s01_source`;
   mkdirSync(join(dir, cacheTrail), { recursive: true });
   writeFileSync(join(dir, cacheTrail, 'websearch.json'), '[]\n');
-  writeFileSync(join(dir, cacheTrail, 'page.md'), '# Captured Page\n\nFetched content capture for https://example.com/source.\n');
-  writeFileSync(join(dir, cacheTrail, 'meta.json'), '{"url":"https://example.com/source"}\n');
+  writeFileSync(join(dir, cacheTrail, 'page.md'), '# Captured Page\n\nFetched content capture for https://fixture.news-research.com/source.\n');
+  writeFileSync(join(dir, cacheTrail, 'meta.json'), '{"url":"https://fixture.news-research.com/source"}\n');
   writeFileSync(join(dir, record.paths.runtime_receipt_ref), `${JSON.stringify({
     event: 'work_done',
     work_id: record.work_id,
