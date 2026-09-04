@@ -13,6 +13,7 @@ import {
   evaluatePrematureFinalPresence,
   evaluatePlanProgressTamper,
   evaluateLifecycleIntegrity,
+  evaluateTraceCompletionIntegrity,
 } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/phase-status-audit.mjs';
 import {
   loadHandoffTopology,
@@ -209,5 +210,75 @@ describe('lifecycle integrity projection', () => {
     const tamper = tamperFor(bundle);
     assert.equal(tamper.tampered.length, 0);
     assert.equal(evaluateLifecycleIntegrity(bundle), null);
+  });
+});
+
+describe('trace completion integrity @impl TRW-008', () => {
+  it('accepts a completion written before its passed gate attempt (legal phase flow)', () => {
+    const bundle = makeBundle('trace-witness-completion-before-gate');
+    const canonical = bundle.split('/').pop();
+    writeTrace(bundle, [
+      { ts: '2026-01-01T00:00:01.000Z', event: 'wave1_completion', bundle: canonical },
+      { ts: '2026-01-01T00:00:02.000Z', event: 'gate_attempt', gate: 'wave1-complete', phase: 'wave1', passed: true },
+    ]);
+    const verdict = evaluateTraceCompletionIntegrity(bundle);
+    assert.equal(verdict.ok, true, JSON.stringify(verdict.findings));
+    assert.equal(verdict.findings.length, 0);
+  });
+
+  it('accepts a completion written after its passed gate attempt (rerun shape)', () => {
+    const bundle = makeBundle('trace-witness-completion-after-gate');
+    const canonical = bundle.split('/').pop();
+    writeTrace(bundle, [
+      { ts: '2026-01-01T00:00:00.000Z', event: 'gate_attempt', gate: 'wave1-complete', phase: 'wave1', passed: true },
+      { ts: '2026-01-01T00:00:01.000Z', event: 'wave1_completion', bundle: canonical },
+    ]);
+    const verdict = evaluateTraceCompletionIntegrity(bundle);
+    assert.equal(verdict.ok, true, JSON.stringify(verdict.findings));
+  });
+
+  it('flags a completion with no passed gate attempt for its gate', () => {
+    const bundle = makeBundle('trace-witness-no-witness');
+    const canonical = bundle.split('/').pop();
+    writeTrace(bundle, [
+      { ts: '2026-01-01T00:00:00.000Z', event: 'gate_attempt', gate: 'wave1-complete', phase: 'wave1', passed: false },
+      { ts: '2026-01-01T00:00:01.000Z', event: 'wave1_completion', bundle: canonical },
+    ]);
+    const verdict = evaluateTraceCompletionIntegrity(bundle);
+    assert.equal(verdict.ok, false);
+    assert.ok(
+      verdict.findings.some((f) => f.event === 'wave1_completion' && /no passed gate_attempt witness for gate 'wave1-complete'/.test(f.detail)),
+      JSON.stringify(verdict.findings),
+    );
+  });
+
+  it('flags a completion whose bundle is the short name rather than canonical basename', () => {
+    const bundle = makeBundle('trace-witness-short-name');
+    writeTrace(bundle, [
+      { ts: '2026-01-01T00:00:00.000Z', event: 'gate_attempt', gate: 'wave1-complete', phase: 'wave1', passed: true },
+      { ts: '2026-01-01T00:00:01.000Z', event: 'wave1_completion', bundle: 'trace-witness-short-name' },
+    ]);
+    const verdict = evaluateTraceCompletionIntegrity(bundle);
+    assert.equal(verdict.ok, false);
+    assert.ok(
+      verdict.findings.some((f) => f.event === 'wave1_completion' && /not the canonical bundle basename/.test(f.detail)),
+      JSON.stringify(verdict.findings),
+    );
+  });
+
+  it('flags a completion appended with a timestamp older than a preceding event', () => {
+    const bundle = makeBundle('trace-witness-non-monotonic');
+    const canonical = bundle.split('/').pop();
+    writeTrace(bundle, [
+      { ts: '2026-01-01T00:00:00.000Z', event: 'gate_attempt', gate: 'wave1-complete', phase: 'wave1', passed: true },
+      { ts: '2026-01-01T00:00:02.000Z', event: 'diagnostic', kind: 'gate_failure_detail' },
+      { ts: '2026-01-01T00:00:01.000Z', event: 'wave1_completion', bundle: canonical },
+    ]);
+    const verdict = evaluateTraceCompletionIntegrity(bundle);
+    assert.equal(verdict.ok, false);
+    assert.ok(
+      verdict.findings.some((f) => f.reason_code === 'trace_integrity_non_monotonic_ts'),
+      JSON.stringify(verdict.findings),
+    );
   });
 });

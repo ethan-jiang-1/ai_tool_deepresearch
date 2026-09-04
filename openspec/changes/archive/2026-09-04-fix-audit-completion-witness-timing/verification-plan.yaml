@@ -1,0 +1,97 @@
+schema_version: verification-routing/v1
+change: 2026-09-04-fix-audit-completion-witness-timing
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      The witness evaluator (`evaluateTraceCompletionIntegrity` in
+      engine/helpers/phase-status-audit.mjs) is exported and directly
+      testable in-process; the existing unit truth-table file for the phase
+      status audit (`tests/engine/helpers/phase-status-audit-integrity.test.mjs`)
+      gains a describe block exercising the witness condition on a minimal
+      trace buffer (completion before its passed gate attempt is legal; no
+      witness is not), giving the fastest deterministic proof of the
+      condition change alongside the existing premature-presence and tamper
+      truth tables.
+  integration:
+    status: selected
+    rationale: >-
+      The change is bounded to `audit-phase-status.mjs`'s trace_integrity
+      diagnostic, which is already covered by CLI-boundary tests on fixture
+      bundles (tests/integration/cli/audit-phase-status.test.mjs). The
+      positive case (completion written before its passed gate attempt is
+      legal) and the preserved negative cases (no witness / short-name
+      bundle / non-monotonic ts) are exercised through that same CLI
+      surface, proving the observable CLI verdict.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      The change alters one advisory diagnostic condition inside an existing
+      CLI; unit + integration claims cover the full observable surface and
+      add no further verdict that a deterministic end-to-end run would
+      establish.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      No Agent obligation or workflow behavior changes; the phase flow
+      (record completion, then run the formal gate) is unchanged and is
+      reviewable as change artifacts rather than by a machine verdict.
+claims:
+  - id: witness-condition-accepts-completion-before-gate
+    statement: >-
+      evaluateTraceCompletionIntegrity reports no
+      trace_integrity_unsupported_completion for a waveN_completion event
+      that carries the canonical bundle, has a matching passed gate_attempt
+      for its gate identity, and is appended with non-decreasing timestamps
+      even when its timestamp precedes the witness's timestamp (the phase
+      flow's legal shape).
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/phase-status-audit-integrity.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      external_calls: none
+      verdict_judge: deterministic
+      runtime: none
+    verdict_authority: node_test_exit
+  - id: completion-before-gate-still-witnessed
+    statement: >-
+      audit-phase-status reports no trace_integrity_unsupported_completion
+      for a waveN_completion event that carries the canonical bundle, has a
+      matching passed gate_attempt for its gate identity, and is appended
+      with non-decreasing timestamps even when its timestamp precedes the
+      witness's timestamp (the phase flow's legal shape).
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/audit-phase-status.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      external_calls: none
+      verdict_judge: deterministic
+      runtime: none
+    verdict_authority: node_test_exit
+  - id: forged-shapes-still-flagged
+    statement: >-
+      audit-phase-status still reports trace_integrity_unsupported_completion
+      for a completion event with no matching passed gate_attempt, for one
+      whose bundle is the rb_status.json short name rather than the canonical
+      basename, and still reports trace_integrity_non_monotonic_ts for an
+      event appended with a timestamp older than a preceding event.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/audit-phase-status.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      external_calls: none
+      verdict_judge: deterministic
+      runtime: none
+    verdict_authority: node_test_exit

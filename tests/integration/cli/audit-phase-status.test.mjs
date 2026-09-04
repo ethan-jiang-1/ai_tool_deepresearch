@@ -286,4 +286,15 @@ describe('trace completion integrity @impl TRW-008', () => {
     assert.deepEqual(output.trace_integrity.findings, []);
     assert.equal(output.trace_integrity.canonical_bundle, bundle.split('/').pop());
   });
+
+  it('accepts a completion written before its passed gate attempt (legal phase flow)', () => {
+    const bundle = makeBundle('audit-trace-legal-before-gate', { current_gate: 'wave1_complete', next_gate: 'wave2_complete' });
+    writeTrace(bundle, [
+      { ts: '2026-01-01T00:00:01.000Z', event: 'wave1_completion', bundle: bundle.split('/').pop() },
+      { ts: '2026-01-01T00:00:02.000Z', event: 'gate_attempt', gate: 'wave1-complete', phase: 'wave1', passed: true },
+    ]);
+    const { output } = runAudit(bundle);
+    assert.equal(output.trace_integrity.ok, true, JSON.stringify(output.trace_integrity));
+    assert.deepEqual(output.trace_integrity.findings, []);
+  });
 });

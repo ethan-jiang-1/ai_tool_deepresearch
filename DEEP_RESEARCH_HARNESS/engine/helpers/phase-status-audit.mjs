@@ -402,8 +402,7 @@ export function evaluateTraceCompletionIntegrity(bundlePath) {
       const candidate = other.event ?? other;
       return candidate.event === 'gate_attempt'
         && candidate.gate === gateIdentity
-        && candidate.passed === true
-        && (ts === null || typeof candidate.ts !== 'string' || candidate.ts <= ts);
+        && candidate.passed === true;
     });
     if (!witnessed) {
       findings.push({

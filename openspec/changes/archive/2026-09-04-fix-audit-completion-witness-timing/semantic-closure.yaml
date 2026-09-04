@@ -1,0 +1,39 @@
+schema_version: semantic-closure/v1
+change: 2026-09-04-fix-audit-completion-witness-timing
+status: affected
+catalog_additions: []
+affected:
+  - family: lifecycle.gate-status-trace-handoff
+    fact: >-
+      Whether a trace completion event (`waveN_completion`) is legal lifecycle
+      evidence is determined by the existence of a matching passed
+      `gate_attempt` (gate identity + passed status), not by any temporal
+      ordering between the completion event and its witness; append-order
+      timestamp monotonicity is enforced separately. This change removes the
+      implementation's extra `gate_attempt.ts <= completion.ts` requirement
+      that deadlocked with the phase flow (completion recorded before the
+      formal gate runs, per the gate's `trace_event_present` rule).
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/helpers/phase-status-audit.mjs
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/phase-status-audit.mjs
+      - openspec/specs/engine/trace-writer/spec.md
+    consumers:
+      - DEEP_RESEARCH_HARNESS/cli/audit-phase-status.mjs
+    overlap:
+      - coordinate: DEEP_RESEARCH_HARNESS/workflows/nodes/phases/phase-wave1.md
+        relation: derived
+        detail: >-
+          The phase document describes the flow (record completion evidence,
+          then run the formal gate); the witness semantics live with the
+          trace-writer capability and its audit evaluator, not with the phase
+          prose.
+      - coordinate: DEEP_RESEARCH_HARNESS/schema/gate_definitions/gate-wave1-complete.definition.json
+        relation: derived
+        detail: >-
+          The gate rule `trace_event_present` requires the completion event to
+          exist before the gate passes; the audit witness check does not add a
+          second, contradictory temporal constraint on top of it.
+    verification:
+      truth_table: tests/engine/helpers/phase-status-audit-integrity.test.mjs
+      cross_surface: tests/integration/cli/audit-phase-status.test.mjs

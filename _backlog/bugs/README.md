@@ -23,6 +23,8 @@
 > BUG-246/247 已按 2026-08-27 结案并移入 [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)。
 > BUG-250/251 已按 2026-09-03 结案并移入 [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)，见下方「最近关闭 (2026-09-03)」。
 > BUG-252/253（本批两条先以 slug 卡记录的观察，后按归档 change 修复）已按 2026-09-03 补编号并移入 [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)，见下方「最近关闭 (2026-09-03)」。
+> BUG-254 已按 2026-09-04 结案（`2026-09-04-run-scoped-tmp-inside-bundle`）并移入 [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)。
+> BUG-255 已按 2026-09-04 结案（`2026-09-04-fix-audit-completion-witness-timing`）并移入 [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)。
 
 | Bug | Severity | Phase | 简述 |
 |-----|----------|-------|------|
@@ -225,7 +227,7 @@ drain 阶段。8 个 bug 均为 framework DX/contract 层面的确定性缺陷�
 
 > BUG-099/106 不在 Wave execution/gate remediation 范围内，由 [`silent-autonomous-execution`](../plans/silent-autonomous-execution.md) 承接。现行 Chain/Queue/Work Unit contract 与 actor/Gate canary checkpoint 已收敛；残余问题只等待有效 current-head Phase-Agent observation，不再以“核心路径先稳定”为 reopen 条件。BUG-129/130/131/142 已移至 `../_done/_suspended_bugs/`：它们分别等待当前真实反例、产品策略决定或有效 current-head Agent-flow observation，不是活跃 implementation defect。
 
-**Next available bug ID: BUG-254**
+**Next available bug ID: BUG-256**
 
 ## BUG-132–137 接手地图
 
