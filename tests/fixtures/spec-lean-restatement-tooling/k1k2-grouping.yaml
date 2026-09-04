@@ -1,0 +1,14 @@
+# Deep-dive §11 K1/K2 grouping (spec-lean-f4-megablock-deepdive.md), REVIEW-passed 2026-09-03.
+# The `spec` field is rewritten by the rehearsal test to the fixture path.
+spec: tests/fixtures/spec-lean-restatement-tooling/rerun-block-fixture.md
+block_title: "### Requirement: Rerun node analyzes rationale vs seed_topics and produces topic adjustment plan"
+expect:
+  prose: 8
+  scenarios: 19
+units:
+  - title: "### Requirement: Rerun adjustment plan and apply forms (K1)"
+    prose: [1, 2, 3, 4, 7]
+    scenarios: [1, 7, 8, 9, 10, 11, 17, 18, 19]
+  - title: "### Requirement: Rerun authorization and execution loop (K2)"
+    prose: [5, 6, 8]
+    scenarios: [2, 3, 4, 5, 6, 12, 13, 14, 15, 16]

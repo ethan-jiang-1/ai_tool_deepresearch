@@ -1,0 +1,11 @@
+schema_version: semantic-closure/v1
+change: spec-lean-restatement-tooling
+status: not_applicable
+reason: >-
+  本 change 纯新增两个 repo 治理辅助工具（openspec/governance/scan-restatement-candidates.mjs
+  与 assemble-spec-delta.mjs）及其测试，均不进入 runtime、不接入 check-all、不出 governance
+  verdict。不触碰任何 semantic fact family 的 verdict consumer，不改变 gate/queue/work-unit/
+  research/lifecycle 的任何 runtime 语义结论，也不新增或改变具名 state、projection、status、
+  Module、command 或 reader-facing view（工具输出为一次性人审输入，非持久 view）。
+  catalog（openspec/governance/semantic-fact-families.yaml）全部 family 的 bounded_question
+  与本 change 的 observable surface（spec 文本只读扫描与文本守恒断言）无交集，故无 affected family。

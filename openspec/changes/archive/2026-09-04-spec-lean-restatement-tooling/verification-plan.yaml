@@ -1,0 +1,73 @@
+schema_version: verification-routing/v1
+change: spec-lean-restatement-tooling
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      扫描器的段落切分/命中提取与装配工具的三重断言（declared==actual、覆盖完备、多重集合守恒）
+      均为纯函数，由 tests/governance/ 下新单测守护（含每类失败的最小根因负向断言）。
+  integration:
+    status: selected
+    rationale: >-
+      只读实战预演跨工具与真实 accepted spec 文件的边界（扫描器 × DWU spec、装配工具 ×
+      rerun-incremental-node spec），无 runtime bundle、无外部调用，属 integration 级证明项。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      预演读取真实 accepted spec、无 temporary bundle，不满足 deterministic_e2e 的
+      runtime: temporary_bundle 路由元组；该证明项已归入 integration。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: 本 change 不涉及 experiments_playbook/ 用例与真实 Agent 执行。
+claims:
+  - id: scanner-candidate-extraction-contract
+    statement: >-
+      扫描器对 fixture spec 输出的候选表字段完整（段落区间、命中类别、所在 requirement、摘录），
+      段落切分确定性可复现，不可读文件 fail-closed exit 2。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/governance/scan-restatement-candidates.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: assembler-conservation-contract
+    statement: >-
+      装配工具在合法分组 YAML 下 dry-run 通过且写出文件逐行多重集合守恒（唯一净增 = unit
+      标题行）；declared 不符、覆盖缺口、守恒破坏、块不唯一、schema 不合分别以 exit 1/2
+      fail-closed 并输出首个最小根因。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/governance/assemble-spec-delta.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: real-spec-rehearsal-contract
+    statement: >-
+      只读 integration 预演（冻结 fixture，见 design D5）：装配工具以深挖 §11 K1/K2 分组
+      fixture 对 rerun-incremental-node 目标块的 C1 时点快照 dry-run，declared==actual 与
+      多重集合守恒全过且无写出副作用；扫描器与装配工具共用同一单元解析实现
+      （spec-unit-parse.mjs），段/场景序号跨工具语义一致。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/spec-lean-tooling-rehearsal.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

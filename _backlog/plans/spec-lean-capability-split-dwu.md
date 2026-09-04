@@ -90,7 +90,7 @@
 - [ ] 2.5 `/opsx:archive` + `finalize-change-archive.mjs`（finalizer 19 项含内置 npm test）
 - [ ] 2.6 git 单提交 + before/after 度量随提交
 
-### T3 迁移后指针化（独立 change，在四新家真实基线上）
+### T3 迁移后指针化（G2 已拍板 2026-09-03：**并入主 plan C2 `dwu-capability-identity-split` 尾段**，不独立立项；任务序保证 T2 全绿后才进入）
 
 - [ ] 3.1 复述段指针化（按母 plan §2.1 判定规则）
 - [ ] 3.2 before/after 度量随提交

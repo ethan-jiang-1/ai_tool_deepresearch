@@ -1,7 +1,7 @@
 # Plan: spec-lean-pointerization-and-registry-hygiene
 
-> 创建: 2026-09-01 | 状态: **活跃（事实与思路定稿；主线进度见 §8；执行待用户指令）**
-> 状态同步: 2026-09-03——主线批次 R0–R5 均未启动；期间仓库完成 BUG-248..253 修复与 CLS-085 回归套件提速（每批全量 npm test 成本下降）。两处顺路变化：15 死前缀注记已存在（R3 第一项过时，见 §3）；§-guard 基线在本 plan 定稿前已落地（4a18e9fdf），R4 仅剩扩展项。事实基线数字更新见 §1 各同步注。
+> 创建: 2026-09-01 | 状态: **活跃（事实与思路定稿；主线进度见 §8（change 视角 tracking）；执行待用户指令）**
+> 状态同步: 2026-09-03——主线批次 R0–R5 均未启动；期间仓库完成 BUG-248..253 修复与 CLS-085 回归套件提速（每批全量 npm test 成本下降）。两处顺路变化：15 死前缀注记已存在（R3 第一项过时，见 §3）；§-guard 基线在本 plan 定稿前已落地（4a18e9fdf），R4 仅剩扩展项。事实基线数字更新见 §1 各同步注。**2026-09-03 REVIEW 完成**（四份 plan 复核通过，3 处数字修正，判定书 `_backlog/_scratch/handoff-spec-lean-plan-review-verdict.md`）；§8 已重构为 change 视角 tracking（少量 change、统一管线）。
 > 来源: 用户指示"再打扫一遍：spec 是否啰嗦、是否与代码/Prompt 对齐、registry `[DEPRECATED]` 能清多少清多少"。
 > 承接: CLS-084（`spec-drift-audit-remediation-and-requirement-slimming`，2026-09-01 关闭——修好了 requirement 粒度，本轮做**减量、堵盲区、清账本**）。
 > 复核说明: 本文件自包含。§1 每条事实附【复现】命令；§3 每批附判定规则与边界；§2.0/§2.3 为分割触点与红线；§8 为主线进度 checkitems。
@@ -217,7 +217,7 @@
 ## 4. 全局验收度量（随每批提交落地 before/after）
 
 - [ ] 全库无 requirement 块 > 160 行（含 post-final-recovery 357 与 R2 长尾全部）。**⚠️ 待拍板（2026-09-03 实测）**：全库 ≥160 行块共 **21 块**——11 块 ≥190 在 R2 清单内；160–190 区间另有 10 块不在任何批次清单（reference-flat-format 187 / agent-command-surface 187 / subagent-node-contract 182 / CPT-004 179 / RWP 177 / version-management 174 / CDP-Final 173 / change-feedback-loop 171 / HITL1 163 / wave1-intake 161）。二选一：扩 R2 长尾覆盖全量 ≥160，或本条验收口径改为 ≥190。
-  > **REVIEW 建议（2026-09-03）**：验收口径改 **≥190**（R2 清单 = 验收对象，可判定）；160–190 的 10 块登记为观察名单，任一吸积破 190 即入下一轮长尾批。扩 R2 长尾会把 R2 从 3-4 change 膨胀到 ~7+，违反 CLS-084 复盘的 pacing 教训。**待用户拍板。**
+  > **REVIEW 建议（2026-09-03）**：验收口径改 **≥190**（R2 清单 = 验收对象，可判定）；160–190 的 10 块登记为观察名单，任一吸积破 190 即入下一轮长尾批。扩 R2 长尾会把 R2 从 3-4 change 膨胀到 ~7+，违反 CLS-084 复盘的 pacing 教训。**✅ 已拍板（2026-09-03）：采用 ≥190 + 观察名单。**
 - [ ] `agent/delegated-work-units` 总行数 before/after 随 R1 提交报告（基线 2360；目标量级以 R0 扫描器实测为准）。
 - [ ] registry：15 死前缀全部注记/迁出；61 条 DEPRECATED 核对对账表入档；活跃 ID 与政策零变化；`check-project-reqs` 全程绿。
 - [ ] §-guard 覆盖 prompt 自引用；引擎幽灵符号泛化 checker 接入 check-all；全库首扫定标。
@@ -249,29 +249,68 @@
 
 ---
 
-## 8. 主线进度（checkitems；每批落地 = 一个 OpenSpec change 走全管线）
+## 8. 主线进度（change 视角 tracking；2026-09-03 REVIEW 后重构）
 
-**落地方式（每批一致）**：OpenSpec change 全管线 `/opsx:propose → /polish-openspec-change → /opsx:apply → npm test + governance:check → /opsx:archive + finalize-change-archive.mjs → git 单提交`。
-**执行序与依赖**：R0 → R1（= 独立 PLAN `spec-lean-capability-split-dwu.md`）→ R2 → R3 → R4 → R5；R3/R4 无前置依赖，可插空。
+> 重构原则：少量 change（4 必做 + 1 条件）、每 change 独立命名与 checkitem、统一走 polish 管线；R0–R5 批次作为 scope 映射保留，不再单独作为跟踪单位。
 
-- [ ] **R0 工具先行**：复述候选扫描器（只出候选、人审定稿）+ 通用装配工具（spec + 分组 YAML → delta + 守恒校验）。验收：DWU/CTS 候选表交叉一致；通用工具 R2 首用零返工。
-- [ ] **R1 DWU capability 身份迁移**（独立 PLAN `spec-lean-capability-split-dwu.md`；前置 = 其 §6 四决策点复核通过）
-  - [ ] R1a 测绘（37 块新家判定 + WSU/WUP/WUC 新 ID 分配表 + 53 处引用清单 + `@impl` 清单 + doc-lock 清单）
-  - [ ] R1b 迁移 change（原子：3 新 capability spec + 母体瘦身 + registry `[DEPRECATED]`/新 ID + catalog 3 新行与 Purpose 改写 + `@impl`/doc-lock 对齐）
-  - [ ] R1c 迁移后指针化 + before/after 度量随提交
-- [ ] **R2 pointerization 第二波 + 长尾**（设计 = `spec-lean-f4-megablock-deepdive.md` 十块处置表）
-  - [ ] post-final-recovery 357 块 ×4
-  - [ ] content-delivery-phase-content 257 块 ×3
-  - [ ] cli-phase-transition 241 块 ×3
-  - [ ] research-wave-phase-content 234 块 ×3 + 12 行复述甄别
-  - [ ] semantic-fact-closure 193 块 ×3
-  - [ ] workflow-directory-contract 197 块 ×2
-  - [ ] seed-topic-materialization 196 块 ×2
-  - [ ] runtime-reentry-debuggability 193 块 ×2
-  - [ ] artifact-persistence-recovery 190 块 ×2
-  - [ ] rerun-incremental-node 191 行块 ×2（2026-09-03 补记，处置初稿见深挖 §11）
-- [ ] **R3 registry 卫生**：~~15 死前缀注记~~（✅ 已存在，降级为注记事实核对）+ 61 条 DEPRECATED 描述核对 + old→new 对账表（含 R1 迁移映射）
-- [ ] **R4 guard 扩展**（基线 guard 已落地，纯扩展）：prompt 内部 `§X.Y` 自引用可解析 + 引擎导航注释幽灵符号 checker（两者接入 check-all）
-- [ ] **R5 housekeeping**：小修合并（M1/M4/M5 若前批未顺手处理；REVIEW 2026-09-03：M5 的 "DEW L1102" 行号锚已漂移——BUG-252/253 后 L1102 为空行，执行时按内容重定位）
+**统一落地管线（每个 change 一致）**：
+`/opsx:propose` → `/polish-openspec-change`（≥2 passes；`openspec validate --strict` + `git diff --check` + `governance:check` 全绿 → ready for apply）→ `/opsx:apply` → 全量 `npm test` + `governance:check` → `/opsx:archive` + `node openspec/governance/finalize-change-archive.mjs --change <name>` → git 单提交 + before/after 度量随提交。
 
-- [ ] **完成定义**：§8 全勾 → 按 `_backlog/plans/README.md` 四步移档关闭本 plan。
+**启动前决策门（2026-09-03）**：
+
+| # | 决策 | 状态 |
+|---|---|---|
+| G1 | §4 验收口径：**160 vs 190** —— REVIEW 建议 ≥190 + 160–190 十块观察名单 | ✅ 2026-09-03 用户拍板：**≥190 + 观察名单** |
+| G2 | R1c 指针化**并入 C2**（迁移任务全绿后进入尾段任务，推荐）vs 独立 change（DWU plan T3 原设计） | ✅ 2026-09-03 用户拍板：**并入 C2 尾段** |
+| G3 | DWU §6 四决策点（ID 策略 / 四分法 / Purpose 措辞 / supersession 归属） | ✅ REVIEW 2026-09-03 建议全部通过（判定书 §1） |
+
+**Change 总表（执行序 = 依赖序）**：
+
+| change 名 | scope | 内容一句话 | 前置 |
+|---|---|---|---|
+| C1 `spec-lean-restatement-tooling` | R0 | 复述候选扫描器 + 通用装配工具（无 spec delta） | 无 |
+| C2 `dwu-capability-identity-split` | R1 | DWU 一变四原子迁移 + 尾段指针化（G2 已拍板并入） | C1；G3 ✅ |
+| C3 `megablock-requirement-split` | R2 | 11 块 → 27 子块机械拆分 + 守恒断言 | C1；G1 |
+| C4 `registry-hygiene-and-guard-extensions` | R3+R4 | 59 条 DEPRECATED 核对 + old→new 对账表 + guard 两扩展 | C2（对账表含迁移映射） |
+| C5 `spec-lean-housekeeping` | R5 | 小修合并（**条件性**：仅当 C1–C4 有未顺手处理的遗留才立项；否则记录"无遗留"） | C4 |
+
+### C1 `spec-lean-restatement-tooling`（R0 工具先行；无行为面）
+
+- [x] 1.1 复述候选扫描器：按 §2.1 规则 1 输出候选段落行号表（只出候选、人审定稿，不自动改写）✅ 2026-09-04 落地（`openspec/governance/scan-restatement-candidates.mjs` + 共享解析器 `spec-unit-parse.mjs`）
+- [x] 1.2 通用装配工具：spec + 分组 YAML → delta + 内容守恒校验（深挖执行注记 2 的多重集合守恒内置）✅ 2026-09-04 落地（`openspec/governance/assemble-spec-delta.mjs`，三重断言：declared==actual / 覆盖完备 / 多重集合守恒）
+- [x] 1.3 验收：DWU 候选表与 §1.5 生成类散文锚点（36 命中）交叉一致（实测 13/13 散文域命中全覆盖 + 23 处场景命中按 §2.2 刻意排除，见 calibration-dwu.md）；工具已随 change `2026-09-04-spec-lean-restatement-tooling` 归档（finalizer 19/19）
+
+### C2 `dwu-capability-identity-split`（R1 主力；设计 = `spec-lean-capability-split-dwu.md`）
+
+- [ ] 2.1 R1a 测绘（propose 阶段交付：39 块新家判定 + WSU/WUP/WUC ID 分配表 + 引用清单 + `@impl` 清单 + doc-lock 清单；DEW-030 归属按 REVIEW 证据定案）
+- [ ] 2.2 R1b 原子迁移（3 新 capability spec + 母体瘦身 + registry `[DEPRECATED]`/新 ID + catalog 3 新行与 Purpose 改写 + `@impl`/doc-lock 对齐；禁止半迁移态）
+- [ ] 2.3 R1c 迁移后指针化（G2 已拍板并入：迁移任务全绿后进入）
+- [ ] 2.4 before/after 度量随提交（基线 2448）
+
+### C3 `megablock-requirement-split`（R2；设计 = `spec-lean-f4-megablock-deepdive.md` 处置表）
+
+- [ ] 3.1 post-final-recovery 358 块 ×4
+- [ ] 3.2 content-delivery-phase-content 258 块 ×3
+- [ ] 3.3 cli-phase-transition 241 块 ×3
+- [ ] 3.4 research-wave-phase-content 235 块 ×3 + 12 行复述甄别
+- [ ] 3.5 semantic-fact-closure 193 块 ×3
+- [ ] 3.6 workflow-directory-contract 197 块 ×2
+- [ ] 3.7 seed-topic-materialization 196 块 ×2
+- [ ] 3.8 runtime-reentry-debuggability 193 块 ×2
+- [ ] 3.9 artifact-persistence-recovery 190 块 ×2
+- [ ] 3.10 rerun-incremental-node 191 块 ×2（深挖 §11 REVIEW 通过；K1/K2 标题措辞带出跨块依赖）
+- [ ] 3.11 验收口径（G1 已拍板）：**全库无块 >190**（R2 清单即验收对象）+ 160–190 十块观察名单登记于 §4
+- [ ] 备选：若单 change 评审过载，按域拆 2（research 系 / 其余）——默认单 change
+
+### C4 `registry-hygiene-and-guard-extensions`（R3+R4 合并；均无行为面）
+
+- [ ] 4.1 59 条 DEPRECATED 描述逐条核对（仅修正事实性错误）
+- [ ] 4.2 old→new 对账表入档（含 C2 迁移映射）
+- [ ] 4.3 `check-spec-section-references.mjs` 扩展：phase 节点/playbook 内部 `§X.Y` 自引用可解析
+- [ ] 4.4 引擎导航注释幽灵符号 checker 泛化（104 文件 0 幽灵成为机器断言；check-*.mjs 命名自动接入）
+
+### C5 `spec-lean-housekeeping`（R5；条件性）
+
+- [ ] 5.1 盘点 C1–C4 遗留小修（M1 `migrate_legacy` 显式化 / M4 `journal_disposition` 并集措辞 / M5 DEW 场景标题注记——L1102 锚已漂移按内容重定位）；有遗留 → 立项合并批；无遗留 → 记录关闭
+
+- [ ] **完成定义**：C1–C4 全勾 + C5 定案 → §4 全局验收逐项核对 → 按 `_backlog/plans/README.md` 四步移档关闭本 plan。
