@@ -23,6 +23,8 @@
 
 ## 最近关闭 (2026-09-04)
 
+| `spec-lean-pointerization-and-registry-hygiene` | CLS-086：C1–C5 全落地，四个 OpenSpec change 全管线归档（finalizer 均 19/19）——restatement-tooling / dwu 一变四 / megablock 11→30 子块 / registry+guard 扩展；全库无 requirement 块 >190 行；C5 无遗留。 |
+
 | Plan | 关闭依据 |
 |------|----------|
 | `regression-suite-runtime-profiling-and-speedup` | CLS-085：A/F 路线经 change `regression-suite-tooling-speedup` 落地归档（finalizer 19/19，含归档自跑全量回归闸）——runner wrapper c8 + NODE_COMPILE_CACHE + 权重表；实测修正三个推断（并发非主杠杆、LPT 被探针证伪、C 路线前提已落地）；墙钟 281.8s→中位 ≈226s 全绿。D/E 投资转 `regression-suite-step2-heavy-chain-investment`。 |

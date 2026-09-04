@@ -1,6 +1,6 @@
 # Plan: spec-lean-pointerization-and-registry-hygiene
 
-> 创建: 2026-09-01 | 状态: **活跃（事实与思路定稿；主线进度见 §8（change 视角 tracking）；执行待用户指令）**
+> 创建: 2026-09-01 | 状态: **已关闭（CLS-086，2026-09-04：C1–C5 全落地，四个 change 归档，finalizer 均 19/19）**
 > 状态同步: 2026-09-03——主线批次 R0–R5 均未启动；期间仓库完成 BUG-248..253 修复与 CLS-085 回归套件提速（每批全量 npm test 成本下降）。两处顺路变化：15 死前缀注记已存在（R3 第一项过时，见 §3）；§-guard 基线在本 plan 定稿前已落地（4a18e9fdf），R4 仅剩扩展项。事实基线数字更新见 §1 各同步注。**2026-09-03 REVIEW 完成**（四份 plan 复核通过，3 处数字修正，判定书 `_backlog/_scratch/handoff-spec-lean-plan-review-verdict.md`）；§8 已重构为 change 视角 tracking（少量 change、统一管线）。
 > 来源: 用户指示"再打扫一遍：spec 是否啰嗦、是否与代码/Prompt 对齐、registry `[DEPRECATED]` 能清多少清多少"。
 > 承接: CLS-084（`spec-drift-audit-remediation-and-requirement-slimming`，2026-09-01 关闭——修好了 requirement 粒度，本轮做**减量、堵盲区、清账本**）。
@@ -304,13 +304,13 @@
 
 ### C4 `registry-hygiene-and-guard-extensions`（R3+R4 合并；均无行为面）
 
-- [ ] 4.1 59 条 DEPRECATED 描述逐条核对（仅修正事实性错误）
-- [ ] 4.2 old→new 对账表入档（含 C2 迁移映射）
-- [ ] 4.3 `check-spec-section-references.mjs` 扩展：phase 节点/playbook 内部 `§X.Y` 自引用可解析
-- [ ] 4.4 引擎导航注释幽灵符号 checker 泛化（104 文件 0 幽灵成为机器断言；check-*.mjs 命名自动接入）
+- [x] 4.1 76 条 retired 行(live 前缀)描述核对——2026-09-04 预研定案 0 事实性错误需修(15 死前缀注记/替换指针已核)
+- [x] 4.2 old→new 对账表入档(ledger-accounting.md,含 C2 迁移映射 + 15 死前缀回声)
+- [x] 4.3 `check-spec-section-references.mjs` 扩展:workflows 树内裸 §X.Y 自引用 + 跨文件 .md §X.Y 解析(首扫修复 phase-hitl2 一处悬空引用,0 violations)
+- [x] 4.4 引擎导航注释幽灵符号 checker(`check-engine-nav-symbols.mjs`)泛化:19 导航注释 0 幽灵(清理 8 文件过时注释),接入 check-all
 
 ### C5 `spec-lean-housekeeping`（R5；条件性）
 
-- [ ] 5.1 盘点 C1–C4 遗留小修（M1 `migrate_legacy` 显式化 / M4 `journal_disposition` 并集措辞 / M5 DEW 场景标题注记——L1102 锚已漂移按内容重定位）；有遗留 → 立项合并批；无遗留 → 记录关闭
+- [x] 5.1 盘点定案:无遗留——M1 `migrate_legacy` 已在 canonical-topic-state L118 显式化;M4 `journal_disposition` 现为 WUC-003 闭集枚举;M5 锚点随母体瘦身消失（M1 `migrate_legacy` 显式化 / M4 `journal_disposition` 并集措辞 / M5 DEW 场景标题注记——L1102 锚已漂移按内容重定位）；有遗留 → 立项合并批；无遗留 → 记录关闭
 
-- [ ] **完成定义**：C1–C4 全勾 + C5 定案 → §4 全局验收逐项核对 → 按 `_backlog/plans/README.md` 四步移档关闭本 plan。
+- [x] **完成定义**:C1–C4 全勾 + C5 无遗留 → 四步移档关闭本 plan(2026-09-04)：C1–C4 全勾 + C5 定案 → §4 全局验收逐项核对 → 按 `_backlog/plans/README.md` 四步移档关闭本 plan。
