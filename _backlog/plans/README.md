@@ -18,12 +18,8 @@
 | Plan | 简述 | 状态 |
 |------|------|------|
 | [`regression-suite-step2-heavy-chain-investment`](regression-suite-step2-heavy-chain-investment.md) | 回归套件第二步投资计划：P0 e2e 全链去重（rerun-round-continuity 同链爬两遍 / post-final 同族复核）、P1 operate-work-unit 121 spawn 点 + finalizer 注入（独立 change）、P2 同族批量、P3 加权分片；tooling 已到顶（1061 CPU-s / 8 核下限 ≈133s），目标 P2 后 ~120-140s | 计划已成文；执行待用户指令 |
-| [`spec-lean-capability-split-dwu`](spec-lean-capability-split-dwu.md) | `agent/delegated-work-units` 一变四 capability 拆分（母体 assignment & briefing + submission/preflight/correction）：设计定稿，§6 四个决策点待用户复核；复核通过后 T1 测绘起跑 | 设计定稿；执行待指令 |
-| [`spec-lean-pointerization-and-registry-hygiene`](spec-lean-pointerization-and-registry-hygiene.md) | 第二轮打扫：R0 工具先行（复述扫描器+装配通用化）、R2 pointerization 减量（全部 >160 块；DWU 已剥离至独立 plan）、R3 registry 卫生（15 死前缀+61 条 DEPRECATED 核对）、R4 §-guard 扩展、R5 housekeeping | 事实与思路已成文；R1 已剥离至独立 plan；执行待用户指令 |
 
 ## 最近关闭 (2026-09-04)
-
-| `spec-lean-pointerization-and-registry-hygiene` | CLS-086：C1–C5 全落地，四个 OpenSpec change 全管线归档（finalizer 均 19/19）——restatement-tooling / dwu 一变四 / megablock 11→30 子块 / registry+guard 扩展；全库无 requirement 块 >190 行；C5 无遗留。 |
 
 | Plan | 关闭依据 |
 |------|----------|
@@ -37,7 +33,6 @@
 
 ### 参照资料（非 plan，供后续 change 引用）
 
-- `spec-lean-f4-megablock-deepdive.md` — 活跃 plan `spec-lean-pointerization-and-registry-hygiene` 的 F4 深挖参照：10 块 ≥190 行 requirement 的逐块处置设计（分割/清理候选/执行约束），R2 批次执行与复核以此为据。
 - `user-intent-carry-through-design-analysis.md`、`rerun-feedback-carry-through-design-analysis.md`、`user-intent-carry-through-implementation-plan.md` — 已随 `strengthen-user-intent-carry-through` 完成并移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
 - `machine-checks-catalog.md` 与 `midrun-reading-burden-audit.md` 已随 `midrun-burden-reduction-and-residual-drift` plan 归档至 `../_done/_closed_plans/`，C3 触发时取用。
 
