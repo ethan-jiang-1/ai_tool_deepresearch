@@ -47,6 +47,46 @@ for (const specPath of specFiles) {
   }
 }
 
+// Rule 3 (2026-09-04 registry-hygiene-and-guard-extensions): inside the Harness
+// workflow/command_playbook tree, a bare `§TOKEN` reference must resolve to a
+// numbered heading in the SAME file; `<file>.md §TOKEN` must resolve in target.
+const workflowRoot = join(root, 'DEEP_RESEARCH_HARNESS', 'workflows');
+const playbookRoot = join(root, 'DEEP_RESEARCH_HARNESS', 'command_playbook');
+const treeFiles = [...walk(workflowRoot), ...walk(playbookRoot)];
+const CROSS_REF_RE = /\b([\w.-]+\.md)`?\s*§\s*(\d+(?:\.\d+)*[a-z]?)/g;
+const BARE_REF_RE = /(?:^|[\s（(`])\u00a7\s*(\d+(?:\.\d+)*[a-z]?)(?=[\s.，。、：:)\u201d`]|$)/g;
+function headingReFor(token) {
+  const esc = token.replace(/\./g, '\\.');
+  return new RegExp(`^#{2,4}\\s+${esc}(?:[\\s.：:])`, 'm');
+}
+for (const filePath of treeFiles) {
+  const text = readFileSync(filePath, 'utf8');
+  const rel = relative(root, filePath);
+  const lines = text.split('\n');
+  const base = filePath.split('/').pop();
+  for (const [i, line] of lines.entries()) {
+    for (const m of line.matchAll(CROSS_REF_RE)) {
+      const [, fname, token] = m;
+      if (fname === base) continue;
+      const target = treeFiles.find((f) => f.endsWith(`/${fname}`));
+      if (!target) {
+        failures.push(`${rel}:${i + 1} workflows cross-ref target file not found: ${fname}`);
+        continue;
+      }
+      if (!headingReFor(token).test(readFileSync(target, 'utf8'))) {
+        failures.push(`${rel}:${i + 1} section §${token} not found in ${fname} (file: ${relative(root, target)})`);
+      }
+    }
+    const sanitized = line.replace(CROSS_REF_RE, '');
+    for (const m of sanitized.matchAll(BARE_REF_RE)) {
+      const token = m[1];
+      if (!headingReFor(token).test(text)) {
+        failures.push(`${rel}:${i + 1} self section §${token} not found in ${base}`);
+      }
+    }
+  }
+}
+
 if (failures.length) {
   for (const f of failures) console.error('FAIL check-spec-section-references —', f);
   process.exit(1);

@@ -5,7 +5,7 @@
 // wave-depth-contracts.mjs — deterministic Wave1/Wave2 depth-adjacent checks
 // @impl WAI-005, WAI-008, RWG-002, RWG-003, RWG-005, RWG-017, WTS-004, WTS-008, WTS-009, WTS-010, CRC-007, WPG-003, WPG-005, WPG-012
 
-// Navigation: public API — exactUrlKey, normalizeUrlForCacheMapping, evaluateWave1FocusCoverage, readWave0SourceUrls, deriveWave1NewSourceFloor, checkSourceClaimCacheMapping, checkWave1DepthReviewContract, loadWave2FindingIndexFact, evaluateWave2PairFacts, checkWave2FindingIndexContract, topicSlugFromDepthReviewTarget
+// Navigation: public API — evaluateWave1FocusCoverage, readWave0SourceUrls, deriveWave1NewSourceFloor, checkSourceClaimCacheMapping, checkWave1DepthReviewContract
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { basename, join, resolve as resolvePath } from 'node:path';
 import { parse as parseYaml } from 'yaml';

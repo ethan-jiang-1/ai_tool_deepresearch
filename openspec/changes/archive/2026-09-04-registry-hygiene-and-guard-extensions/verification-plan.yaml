@@ -1,0 +1,51 @@
+schema_version: verification-routing/v1
+change: registry-hygiene-and-guard-extensions
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      两 checker 为纯函数(正则提取 + 存在性断言),由 tests/governance/ 单测守护
+      (含真假符号 fixture 与缺引用负向)。
+  integration:
+    status: not_applicable
+    rationale: 无跨模块运行时交互;全库首扫由 checker 自身手动跑 + governance:check 断言。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: 无 temporary bundle 场景。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: 不涉及 experiments_playbook/ 与真实 Agent 执行。
+claims:
+  - id: section-reference-guard-extension
+    statement: >-
+      check-spec-section-references 扩展后对 workflows 树(phase 节点/playbook)内
+      自引用与跨文件 §X.Y 引用做解析断言;缺失引用 fail-closed 输出 file:line 根因,
+      全库首扫 0 violations。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/governance/spec-section-reference-extension.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: engine-nav-symbols-contract
+    statement: >-
+      check-engine-nav-symbols 对 DEEP_RESEARCH_HARNESS 全库 `// Navigation: public API`
+      注释声明的符号断言同文件存在,0 幽灵;幽灵 fail-closed 给首根因。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/governance/check-engine-nav-symbols.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

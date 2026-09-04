@@ -64,7 +64,7 @@ node --input-type=module -e "import { loadGateDefinition, readBundleProfile, eva
 
 - 从 Wave0/Wave1/Wave2 artifact 中提取 research review 与一个当前可用推荐：
   - 目前证据足够回答的是：概括各 topic evidence-summary 中已确认的关键发现
-  - 仍然不足或需要谨慎的地方是：汇总 question-list 中的 open/gap 问题 + 静默期降级汇总（`shared-silent-execution.md` §2 的 HITL2 汇总）
+  - 仍然不足或需要谨慎的地方是：汇总 question-list 中的 open/gap 问题 + 静默期降级汇总（`shared-silent-execution.md`「Silent hold」的 HITL2 降级语义）
   - 本轮已声明 research focus 的当前承接：从 `rb_plan.md## Constraints > ### User Research Controls` baseline 与 newest complete Decisions revision 识别已声明 focus，读对应 Topic 的 `artifacts/wave1/{topic}/depth-review.yaml#/focus_coverage`（或 reference evidence map 的 current focus increments），列出每个 focus 的 covered/partial/blocked/not declared；已声明但 not declared 的 drop 必须可见，不得静默省略；此呈现不新增 Gate/field/weight/quota
   - 当前推荐、理由与影响：从 direct facts、legal path 和 shared availability 中选择一个用户可理解的动作
 - **展示 prompt 之前先写 durable state**：产出 decision brief artifact（`artifacts/hitl2/decision-brief.md`）+ 将 `hitl2.status` 设为 `pending_user`。此步骤不可跳过——session 断掉后 Agent 恢复时 SHALL 能通过 `hitl2.status = pending_user` 得知用户尚未回复

@@ -1,0 +1,9 @@
+schema_version: semantic-closure/v1
+change: registry-hygiene-and-guard-extensions
+status: not_applicable
+reason: >-
+  本 change 纯治理工具扩展(check-spec-section-references 增 workflows 树内引用规则、
+  新 check-engine-nav-symbols 断言 nav 注释符号存在性)与账本文档归档。不改变任何
+  semantic fact family 的 verdict consumer、runtime 语义或 reader-facing view;
+  新 checker 为只读存在性断言,不新增 verdict 语义。catalog 全部 family 与
+  observable surface(文档引用坐标 + 注释符号)无交集,故无 affected family。
