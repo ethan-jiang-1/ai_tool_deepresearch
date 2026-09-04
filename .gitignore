@@ -78,3 +78,8 @@ _subagents/
 .codewhale/
 # ===== Transient working files =====
 _backlog/_scratch/
+
+_fetch_*/
+
+# Node V8 compile cache (scripts/run-tests.mjs NODE_COMPILE_CACHE)
+/.cache/

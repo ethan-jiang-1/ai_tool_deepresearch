@@ -1,0 +1,59 @@
+schema_version: verification-routing/v1
+change: regression-suite-tooling-speedup
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      wrapper 的纯函数（文件发现契约：跳过 .test-* 一次性目录与符号链接目录；
+      LPT 排序决定论：权重降序、未登记文件按发现序垫后、稳定排序）用 node:test
+      单测钉住，与 tests/engine/test-shard-partition.test.mjs 对
+      scripts/test-shard.mjs 的既有先例同构。
+  integration:
+    status: not_applicable
+    rationale: >-
+      wrapper 的真实行为闭环是"npm test 全绿 + 退出码直传"，由 tasks.md 的
+      静默机器验收协议（load 水位记录 + 3 次取中位）覆盖；它 spawn 真实
+      node --test 子进程，与 verification-routing integration 类
+      external_calls=none 的路由元组不相容，且它不产生任何 spec 级行为断言，
+      强行路由等于为 tooling 发明 requirement，违反 catalog 纪律。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: 本 change 不触碰 tests/e2e/ 任何内容；链路分解属第二步 change。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: 本 change 不涉及 experiments_playbook/ 用例与真实 Agent 执行。
+claims:
+  - id: test-runner-discovery-contract
+    statement: >-
+      run-tests wrapper 的文件发现与现行为逐字等价：递归收集 tests/ 下
+      *.test.mjs，跳过以 .test- 开头的一次性输出目录，跳过符号链接目录，
+      且不跟随符号链接（与 scripts/test-shard.mjs 的 discovery 契约同源）。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/test-runner-entry.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: test-runner-lpt-ordering-contract
+    statement: >-
+      run-tests wrapper 的排序函数按提交的 test-weights.json 权重降序排列
+      测试文件；权重缺失或过期的文件保持发现序相对位置垫后；排序对相同输入
+      决定论且稳定，仅改变调度序、永不改变被执行的文件集合。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/test-runner-entry.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

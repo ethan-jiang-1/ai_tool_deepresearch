@@ -1,0 +1,11 @@
+schema_version: semantic-closure/v1
+change: regression-suite-tooling-speedup
+status: not_applicable
+reason: >-
+  本 change 是纯测试运行器 tooling（package.json test 入口改为 wrapper 脚本、
+  并发度、NODE_COMPILE_CACHE、最重优先文件排序）。不触碰任何 semantic fact
+  family 的 verdict consumer，不改变 gate/queue/work-unit/research 的任何
+  runtime 语义结论，也不新增或改变具名 state、projection、status、Module
+  或 reader-facing view。catalog（openspec/governance/semantic-fact-families.yaml）
+  中全部 family 的 bounded_question 均与本 change 的 observable surface
+  （npm test 的进程编排方式与墙钟）无交集，故无 affected family。

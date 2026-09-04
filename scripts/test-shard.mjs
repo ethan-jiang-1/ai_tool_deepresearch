@@ -9,6 +9,8 @@
 // running all n shards in parallel yields wall time ~= full parallel / n.
 //
 // The pure partition function is exported for unit testing.
+// discoverTestFiles is exported so `npm test` (scripts/run-tests.mjs) and the
+// shard runner share one file-discovery source of record.
 import { lstatSync, readdirSync, realpathSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
@@ -22,7 +24,7 @@ export function shardFiles(files, n, m) {
   return files.filter((_, i) => i % shardCount === shardIndex);
 }
 
-function discoverTestFiles(baseDir, prefix = '') {
+export function discoverTestFiles(baseDir, prefix = '') {
   const out = [];
   for (const entry of readdirSync(baseDir)) {
     if (entry.startsWith('.test-')) continue; // disposable output dirs

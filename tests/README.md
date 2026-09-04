@@ -4,15 +4,27 @@ This directory owns all JS-led project tests: `unit`, `integration`, and `determ
 
 ## How to Run
 
-- Use `npm test` for the full project regression suite. Node's test runner
-  executes files **in parallel** by default; this parallel run is the
-  canonical full-suite mode (measured ~139s on the 8-core dev machine) and is
-  flake-free since the shared-snapshot/bundle-name races were removed
-  (2026-08-22: `parallelize-regression-suite` + `de-spawn-bundle-instantiation`
-  changes).
+- Use `npm test` for the full project regression suite. The entry is
+  `scripts/run-tests.mjs`, which discovers the same `tests/**/*.test.mjs` set
+  (excluding disposable `.test-*` output directories and symlinked dirs, via
+  the shared `scripts/test-shard.mjs` discovery), runs `node --test` at
+  `os.availableParallelism()` concurrency, and sets `NODE_COMPILE_CACHE` under
+  the gitignored `/.cache/` for a cross-process V8 compile cache. The wrapper
+  adds no verdict logic: stdio and the exit code are passed through verbatim.
+  Other flags are forwarded to `node --test` (a trailing
+  `--test-concurrency` overrides the wrapper's), so the serial measurement
+  mode below still works.
 - Serial mode (`npm test -- --test-concurrency=1 --test-reporter=tap`) is a
   **measurement mode only** for per-file timing baselines, not the canonical
   entry (~489s).
+- `scripts/test-weights.json` is a performance projection (per-file wall
+  seconds, contention-inflated 8-way methodology — relative order only). It
+  is consumed by heavy-file triage for the spawn-cost reduction change; the
+  CLI-arg LPT scheduling it was originally generated for is **not applied**
+  (`node --test` sorts file args lexicographically — R1 probe, 2026-09-04).
+  Regenerate with `node scripts/regen-test-weights.mjs` (~4-8 min) when a new
+  file heavier than ~5s lands or the heavy-file ranking drifts; a missing or
+  stale table never affects correctness, only triage data quality.
 - `npm run test:shard <n> <m>` runs the m-th (1-based) deterministic shard of
   the discovered suites for parallel execution across n workers/CI shards
   (wall ~= full parallel / n). See `scripts/test-shard.mjs`.
