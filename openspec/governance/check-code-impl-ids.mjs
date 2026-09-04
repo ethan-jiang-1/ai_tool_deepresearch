@@ -54,10 +54,23 @@ const registered = new Set(
 
 function walkMjs(dir, out = []) {
   if (!existsSync(dir)) return out;
-  for (const name of readdirSync(dir)) {
-    if (SKIPPED_DIRS.has(name)) continue;
+  let entries;
+  try {
+    entries = readdirSync(dir);
+  } catch (err) {
+    if (err.code === 'ENOENT') return out;
+    throw err;
+  }
+  for (const name of entries) {
+    if (SKIPPED_DIRS.has(name) || name.startsWith('.')) continue;
     const entry = join(dir, name);
-    const s = statSync(entry);
+    let s;
+    try {
+      s = statSync(entry);
+    } catch (err) {
+      if (err.code === 'ENOENT') continue;
+      throw err;
+    }
     if (s.isDirectory()) walkMjs(entry, out);
     else if (name.endsWith('.mjs')) out.push(entry);
   }
@@ -75,7 +88,14 @@ for (const surface of COVERED_SURFACES) {
   for (const file of walkMjs(surfaceDir)) {
     filesScanned += 1;
     const rel = relative(ROOT, file).replace(/\\/g, '/');
-    const lines = readFileSync(file, 'utf8').split('\n');
+    let text;
+    try {
+      text = readFileSync(file, 'utf8');
+    } catch (err) {
+      if (err.code === 'ENOENT') continue;
+      throw err;
+    }
+    const lines = text.split('\n');
     for (let index = 0; index < lines.length; index += 1) {
       const line = lines[index];
       if (!line.includes('@impl')) continue;

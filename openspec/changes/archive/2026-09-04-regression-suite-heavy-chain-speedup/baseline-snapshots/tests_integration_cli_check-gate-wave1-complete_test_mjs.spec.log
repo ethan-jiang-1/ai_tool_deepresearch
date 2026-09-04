@@ -1,0 +1,49 @@
+▶ check-gate-wave1-complete
+  ✔ projects the same candidate-exact materialization hint through inspect and formal Gate (653.968041ms)
+  ✔ keeps the floor outcome while making omitted supplementary review sync the primary inspect and Gate repair (662.332875ms)
+  ✔ 1. happy path: evidence-summary with source URL + key findings passes (324.79975ms)
+  ✔ 1h. treats an exact hash-valid superseded predecessor as historical rather than delegated bypass (896.113958ms)
+  ✔ 1j. rejects a malformed carried target declaration at the existing depth-review coordinate (324.166458ms)
+  ✔ 1i. masks Wave1 declaration-dependent symptoms behind one recoverable parent (414.801209ms)
+  ✔ 1h. keeps bounded fresh/rerun-added Wave1 contract and Gate parity (839.335ms)
+  ✔ 1a. keeps a historical Wave1 binding as the direct current-topic root before count-floor evaluation (549.856667ms)
+  ✔ 1d. tolerates equivalent headings, bare URLs, paragraph findings, and numbered Key Facts (517.798167ms)
+  ✔ 1g. accepts UID-only reference metadata through the canonical topic resolver (525.021166ms)
+  ✔ 1g. reports one retired-key root for a dual binding without downstream floor noise (492.370209ms)
+  ✔ 1j. routes raw document markup through the existing Gate and side-effect-free inspect repair (514.085167ms)
+  ✔ 1e. fewer Key Facts does not affect numeric count or revive the retired quantity blocker (505.648708ms)
+  ✔ 1f. an empty required question-list semantic section remains blocking once (517.722375ms)
+  ✔ 1a. rejects noncanonical required output roles at submission (29.852583ms)
+  ✔ 1b. fails when a required artifact exists but canonical submitted coverage is missing (312.096ms)
+  ✔ 1c. passes and reports canonicalization when depth-review reviewed refs have harmless trailing slash (298.128667ms)
+  ✔ 2. fails when per-topic evidence-summary is missing (275.190083ms)
+  ✔ 2b. emits delegated bypass diagnostics once per formal invocation (155.479167ms)
+  ✔ 3. fails when source URL is missing from evidence-summary (363.840042ms)
+  ✔ 4. fails when key findings section is empty (331.026542ms)
+  ✔ 5. fails when backfill tokens are stale in seed_topics (251.085084ms)
+  ✔ 6. fails on status drift (246.187375ms)
+  ✔ 7. fails when trace event (wave1_completion) is missing from rb_trace.jsonl (336.627959ms)
+  ✔ 7a. @impl TRW-007 ignores a forged wave1_completion whose bundle is the rb_status.json short name (255.351ms)
+  ✔ 7b. @impl TRW-007 accepts a CLI-written wave1_completion with the canonical bundle basename (239.270542ms)
+  ✔ 8. rejects reference files with placeholder source_url (example.com) (320.67975ms)
+  ✔ 9. rejects orphan reference files not declared in ledger (352.057541ms)
+  ✔ 10. accepts canonical YAML rich references without return-map fields (312.544ms)
+  ✔ 11. fails when depth-review.yaml is missing (453.154625ms)
+  ✔ 11a. gives inspect and Gate one current-topic submitted-backing root without fabrication advice (530.472958ms)
+  ✔ 12. fails when depth review has too few exact-new source URLs (329.756083ms)
+  ✔ 13. fails when accepted source claims lose cache content coverage (387.872333ms)
+  ✔ 14. passes after supplementary Wave1 repair is submitted and reviewed (504.259584ms)
+✔ check-gate-wave1-complete (14271.273208ms)
+▶ RWG-018 Wave1 direct adapter parity
+  ✔ 0a. projects the same direct roots for Key Findings and question sections (21.541416ms)
+  ✔ 0b. keeps URL, provenance, depth, return-map, and phase facts Wave-only (12.35375ms)
+  ✔ 0c. evaluates a parsed semantic descriptor without reusing a target-only default result (10.512541ms)
+✔ RWG-018 Wave1 direct adapter parity (57.279875ms)
+ℹ tests 37
+ℹ suites 2
+ℹ pass 37
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 14768.059833

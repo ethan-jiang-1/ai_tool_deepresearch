@@ -11,17 +11,53 @@
 // The pure partition function is exported for unit testing.
 // discoverTestFiles is exported so `npm test` (scripts/run-tests.mjs) and the
 // shard runner share one file-discovery source of record.
-import { lstatSync, readdirSync, realpathSync } from 'node:fs';
+import { existsSync, lstatSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-export function shardFiles(files, n, m) {
+export function loadWeights(weightsPath) {
+  if (!existsSync(weightsPath)) return {};
+  return JSON.parse(readFileSync(weightsPath, 'utf8'));
+}
+
+export function shardFiles(files, n, m, weights = {}) {
   const shardCount = Number(n);
   const shardIndex = Number(m);
   if (!Number.isInteger(shardCount) || shardCount < 1) return [];
   if (!Number.isInteger(shardIndex) || shardIndex < 0 || shardIndex >= shardCount) return [];
-  return files.filter((_, i) => i % shardCount === shardIndex);
+  if (!Array.isArray(files) || files.length === 0) return [];
+
+  // Pair files with original index and weight
+  const items = files.map((f, i) => {
+    const rawWeight = weights && Object.prototype.hasOwnProperty.call(weights, f) ? weights[f] : undefined;
+    const w = typeof rawWeight === 'number' && Number.isFinite(rawWeight) && rawWeight >= 0 ? rawWeight : 0;
+    return { file: f, index: i, weight: w };
+  });
+
+  // Sort descending by weight, breaking ties by original index to ensure determinism and stability
+  items.sort((a, b) => (b.weight - a.weight) || (a.index - b.index));
+
+  // Initialize shards
+  const shards = Array.from({ length: shardCount }, () => []);
+  const shardWeights = new Array(shardCount).fill(0);
+
+  // Greedy LPT assignment: assign each file to the shard with the lowest cumulative weight
+  for (const item of items) {
+    let minShard = 0;
+    for (let s = 1; s < shardCount; s++) {
+      if (
+        shardWeights[s] < shardWeights[minShard] ||
+        (shardWeights[s] === shardWeights[minShard] && shards[s].length < shards[minShard].length)
+      ) {
+        minShard = s;
+      }
+    }
+    shards[minShard].push(item.file);
+    shardWeights[minShard] += item.weight;
+  }
+
+  return shards[shardIndex];
 }
 
 export function discoverTestFiles(baseDir, prefix = '') {
@@ -46,7 +82,9 @@ function main() {
     process.exit(2);
   }
   const files = discoverTestFiles('tests', 'tests').sort();
-  const shard = shardFiles(files, n, m1 - 1);
+  const weightsPath = join(process.cwd(), 'scripts', 'test-weights.json');
+  const weights = loadWeights(weightsPath);
+  const shard = shardFiles(files, n, m1 - 1, weights);
   if (shard.length === 0) {
     console.error(`shard ${m1}/${n}: no files assigned (files=${files.length})`);
     process.exit(2);

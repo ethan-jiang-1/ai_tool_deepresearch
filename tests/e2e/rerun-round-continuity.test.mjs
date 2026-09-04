@@ -25,6 +25,7 @@ let snapshot;
 // once in before() and restored per variant.
 let wave2Ready;
 let wave2Snapshot;
+let rerunSnapshot;
 const TOPIC = { topic_uid: 'tp_11111111-1111-4111-8111-111111111111', id: 't1', slug: 'topic-a', title: 'Topic A', must_answer: ['How does rerun continuity preserve authority?'], scope_role: 'primary', depends_on_topic_uids: [] };
 
 function currentAvailableResearchAccess() {
@@ -467,13 +468,15 @@ before(() => {
   reachWave2(wave2Ready, { suffix: 'direction-shared' });
   wave2Snapshot = join(root, '.wave2-snapshot');
   cpSync(wave2Ready, wave2Snapshot, { recursive: true });
+  passAndEnter(wave2Ready, 'wave2-complete', 'phases/phase-wave2.md', 'wave2_complete');
+  rerunSnapshot = join(root, '.rerun-snapshot');
+  cpSync(wave2Ready, rerunSnapshot, { recursive: true });
 });
 after(() => cleanupRoot(root));
 
 describe('deterministic rerun round continuity', { timeout: 60000 }, () => {
   it('traverses the full rerun chain through production checkpoints', () => {
-    const bundle = restoreBundle(snapshot, baseline);
-    runRerunCycle(bundle);
+    const bundle = restoreBundle(rerunSnapshot, baseline);
     const status = readStatus(bundle);
     assert.equal(status.current_node, 'phases/phase-hitl2.md');
     assert.equal(status.current_gate, 'wave2_complete');
@@ -504,8 +507,7 @@ describe('deterministic rerun round continuity', { timeout: 60000 }, () => {
       .at(-1);
     assert.equal(firstReadiness?.next, 'phases/phase-final.md');
 
-    const rerunRound = restoreBundle(snapshot, baseline);
-    runRerunCycle(rerunRound);
+    const rerunRound = restoreBundle(rerunSnapshot, baseline);
     assert.equal(readStatus(rerunRound).current_node, 'phases/phase-hitl2.md');
 
     // Fixture-labeled replay of the prior accepted projection. The old receipt is
@@ -711,8 +713,7 @@ describe('deterministic rerun round continuity', { timeout: 60000 }, () => {
   });
 
   it('fails Wave2 on a missing required artifact without invoking its transition', () => {
-    const bundle = restoreBundle(snapshot, baseline);
-    reachWave2(bundle, { suffix: 'missing-wave2' });
+    const bundle = restoreBundle(wave2Snapshot, baseline);
     unlinkSync(join(bundle, 'artifacts/wave2/synthesis.md'));
     const before = authoritySnapshot(bundle);
     const result = runGate(bundle, 'wave2-complete', 'phases/phase-wave2.md', { expectedStatus: 1 });
@@ -855,14 +856,8 @@ describe('deterministic rerun round continuity', { timeout: 60000 }, () => {
   });
 
   it('fails a partial Wave2 artifact, repairs it, and reruns the same gate once', () => {
-    const bundle = restoreBundle(snapshot, baseline);
-    stageHitl2(bundle, 'rerun', 1);
-    passAndEnter(bundle, 'hitl2-recorded', 'phases/phase-hitl2.md', 'hitl2_recorded');
-    passAndEnter(bundle, 'rerun-ready', 'phases/phase-rerun.md', 'rerun_ready');
-    stageSeed(bundle, 1);
-    passAndEnter(bundle, 'seed-topics-ready', 'phases/phase-seed-topics.md', 'seed_topics_ready', () => stageWave0(bundle, 'repair'));
-    passAndEnter(bundle, 'wave0-complete', 'phases/phase-wave0.md', 'wave0_complete', () => stageWave1(bundle, 'repair'));
-    passAndEnter(bundle, 'wave1-complete', 'phases/phase-wave1.md', 'wave1_complete', () => { stageWave2(bundle); writeFileSync(join(bundle, 'artifacts/wave2/finding-index.yaml'), ': malformed\n'); });
+    const bundle = restoreBundle(wave2Snapshot, baseline);
+    writeFileSync(join(bundle, 'artifacts/wave2/finding-index.yaml'), ': malformed\n');
     const before = authoritySnapshot(bundle);
     const failed = runGate(bundle, 'wave2-complete', 'phases/phase-wave2.md', { expectedStatus: 1 });
     assert.equal(failed.output.check.passed, false);

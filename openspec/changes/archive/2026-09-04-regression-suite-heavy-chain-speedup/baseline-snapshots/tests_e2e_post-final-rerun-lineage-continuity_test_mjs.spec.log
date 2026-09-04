@@ -1,0 +1,14 @@
+▶ post-final rerun lineage continuity from a production terminal chain
+  ✔ resumes add style-before-count and reaches one later normal handoff (1368.234625ms)
+  ✔ resumes safe-remove style-before-count and reaches one later normal handoff (1448.638625ms)
+  ✔ keeps event-bound style params on count-only compatibility even when exact current projection differs (1512.340542ms)
+  ✔ retains the accepted ReopenResearchPass audit lineage through a newer Final handoff and appends globally (16342.696208ms)
+✔ post-final rerun lineage continuity from a production terminal chain (20672.49275ms)
+ℹ tests 4
+ℹ suites 1
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 26365.517208

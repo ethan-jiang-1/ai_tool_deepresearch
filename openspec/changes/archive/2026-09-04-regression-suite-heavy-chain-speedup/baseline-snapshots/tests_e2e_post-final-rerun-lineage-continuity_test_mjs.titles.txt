@@ -1,0 +1,4 @@
+resumes add style-before-count and reaches one later normal handoff
+resumes safe-remove style-before-count and reaches one later normal handoff
+keeps event-bound style params on count-only compatibility even when exact current projection differs
+retains the accepted ReopenResearchPass audit lineage through a newer Final handoff and appends globally

@@ -1,0 +1,54 @@
+schema_version: verification-routing/v1
+change: regression-suite-heavy-chain-speedup
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      scripts/test-shard.mjs 的 LPT 贪心装箱分片算法为纯函数，用既有单测 tests/engine/test-shard-partition.test.mjs
+      进行单测守护，确保分片结果确定论、全覆盖且无漏项。
+  integration:
+    status: not_applicable
+    rationale: >-
+      本 change 属于内部测试重构与调度优化，不引入新的 integration 级别证明项；
+      既有 integration 套件全绿由全量回归守护。
+  deterministic_e2e:
+    status: selected
+    rationale: >-
+      重构后的 tests/e2e/rerun-round-continuity.test.mjs 自身即为 deterministic_e2e 测试，
+      证明重跑生命周期全链完整性在消除首个 it 重复遍历后依然全绿。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: 本 change 不涉及 experiments_playbook/ 用例与真实 Agent 执行。
+claims:
+  - id: test-shard-lpt-partition-contract
+    statement: >-
+      test-shard 的 LPT 装箱分片函数按 test-weights.json 的权重平衡分配测试文件；
+      未登记文件按发现序均匀补齐；分片结果无重无漏，各 shard 集合的并集严格等于全集。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/test-shard-partition.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: rerun-continuity-e2e-contract
+    statement: >-
+      rerun-round-continuity 测试在消除首个 it 的全链重复遍历后，全部既有生命周期断言
+      和后续微分支断言保持 100% 通过，断言清单快照 diff 为空。
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/rerun-round-continuity.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

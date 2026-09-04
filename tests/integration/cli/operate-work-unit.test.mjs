@@ -6,11 +6,11 @@ import {
   spawnSync as spawnSyncProduction,
 } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, watch, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, watch, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { describe, it } from 'node:test';
+import { after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { makeItem } from '../../../DEEP_RESEARCH_HARNESS/engine/queue-manager.mjs';
@@ -384,6 +384,67 @@ function writeAssignedRepairableResult(dir, record) {
   writeReceiptProgress(dir, record);
   return assignedPath;
 }
+
+let sharedClaimedWave0Template = null;
+let sharedClaimedWave1Template = null;
+
+function createClaimedWave0Bundle() {
+  if (!sharedClaimedWave0Template) {
+    const dir = tempBundle();
+    saveQueueWith(dir, [queueItem()]);
+    const stdout = execFileSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf-8' });
+    const parsed = JSON.parse(stdout);
+    const workId = parsed.claimed_work_ids[0];
+    const record = loadWorkUnitIndex(dir).work_units[workId];
+    sharedClaimedWave0Template = { dir, workId, record, stdout };
+  }
+  const dest = tempBundle();
+  cpSync(sharedClaimedWave0Template.dir, dest, { recursive: true });
+  const beaconPath = path.join(dest, sharedClaimedWave0Template.record.paths.beacon_ref);
+  const beacon = JSON.parse(readFileSync(beaconPath, 'utf-8'));
+  beacon.bundle = path.basename(dest);
+  beacon.bundle_dir = path.resolve(dest);
+  writeFileSync(beaconPath, `${JSON.stringify(beacon, null, 2)}\n`);
+  const record = JSON.parse(JSON.stringify(sharedClaimedWave0Template.record));
+  return { dir: dest, workId: sharedClaimedWave0Template.workId, record, stdout: sharedClaimedWave0Template.stdout };
+}
+
+function createClaimedWave1Bundle() {
+  if (!sharedClaimedWave1Template) {
+    const dir = tempBundle();
+    writeCanonicalPlan(dir);
+    saveQueueWith(dir, [supplementaryWave1QueueItem()]);
+    const result = spawnSync(process.execPath, [
+      CLI,
+      'claim',
+      dir,
+      '--phase', 'wave1',
+      '--actor-outcome', 'available',
+      '--actor-source', 'native_probe',
+      '--actor-role-key', 'dpt-evidence-extractor',
+      '--actor-reason', 'probe_succeeded',
+      '--execution-actor', 'delegated_subagent',
+    ], { encoding: 'utf-8', timeout: 5000 });
+    const parsed = JSON.parse(result.stdout);
+    const workId = parsed.claimed_work_ids[0];
+    const record = loadWorkUnitIndex(dir).work_units[workId];
+    sharedClaimedWave1Template = { dir, workId, record, result };
+  }
+  const dest = tempBundle();
+  cpSync(sharedClaimedWave1Template.dir, dest, { recursive: true });
+  const beaconPath = path.join(dest, sharedClaimedWave1Template.record.paths.beacon_ref);
+  const beacon = JSON.parse(readFileSync(beaconPath, 'utf-8'));
+  beacon.bundle = path.basename(dest);
+  beacon.bundle_dir = path.resolve(dest);
+  writeFileSync(beaconPath, `${JSON.stringify(beacon, null, 2)}\n`);
+  const record = JSON.parse(JSON.stringify(sharedClaimedWave1Template.record));
+  return { dir: dest, workId: sharedClaimedWave1Template.workId, record, result: sharedClaimedWave1Template.result };
+}
+
+after(() => {
+  if (sharedClaimedWave0Template) cleanup(sharedClaimedWave0Template.dir);
+  if (sharedClaimedWave1Template) cleanup(sharedClaimedWave1Template.dir);
+});
 
 describe('operate-work-unit inspect', () => {
   it('preflights a mixed claim batch before every allocation or authority mutation', () => {
@@ -770,12 +831,8 @@ describe('operate-work-unit inspect', () => {
   });
 
   it('submits a claimed work unit through the CLI', () => {
-    const dir = tempBundle();
+    const { dir, workId } = createClaimedWave0Bundle();
     try {
-      saveQueueWith(dir, [queueItem()]);
-      const claimStdout = execFileSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf-8' });
-      const claimOut = JSON.parse(claimStdout);
-      const workId = claimOut.claimed_work_ids[0];
       const record = loadWorkUnitIndex(dir).work_units[workId];
       const resultPath = writeValidSubmitFiles(dir, record);
 
@@ -795,11 +852,8 @@ describe('operate-work-unit inspect', () => {
   });
 
   it('rejects a fabricated placeholder/filler cache leaf before ledger append (@impl CRC-009)', () => {
-    const dir = tempBundle();
+    const { dir, workId } = createClaimedWave0Bundle();
     try {
-      saveQueueWith(dir, [queueItem()]);
-      const claimOut = JSON.parse(execFileSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf-8' }));
-      const workId = claimOut.claimed_work_ids[0];
       const record = loadWorkUnitIndex(dir).work_units[workId];
       const resultPath = writeValidSubmitFiles(dir, record);
       // BUG-251 shape: filler page.md + placeholder-domain meta.json
@@ -821,11 +875,8 @@ describe('operate-work-unit inspect', () => {
   });
 
   it('accepts an explicit degraded capture despite the placeholder-shaped cache leaf (@impl CRC-009)', () => {
-    const dir = tempBundle();
+    const { dir, workId } = createClaimedWave0Bundle();
     try {
-      saveQueueWith(dir, [queueItem()]);
-      const claimOut = JSON.parse(execFileSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf-8' }));
-      const workId = claimOut.claimed_work_ids[0];
       const record = loadWorkUnitIndex(dir).work_units[workId];
       const resultPath = writeValidSubmitFiles(dir, record);
       // Placeholder-shaped page, but it carries an explicit fetch-failure record.
@@ -906,11 +957,9 @@ describe('operate-work-unit inspect', () => {
   });
 
   it('rejects a retired assignment profile through the CLI before authority mutation', () => {
-    const dir = tempBundle();
+    const { dir, workId } = createClaimedWave0Bundle();
     try {
-      saveQueueWith(dir, [queueItem()]);
-      const claim = JSON.parse(execFileSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf-8' }));
-      const record = loadWorkUnitIndex(dir).work_units[claim.claimed_work_ids[0]];
+      const record = loadWorkUnitIndex(dir).work_units[workId];
       const resultPath = writeValidSubmitFiles(dir, record);
       retireAssignmentProfile(dir, record);
       const before = recursiveSnapshot(dir);
@@ -930,11 +979,8 @@ describe('operate-work-unit inspect', () => {
   });
 
   it('dry-submits a valid claimed work unit through the CLI without completing it', () => {
-    const dir = tempBundle();
+    const { dir, workId } = createClaimedWave0Bundle();
     try {
-      saveQueueWith(dir, [queueItem()]);
-      const claimStdout = execFileSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf-8' });
-      const workId = JSON.parse(claimStdout).claimed_work_ids[0];
       const record = loadWorkUnitIndex(dir).work_units[workId];
       const resultPath = writeValidSubmitFiles(dir, record);
 
@@ -960,11 +1006,8 @@ describe('operate-work-unit inspect', () => {
   });
 
   it('surfaces raw invalid ts and affected lines through CLI dry-submit diagnostics', () => {
-    const dir = tempBundle();
+    const { dir, workId } = createClaimedWave0Bundle();
     try {
-      saveQueueWith(dir, [queueItem()]);
-      const claimStdout = execFileSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf-8' });
-      const workId = JSON.parse(claimStdout).claimed_work_ids[0];
       const record = loadWorkUnitIndex(dir).work_units[workId];
       const resultPath = writeValidSubmitFiles(dir, record);
 
@@ -999,23 +1042,8 @@ describe('operate-work-unit inspect', () => {
   });
 
   it('dry-submits and formally submits a v3 supplementary Wave1 result with empty output_files', () => {
-    const dir = tempBundle();
+    const { dir, workId } = createClaimedWave1Bundle();
     try {
-      writeCanonicalPlan(dir);
-      saveQueueWith(dir, [supplementaryWave1QueueItem()]);
-      const claim = spawnSync(process.execPath, [
-        CLI,
-        'claim',
-        dir,
-        '--phase', 'wave1',
-        '--actor-outcome', 'available',
-        '--actor-source', 'native_probe',
-        '--actor-role-key', 'dpt-evidence-extractor',
-        '--actor-reason', 'probe_succeeded',
-        '--execution-actor', 'delegated_subagent',
-      ], { encoding: 'utf-8', timeout: 5000 });
-      assert.equal(claim.status, 0, claim.stderr || claim.stdout);
-      const workId = JSON.parse(claim.stdout).claimed_work_ids[0];
       const record = loadWorkUnitIndex(dir).work_units[workId];
       assert.equal(record.assignment_contract_version, 'work-unit.assignment.v3');
 
@@ -1068,23 +1096,8 @@ describe('operate-work-unit inspect', () => {
   });
 
   it('rejects a zero-claim Wave1 result before ledger append without inline backfill (@impl WAI-013)', () => {
-    const dir = tempBundle();
+    const { dir, workId } = createClaimedWave1Bundle();
     try {
-      writeCanonicalPlan(dir);
-      saveQueueWith(dir, [supplementaryWave1QueueItem()]);
-      const claim = spawnSync(process.execPath, [
-        CLI,
-        'claim',
-        dir,
-        '--phase', 'wave1',
-        '--actor-outcome', 'available',
-        '--actor-source', 'native_probe',
-        '--actor-role-key', 'dpt-evidence-extractor',
-        '--actor-reason', 'probe_succeeded',
-        '--execution-actor', 'delegated_subagent',
-      ], { encoding: 'utf-8', timeout: 5000 });
-      assert.equal(claim.status, 0, claim.stderr || claim.stdout);
-      const workId = JSON.parse(claim.stdout).claimed_work_ids[0];
       const record = loadWorkUnitIndex(dir).work_units[workId];
 
       writeFileSync(path.join(dir, record.paths.runtime_receipt_ref), `${JSON.stringify({
@@ -1139,23 +1152,8 @@ describe('operate-work-unit inspect', () => {
   });
 
   it('dry-submit reports duplicate accepted claim urls inside an invalid accepted-url root (@impl DEW-031)', () => {
-    const dir = tempBundle();
+    const { dir, workId } = createClaimedWave1Bundle();
     try {
-      writeCanonicalPlan(dir);
-      saveQueueWith(dir, [supplementaryWave1QueueItem()]);
-      const claim = spawnSync(process.execPath, [
-        CLI,
-        'claim',
-        dir,
-        '--phase', 'wave1',
-        '--actor-outcome', 'available',
-        '--actor-source', 'native_probe',
-        '--actor-role-key', 'dpt-evidence-extractor',
-        '--actor-reason', 'probe_succeeded',
-        '--execution-actor', 'delegated_subagent',
-      ], { encoding: 'utf-8', timeout: 5000 });
-      assert.equal(claim.status, 0, claim.stderr || claim.stdout);
-      const workId = JSON.parse(claim.stdout).claimed_work_ids[0];
       const record = loadWorkUnitIndex(dir).work_units[workId];
 
       writeFileSync(path.join(dir, record.paths.runtime_receipt_ref), `${JSON.stringify({
@@ -1320,12 +1318,8 @@ describe('operate-work-unit inspect', () => {
   });
 
   it('dry-submit failure exits 1 with structured JSON on stdout and no submit rejection', () => {
-    const dir = tempBundle();
+    const { dir, workId, record } = createClaimedWave0Bundle();
     try {
-      saveQueueWith(dir, [queueItem()]);
-      const claimStdout = execFileSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf-8' });
-      const workId = JSON.parse(claimStdout).claimed_work_ids[0];
-      const record = loadWorkUnitIndex(dir).work_units[workId];
       const resultPath = writeValidSubmitFiles(dir, record);
       const resultJson = JSON.parse(readFileSync(resultPath, 'utf-8'));
       resultJson.output_files[0].role = 'question_list';
@@ -1351,12 +1345,8 @@ describe('operate-work-unit inspect', () => {
   });
 
   it('uses the selected dry-submit root for every normal formal-rejection repair field', () => {
-    const dir = tempBundle();
+    const { dir, workId, record } = createClaimedWave0Bundle();
     try {
-      saveQueueWith(dir, [queueItem()]);
-      const claim = JSON.parse(execFileSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf-8' }));
-      const workId = claim.claimed_work_ids[0];
-      const record = loadWorkUnitIndex(dir).work_units[workId];
       const resultPath = writeAssignedRepairableResult(dir, record);
 
       const dry = spawnSync(process.execPath, [CLI, 'dry-submit', dir, '--work-id', workId, '--result', resultPath], {
@@ -1382,11 +1372,8 @@ describe('operate-work-unit inspect', () => {
   });
 
   it('masks dependent output, cache, source, and direct-output repairs when the candidate result is absent', () => {
-    const dir = tempBundle();
+    const { dir, workId } = createClaimedWave0Bundle();
     try {
-      saveQueueWith(dir, [queueItem()]);
-      const claim = JSON.parse(execFileSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf-8' }));
-      const workId = claim.claimed_work_ids[0];
       const missingResult = path.join(dir, '_tmp', 'missing-result.json');
       const result = spawnSync(process.execPath, [CLI, 'dry-submit', dir, '--work-id', workId, '--result', missingResult], {
         encoding: 'utf-8', timeout: 5000,
@@ -1426,11 +1413,8 @@ describe('operate-work-unit inspect', () => {
   });
 
   it('times out a claimed work unit and lets CLI claim a replacement', () => {
-    const dir = tempBundle();
+    const { dir, workId } = createClaimedWave0Bundle();
     try {
-      saveQueueWith(dir, [queueItem()]);
-      const claimStdout = execFileSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf-8' });
-      const workId = JSON.parse(claimStdout).claimed_work_ids[0];
       expireClaimedWorkUnit(dir, workId);
 
       const timeoutStdout = execFileSync(process.execPath, [CLI, 'timeout', dir, '--work-id', workId, '--reason', 'deadline-expired'], { encoding: 'utf-8' });
@@ -1447,12 +1431,8 @@ describe('operate-work-unit inspect', () => {
   });
 
   it('replaces a failed terminal attempt through one stdout JSON result and returns to normal claim', () => {
-    const dir = tempBundle();
+    const { dir, workId: parentWorkId } = createClaimedWave0Bundle();
     try {
-      saveQueueWith(dir, [queueItem()]);
-      const initialClaim = JSON.parse(execFileSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf-8' }));
-      const parentWorkId = initialClaim.claimed_work_ids[0];
-
       const claimedBefore = recursiveSnapshot(dir);
       const claimedRefusal = spawnSync(process.execPath, [CLI, 'replace', dir, '--work-id', parentWorkId], {
         encoding: 'utf-8', timeout: 5000,
@@ -1506,12 +1486,9 @@ describe('operate-work-unit inspect', () => {
   });
 
   it('late-submits a timed-out work unit through the CLI', () => {
-    const dir = tempBundle();
+    const { dir, workId, record: agedRecord } = createClaimedWave0Bundle();
     try {
-      saveQueueWith(dir, [queueItem()]);
-      const claimStdout = execFileSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf-8' });
-      const workId = JSON.parse(claimStdout).claimed_work_ids[0];
-      const agedRecord = expireClaimedWorkUnit(dir, workId);
+      expireClaimedWorkUnit(dir, workId);
       const timeoutStdout = execFileSync(process.execPath, [CLI, 'timeout', dir, '--work-id', workId, '--reason', 'deadline-expired'], { encoding: 'utf-8' });
       assert.equal(JSON.parse(timeoutStdout).status, 'timed_out');
 
@@ -1544,12 +1521,8 @@ describe('operate-work-unit inspect', () => {
   });
 
   it('keeps an existing contribution declaration idempotent and exactly recovers its missing row', () => {
-    const dir = tempBundle();
+    const { dir, workId, record } = createClaimedWave0Bundle();
     try {
-      saveQueueWith(dir, [queueItem()]);
-      const claimStdout = execFileSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf-8' });
-      const workId = JSON.parse(claimStdout).claimed_work_ids[0];
-      const record = loadWorkUnitIndex(dir).work_units[workId];
       const resultPath = writeValidSubmitFiles(dir, record);
       const submitStdout = execFileSync(process.execPath, [CLI, 'submit', dir, '--work-id', workId, '--result', resultPath], { encoding: 'utf-8' });
       const submitted = JSON.parse(submitStdout);
@@ -1595,12 +1568,9 @@ describe('operate-work-unit inspect', () => {
   });
 
   it('timeout-preflight CLI emits structured eligible and guard-refusal JSON', () => {
-    const eligibleDir = tempBundle();
-    const refusedDir = tempBundle();
+    const { dir: eligibleDir, workId: eligibleWorkId } = createClaimedWave0Bundle();
+    const { dir: refusedDir, workId: refusedWorkId, record: refusedRecord } = createClaimedWave0Bundle();
     try {
-      saveQueueWith(eligibleDir, [queueItem()]);
-      const eligibleClaim = execFileSync(process.execPath, [CLI, 'claim', eligibleDir, '--phase', 'wave0'], { encoding: 'utf-8' });
-      const eligibleWorkId = JSON.parse(eligibleClaim).claimed_work_ids[0];
       expireClaimedWorkUnit(eligibleDir, eligibleWorkId);
       const eligible = spawnSync(process.execPath, [CLI, 'timeout-preflight', eligibleDir, '--work-id', eligibleWorkId], {
         encoding: 'utf-8',
@@ -1614,10 +1584,6 @@ describe('operate-work-unit inspect', () => {
       assert.equal(eligibleOut.recommendation_basis.branch, 'lease');
       assert.equal(eligibleOut.recommendation_basis.facts.effective_timeout_at, eligibleOut.effective_timeout_at);
 
-      saveQueueWith(refusedDir, [queueItem()]);
-      const refusedClaim = execFileSync(process.execPath, [CLI, 'claim', refusedDir, '--phase', 'wave0'], { encoding: 'utf-8' });
-      const refusedWorkId = JSON.parse(refusedClaim).claimed_work_ids[0];
-      const refusedRecord = loadWorkUnitIndex(refusedDir).work_units[refusedWorkId];
       writeReceiptProgress(refusedDir, refusedRecord);
       const beforeIndex = readFileSync(workUnitIndexPath(refusedDir), 'utf-8');
       const beforeQueue = readFileSync(path.join(refusedDir, 'rb_queue.json'), 'utf-8');
@@ -1640,12 +1606,8 @@ describe('operate-work-unit inspect', () => {
   });
 
   it('forwards only the dry-submit action and primary code into timeout-preflight candidate advice', () => {
-    const dir = tempBundle();
+    const { dir, workId, record } = createClaimedWave0Bundle();
     try {
-      saveQueueWith(dir, [queueItem()]);
-      const claim = JSON.parse(execFileSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf-8' }));
-      const workId = claim.claimed_work_ids[0];
-      const record = loadWorkUnitIndex(dir).work_units[workId];
       const resultPath = writeAssignedRepairableResult(dir, record);
       const dry = JSON.parse(spawnSync(process.execPath, [CLI, 'dry-submit', dir, '--work-id', workId, '--result', resultPath], {
         encoding: 'utf-8', timeout: 5000,
@@ -1667,13 +1629,9 @@ describe('operate-work-unit inspect', () => {
   });
 
   it('default timeout refuses progress-positive attempts and force records audit diagnostics', () => {
-    const refusedDir = tempBundle();
-    const forcedDir = tempBundle();
+    const { dir: refusedDir, workId: refusedWorkId, record: refusedRecord } = createClaimedWave0Bundle();
+    const { dir: forcedDir, workId: forcedWorkId, record: forcedRecord } = createClaimedWave0Bundle();
     try {
-      saveQueueWith(refusedDir, [queueItem()]);
-      const refusedClaim = execFileSync(process.execPath, [CLI, 'claim', refusedDir, '--phase', 'wave0'], { encoding: 'utf-8' });
-      const refusedWorkId = JSON.parse(refusedClaim).claimed_work_ids[0];
-      const refusedRecord = loadWorkUnitIndex(refusedDir).work_units[refusedWorkId];
       writeReceiptProgress(refusedDir, refusedRecord);
       const beforeQueue = readFileSync(path.join(refusedDir, 'rb_queue.json'), 'utf-8');
       const refused = spawnSync(process.execPath, [CLI, 'timeout', refusedDir, '--work-id', refusedWorkId, '--reason', 'too-soon'], {
@@ -1687,10 +1645,6 @@ describe('operate-work-unit inspect', () => {
       assert.equal(loadWorkUnitIndex(refusedDir).work_units[refusedWorkId].status, 'claimed');
       assert.equal(readFileSync(path.join(refusedDir, 'rb_queue.json'), 'utf-8'), beforeQueue);
 
-      saveQueueWith(forcedDir, [queueItem()]);
-      const forcedClaim = execFileSync(process.execPath, [CLI, 'claim', forcedDir, '--phase', 'wave0'], { encoding: 'utf-8' });
-      const forcedWorkId = JSON.parse(forcedClaim).claimed_work_ids[0];
-      const forcedRecord = loadWorkUnitIndex(forcedDir).work_units[forcedWorkId];
       writeReceiptProgress(forcedDir, forcedRecord);
       const forced = spawnSync(process.execPath, [CLI, 'timeout', forcedDir, '--work-id', forcedWorkId, '--reason', 'operator-forced', '--force'], {
         encoding: 'utf-8',
@@ -1712,14 +1666,10 @@ describe('operate-work-unit inspect', () => {
   });
 
   it('default timeout CLI refuses submit-ready, repairable, and invalid-binding attempts', () => {
-    const submitDir = tempBundle();
-    const repairDir = tempBundle();
-    const bindingDir = tempBundle();
+    const { dir: submitDir, workId: submitWorkId, record: submitRecord } = createClaimedWave0Bundle();
+    const { dir: repairDir, workId: repairWorkId, record: repairRecord } = createClaimedWave0Bundle();
+    const { dir: bindingDir, workId: bindingWorkId, record: bindingRecord } = createClaimedWave0Bundle();
     try {
-      saveQueueWith(submitDir, [queueItem()]);
-      const submitClaim = execFileSync(process.execPath, [CLI, 'claim', submitDir, '--phase', 'wave0'], { encoding: 'utf-8' });
-      const submitWorkId = JSON.parse(submitClaim).claimed_work_ids[0];
-      const submitRecord = loadWorkUnitIndex(submitDir).work_units[submitWorkId];
       writeAssignedSubmitReadyResult(submitDir, submitRecord);
       const submitBeforeQueue = readFileSync(path.join(submitDir, 'rb_queue.json'), 'utf-8');
       const submitRefused = spawnSync(process.execPath, [CLI, 'timeout', submitDir, '--work-id', submitWorkId, '--reason', 'submit-ready-must-not-timeout'], {
@@ -1732,10 +1682,6 @@ describe('operate-work-unit inspect', () => {
       assert.equal(loadWorkUnitIndex(submitDir).work_units[submitWorkId].status, 'claimed');
       assert.equal(readFileSync(path.join(submitDir, 'rb_queue.json'), 'utf-8'), submitBeforeQueue);
 
-      saveQueueWith(repairDir, [queueItem()]);
-      const repairClaim = execFileSync(process.execPath, [CLI, 'claim', repairDir, '--phase', 'wave0'], { encoding: 'utf-8' });
-      const repairWorkId = JSON.parse(repairClaim).claimed_work_ids[0];
-      const repairRecord = loadWorkUnitIndex(repairDir).work_units[repairWorkId];
       writeAssignedRepairableResult(repairDir, repairRecord);
       const repairBeforeQueue = readFileSync(path.join(repairDir, 'rb_queue.json'), 'utf-8');
       const repairRefused = spawnSync(process.execPath, [CLI, 'timeout', repairDir, '--work-id', repairWorkId, '--reason', 'repairable-must-not-timeout'], {
@@ -1748,10 +1694,6 @@ describe('operate-work-unit inspect', () => {
       assert.equal(loadWorkUnitIndex(repairDir).work_units[repairWorkId].status, 'claimed');
       assert.equal(readFileSync(path.join(repairDir, 'rb_queue.json'), 'utf-8'), repairBeforeQueue);
 
-      saveQueueWith(bindingDir, [queueItem()]);
-      const bindingClaim = execFileSync(process.execPath, [CLI, 'claim', bindingDir, '--phase', 'wave0'], { encoding: 'utf-8' });
-      const bindingWorkId = JSON.parse(bindingClaim).claimed_work_ids[0];
-      const bindingRecord = loadWorkUnitIndex(bindingDir).work_units[bindingWorkId];
       const queuePath = path.join(bindingDir, 'rb_queue.json');
       const queue = JSON.parse(readFileSync(queuePath, 'utf-8'));
       delete queue.delegated_in_flight[bindingRecord.queue_item_id];
@@ -1793,12 +1735,8 @@ describe('operate-work-unit inspect', () => {
   });
 
   it('logs provenance mismatch diagnostics for ledger drift', () => {
-    const dir = tempBundle();
+    const { dir, workId, record } = createClaimedWave0Bundle();
     try {
-      saveQueueWith(dir, [queueItem()]);
-      const claimStdout = execFileSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf-8' });
-      const workId = JSON.parse(claimStdout).claimed_work_ids[0];
-      const record = loadWorkUnitIndex(dir).work_units[workId];
       const resultPath = writeValidSubmitFiles(dir, record);
       execFileSync(process.execPath, [CLI, 'submit', dir, '--work-id', workId, '--result', resultPath], { encoding: 'utf-8' });
 
@@ -1977,16 +1915,11 @@ describe('operate-work-unit attempt recovery operations', () => {
   });
 
   it('reports a committed final-release holder as global busy without active-attempt semantics', async () => {
-    const dir = tempBundle();
+    const { dir, workId, record } = createClaimedWave0Bundle();
     const readyFile = path.join(path.dirname(dir), `${path.basename(dir)}.settled-ready`);
     let holder = null;
     let holderDone = null;
     try {
-      saveQueueWith(dir, [currentWave0QueueItem('queue-settled-holder')]);
-      const claim = spawnSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf8' });
-      assert.equal(claim.status, 0, claim.stderr || claim.stdout);
-      const workId = JSON.parse(claim.stdout).claimed_work_ids[0];
-      const record = loadWorkUnitIndex(dir).work_units[workId];
       const resultPath = writeValidSubmitFiles(dir, record);
       const queueBefore = readFileSync(path.join(dir, 'rb_queue.json'), 'base64');
       const indexBefore = readFileSync(workUnitIndexPath(dir), 'base64');
@@ -2044,17 +1977,12 @@ describe('operate-work-unit attempt recovery operations', () => {
 
   it('blocks default and forced timeout for valid holders and exposes no unrelated progress', async () => {
     for (const sameAttempt of [true, false]) {
-      const dir = tempBundle();
+      const { dir, workId, record } = createClaimedWave0Bundle();
       let holder = null;
       let holderDone = null;
       const readyFile = path.join(path.dirname(dir), `${path.basename(dir)}.holder-ready`);
       const releaseFile = path.join(path.dirname(dir), `${path.basename(dir)}.holder-release`);
       try {
-        saveQueueWith(dir, [currentWave0QueueItem(`queue-timeout-${sameAttempt ? 'same' : 'other'}`)]);
-        const claim = spawnSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf8' });
-        assert.equal(claim.status, 0, claim.stderr || claim.stdout);
-        const workId = JSON.parse(claim.stdout).claimed_work_ids[0];
-        const record = loadWorkUnitIndex(dir).work_units[workId];
         const holderWorkId = sameAttempt ? workId : 'wu-w0-b000-src-i9999';
         const holderQueueId = sameAttempt ? record.queue_item_id : 'queue-unrelated-holder';
         const queueBefore = readFileSync(path.join(dir, 'rb_queue.json'), 'base64');
@@ -2152,13 +2080,8 @@ describe('operate-work-unit attempt recovery operations', () => {
   });
 
   it('keeps held suspect transaction proof off wait, force-timeout, and recovery paths', () => {
-    const dir = tempBundle();
+    const { dir, workId, record } = createClaimedWave0Bundle();
     try {
-      saveQueueWith(dir, [currentWave0QueueItem('queue-suspect-timeout')]);
-      const claim = spawnSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf8' });
-      assert.equal(claim.status, 0, claim.stderr || claim.stdout);
-      const workId = JSON.parse(claim.stdout).claimed_work_ids[0];
-      const record = loadWorkUnitIndex(dir).work_units[workId];
       const queuePath = path.join(dir, 'rb_queue.json');
       const queueBefore = readFileSync(queuePath, 'base64');
       const indexBefore = readFileSync(workUnitIndexPath(dir), 'base64');
@@ -2234,15 +2157,8 @@ describe('operate-work-unit attempt recovery operations', () => {
   });
 
   it('supersedes eligible drift once and replays the immutable relation through stdout JSON', () => {
-    const dir = tempBundle();
+    const { dir, workId, record } = createClaimedWave0Bundle();
     try {
-      saveQueueWith(dir, [queueItem()]);
-      const claim = spawnSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0', '--count', '1'], {
-        encoding: 'utf8',
-      });
-      assert.equal(claim.status, 0, claim.stderr || claim.stdout);
-      const workId = JSON.parse(claim.stdout).claimed_work_ids[0];
-      const record = loadWorkUnitIndex(dir).work_units[workId];
       const resultPath = writeValidSubmitFiles(dir, record);
       const submit = spawnSync(process.execPath, [CLI, 'submit', dir, '--work-id', workId, '--result', resultPath], {
         encoding: 'utf8',
@@ -2276,12 +2192,8 @@ describe('operate-work-unit attempt recovery operations', () => {
   });
 
   it('returns structured supersession no-path while keeping invocation faults on stderr', () => {
-    const dir = tempBundle();
+    const { dir, workId, record } = createClaimedWave0Bundle();
     try {
-      saveQueueWith(dir, [queueItem()]);
-      const claim = spawnSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], { encoding: 'utf8' });
-      const workId = JSON.parse(claim.stdout).claimed_work_ids[0];
-      const record = loadWorkUnitIndex(dir).work_units[workId];
       const resultPath = writeValidSubmitFiles(dir, record);
       assert.equal(spawnSync(process.execPath, [
         CLI, 'submit', dir, '--work-id', workId, '--result', resultPath,
@@ -2378,15 +2290,8 @@ describe('operate-work-unit attempt recovery operations', () => {
   });
 
   it('routes multi-orphan submit blocking through one deterministic recover coordinate', () => {
-    const dir = tempBundle();
+    const { dir, workId, record } = createClaimedWave0Bundle();
     try {
-      saveQueueWith(dir, [queueItem()]);
-      const claim = spawnSync(process.execPath, [CLI, 'claim', dir, '--phase', 'wave0'], {
-        encoding: 'utf8',
-      });
-      assert.equal(claim.status, 0, claim.stderr || claim.stdout);
-      const workId = JSON.parse(claim.stdout).claimed_work_ids[0];
-      const record = loadWorkUnitIndex(dir).work_units[workId];
       const resultPath = writeValidSubmitFiles(dir, record);
 
       const authorityRef = 'authority.json';

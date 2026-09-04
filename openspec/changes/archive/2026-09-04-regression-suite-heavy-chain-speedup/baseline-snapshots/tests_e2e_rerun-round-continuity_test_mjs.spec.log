@@ -1,0 +1,26 @@
+▶ deterministic rerun round continuity
+  ✔ traverses the full rerun chain through production checkpoints (6470.37075ms)
+  ✔ binds a production receipt to its round and rejects replay before recovering the delivery tail (6830.656667ms)
+  ✔ drives labeled add, update, and direction-only candidates through production apply/recovery before count synchronization (1645.331167ms)
+  ✔ preserves two simulated-Agent intent revisions through production rerun continuity (6038.010416ms)
+  ✔ fails at rerun-ready on malformed profile without downstream transition (530.940583ms)
+  ✔ fails at rerun-ready when the profile is missing and preserves prior authority (530.700333ms)
+  ✔ fails Wave2 on a missing required artifact without invoking its transition (4431.57675ms)
+  ✔ fails Wave1 on inconsistent submitted work-unit authority without advancing (4512.634125ms)
+  ✔ stale action:add direction does not activate the Wave2 full-synthesis restriction (313.130416ms)
+  ✔ invalid action:add direction does not activate the Wave2 full-synthesis restriction (294.879292ms)
+  ✔ keeps a future add direction inactive until profile-count synchronization makes it current (536.865459ms)
+  ✔ uses real submit and inspect authority for current and prior round rows in the long chain (5002.823708ms)
+  ✔ reports a real submitted row as legacy only after its round binding is removed (4729.5685ms)
+  ✔ fails closed when long-chain work-unit authority becomes inconsistent (5343.491458ms)
+  ✔ blocks omitted current-row seed projection and passes after an identity-bound Agent repair (5171.946334ms)
+  ✔ fails a partial Wave2 artifact, repairs it, and reruns the same gate once (4986.2095ms)
+✔ deterministic rerun round continuity (57370.320542ms)
+ℹ tests 16
+ℹ suites 1
+ℹ pass 16
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 67389.89225

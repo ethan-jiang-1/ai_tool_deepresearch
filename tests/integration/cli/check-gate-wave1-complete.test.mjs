@@ -36,6 +36,8 @@ const createdDirs = [];
 
 // One template instantiation per file; each test clones it byte-for-byte.
 let templateDir = null;
+let baseBundleTemplateDir = null;
+let baseHappyTemplateDir = null;
 before(() => {
   const r = spawnSync('node', [NEW_BUNDLE, 'w1-template', '--force', '--target-dir', BUNDLES_DIR], { encoding: 'utf-8', timeout: 10000 });
   templateDir = r.stdout.trim();
@@ -43,6 +45,8 @@ before(() => {
 
 after(() => {
   if (templateDir) rmSync(templateDir, { recursive: true, force: true });
+  if (baseBundleTemplateDir) rmSync(baseBundleTemplateDir, { recursive: true, force: true });
+  if (baseHappyTemplateDir) rmSync(baseHappyTemplateDir, { recursive: true, force: true });
 });
 
 const PARITY_HISTORICAL_TOPIC = Object.freeze({
@@ -316,27 +320,26 @@ __BACKFILL_WAVE1_TRENDS__
 __BACKFILL_PENDING_QUESTIONS__
 `;
 
-/** Create a bundle with topic_registry and wave1-ready status. */
-function createBundle(name) {
-  const dir = track(cloneBundleTemplate(templateDir, name, { targetDir: BUNDLES_DIR }));
+function ensureTemplates() {
+  if (!baseBundleTemplateDir) {
+    baseBundleTemplateDir = cloneBundleTemplate(templateDir, 'w1-base-template', { targetDir: BUNDLES_DIR });
+    setStatusWindow(baseBundleTemplateDir, 'wave0_complete', 'wave1_complete');
 
-  setStatusWindow(dir, 'wave0_complete', 'wave1_complete');
+    // topic_registry
+    const planPath = join(baseBundleTemplateDir, 'rb_plan.md');
+    const existing = readFileSync(planPath, 'utf-8');
+    const fm = `---\n{\n  "plan_basename": "w1-base-template",\n  "derived_topic_count": 1,\n  "topic_registry_version": "2",\n  "topic_registry": [\n    {\n      "topic_uid": "tp_123e4567-e89b-12d3-a456-426614174000",\n      "id": "01",\n      "slug": "topic-a",\n      "title": "Topic A",\n      "must_answer": ["How should Topic A be investigated?"],\n      "scope_role": "primary",\n      "depends_on_topic_uids": [],\n      "previous_layouts": []\n    }\n  ]\n}\n---`;
+    writeFileSync(planPath, fm + '\n' + existing.replace(/^---\n[\s\S]*?\n---\n?/, ''));
 
-  // topic_registry
-  const planPath = join(dir, 'rb_plan.md');
-  const existing = readFileSync(planPath, 'utf-8');
-  const fm = `---\n{\n  "plan_basename": "${name}",\n  "derived_topic_count": 1,\n  "topic_registry_version": "2",\n  "topic_registry": [\n    {\n      "topic_uid": "tp_123e4567-e89b-12d3-a456-426614174000",\n      "id": "01",\n      "slug": "topic-a",\n      "title": "Topic A",\n      "must_answer": ["How should Topic A be investigated?"],\n      "scope_role": "primary",\n      "depends_on_topic_uids": [],\n      "previous_layouts": []\n    }\n  ]\n}\n---`;
-  writeFileSync(planPath, fm + '\n' + existing.replace(/^---\n[\s\S]*?\n---\n?/, ''));
+    const statusPath = join(baseBundleTemplateDir, 'rb_status.json');
+    const status = JSON.parse(readFileSync(statusPath, 'utf-8'));
+    status.current_node = 'phases/phase-wave1.md';
+    writeFileSync(statusPath, JSON.stringify(status));
 
-  const statusPath = join(dir, 'rb_status.json');
-  const status = JSON.parse(readFileSync(statusPath, 'utf-8'));
-  status.current_node = 'phases/phase-wave1.md';
-  writeFileSync(statusPath, JSON.stringify(status));
-
-  // Scaffold
-  mkdirSync(join(dir, 'artifacts', 'wave1', 'topic-a'), { recursive: true });
-  mkdirSync(join(dir, 'seed_topics'), { recursive: true });
-  writeFileSync(join(dir, 'rb_profile.yaml'), `research_style_params:
+    // Scaffold
+    mkdirSync(join(baseBundleTemplateDir, 'artifacts', 'wave1', 'topic-a'), { recursive: true });
+    mkdirSync(join(baseBundleTemplateDir, 'seed_topics'), { recursive: true });
+    writeFileSync(join(baseBundleTemplateDir, 'rb_profile.yaml'), `research_style_params:
   wave1_per_topic_ref_floor: 1
   topic_unique_ratio: 1
   counterexample_search: false
@@ -346,26 +349,56 @@ human_decision_checkpoints:
     rerun_count: 0
 `);
 
-  // Reference: flat format with topic-prefixed files (required by count_floor)
-  writeFileSync(join(dir, 'reference', '01-topic-a-deepening.md'),
-    '# Topic A Deepening Reference\n\n' +
-    '- source_url: https://fixture.news-research.com/news/deepening-topic-a\n' +
-    '- acceptance_status: accepted\n' +
-    '- source_type: secondary\n' +
-    '- tier: Tier 2\n' +
-    '- evidence_role: deepening_reference\n' +
-    '- trust_level: practitioner\n' +
-    '- why_it_matters: Deepening evidence.\n' +
-    '- accessed_at: 2026-06-15\n' +
-    '- related_topic_uid: tp_123e4567-e89b-12d3-a456-426614174000\n\n' +
-    '## Key Facts\n- Finding one: Important initial finding.\n- Finding two: Second key insight.\n- Finding three: Third data point.\n- Finding four: Fourth observation.\n- Finding five: Fifth concluding fact.\n\n## Core Content Capture\nThis is a substantive core content capture section that provides meaningful analysis of the topic being researched. It exceeds one hundred characters to satisfy the minimum quality threshold for reference counting.\n' +
-    '## Relevance To This Research\nRelevant.\n## Quotable Terms / Concepts\n- Term.\n## Risks And Limitations\n- None.\n');
-  writeFileSync(join(dir, 'reference', '_INDEX.md'), [
-    '| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |',
-    '| --- | --- | --- | --- | --- | --- | --- | --- |',
-    '| reference/01-topic-a-deepening.md | secondary | practitioner | Tier 2 | topic-a | wave1_topic | accepted | 2026-06-15 |',
-  ].join('\n') + '\n');
+    // Reference: flat format with topic-prefixed files (required by count_floor)
+    writeFileSync(join(baseBundleTemplateDir, 'reference', '01-topic-a-deepening.md'),
+      '# Topic A Deepening Reference\n\n' +
+      '- source_url: https://fixture.news-research.com/news/deepening-topic-a\n' +
+      '- acceptance_status: accepted\n' +
+      '- source_type: secondary\n' +
+      '- tier: Tier 2\n' +
+      '- evidence_role: deepening_reference\n' +
+      '- trust_level: practitioner\n' +
+      '- why_it_matters: Deepening evidence.\n' +
+      '- accessed_at: 2026-06-15\n' +
+      '- related_topic_uid: tp_123e4567-e89b-12d3-a456-426614174000\n\n' +
+      '## Key Facts\n- Finding one: Important initial finding.\n- Finding two: Second key insight.\n- Finding three: Third data point.\n- Finding four: Fourth observation.\n- Finding five: Fifth concluding fact.\n\n## Core Content Capture\nThis is a substantive core content capture section that provides meaningful analysis of the topic being researched. It exceeds one hundred characters to satisfy the minimum quality threshold for reference counting.\n' +
+      '## Relevance To This Research\nRelevant.\n## Quotable Terms / Concepts\n- Term.\n## Risks And Limitations\n- None.\n');
+    writeFileSync(join(baseBundleTemplateDir, 'reference', '_INDEX.md'), [
+      '| ref_file | source_type | trust_level | tier | related_topic | source_layer | acceptance_status | date_landed |',
+      '| --- | --- | --- | --- | --- | --- | --- | --- |',
+      '| reference/01-topic-a-deepening.md | secondary | practitioner | Tier 2 | topic-a | wave1_topic | accepted | 2026-06-15 |',
+    ].join('\n') + '\n');
+  }
 
+  if (!baseHappyTemplateDir) {
+    baseHappyTemplateDir = cloneBundleTemplate(baseBundleTemplateDir, 'w1-happy-template', { targetDir: BUNDLES_DIR });
+    writeFileSync(join(baseHappyTemplateDir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
+    writeFileSync(join(baseHappyTemplateDir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
+    writeFileSync(join(baseHappyTemplateDir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
+    submitAndReviewWave1WorkUnit(baseHappyTemplateDir);
+  }
+}
+
+/** Create a bundle with topic_registry and wave1-ready status. */
+function createBundle(name) {
+  ensureTemplates();
+  const dir = track(cloneBundleTemplate(baseBundleTemplateDir, name, { targetDir: BUNDLES_DIR }));
+  return dir;
+}
+
+function createHappyBundle(name) {
+  ensureTemplates();
+  const dir = track(cloneBundleTemplate(baseHappyTemplateDir, name, { targetDir: BUNDLES_DIR }));
+  const index = loadWorkUnitIndex(dir);
+  for (const record of Object.values(index.work_units)) {
+    const beaconPath = join(dir, record.paths.beacon_ref);
+    if (existsSync(beaconPath)) {
+      const beacon = JSON.parse(readFileSync(beaconPath, 'utf8'));
+      beacon.bundle = basename(dir);
+      beacon.bundle_dir = dir;
+      writeFileSync(beaconPath, `${JSON.stringify(beacon, null, 2)}\n`);
+    }
+  }
   return dir;
 }
 
@@ -862,11 +895,7 @@ describe('check-gate-wave1-complete', () => {
   });
 
   it('1. happy path: evidence-summary with source URL + key findings passes', () => {
-    const dir = createBundle(unique('happy'));
-    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
-    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
-    writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
-    submitAndReviewWave1WorkUnit(dir);
+    const dir = createHappyBundle(unique('happy'));
     writeWave1Trace(dir);
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
@@ -902,11 +931,7 @@ describe('check-gate-wave1-complete', () => {
   });
 
   it('1j. rejects a malformed carried target declaration at the existing depth-review coordinate', () => {
-    const dir = createBundle(unique('bad-carried-target'));
-    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
-    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
-    writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
-    submitAndReviewWave1WorkUnit(dir);
+    const dir = createHappyBundle(unique('bad-carried-target'));
     writeWave1Trace(dir);
     const depthPath = join(dir, 'artifacts/wave1/topic-a/depth-review.yaml');
     const depth = JSON.parse(readFileSync(depthPath, 'utf8'));
@@ -1146,11 +1171,7 @@ describe('check-gate-wave1-complete', () => {
   });
 
   it('1f. an empty required question-list semantic section remains blocking once', () => {
-    const dir = createBundle(unique('missing-question-section'));
-    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
-    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
-    writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
-    submitAndReviewWave1WorkUnit(dir);
+    const dir = createHappyBundle(unique('missing-question-section'));
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST.replace(
       /## Question Reconciliation\n\n[\s\S]*?(?=\n## Emergent Question Protocol)/,
       '## Question Reconciliation\n\n',
@@ -1273,11 +1294,7 @@ describe('check-gate-wave1-complete', () => {
   });
 
   it('4. fails when key findings section is empty', () => {
-    const dir = createBundle(unique('emptyfind'));
-    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
-    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
-    writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
-    submitAndReviewWave1WorkUnit(dir);
+    const dir = createHappyBundle(unique('emptyfind'));
     writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), EMPTY_FINDINGS_SUMMARY);
     writeWave1Trace(dir);
     const result = runGate(dir);
@@ -1299,11 +1316,7 @@ describe('check-gate-wave1-complete', () => {
   });
 
   it('6. fails on status drift', () => {
-    const dir = createBundle(unique('drift'));
-    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
-    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
-    writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
-    submitAndReviewWave1WorkUnit(dir);
+    const dir = createHappyBundle(unique('drift'));
     writeWave1Trace(dir);
     const statusPath = join(dir, 'rb_status.json');
     const status = JSON.parse(readFileSync(statusPath, 'utf-8'));
@@ -1316,11 +1329,7 @@ describe('check-gate-wave1-complete', () => {
   });
 
   it('7. fails when trace event (wave1_completion) is missing from rb_trace.jsonl', () => {
-    const dir = createBundle(unique('notrace'));
-    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
-    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
-    writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
-    submitAndReviewWave1WorkUnit(dir);
+    const dir = createHappyBundle(unique('notrace'));
     writeWave1Trace(dir, { completion: false });
     const result = runGate(dir);
     const output = JSON.parse(result.stdout);
@@ -1329,11 +1338,7 @@ describe('check-gate-wave1-complete', () => {
   });
 
   it('7a. @impl TRW-007 ignores a forged wave1_completion whose bundle is the rb_status.json short name', () => {
-    const dir = createBundle(unique('forgedtrace'));
-    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
-    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
-    writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
-    submitAndReviewWave1WorkUnit(dir);
+    const dir = createHappyBundle(unique('forgedtrace'));
     // BUG-251 shape: the forged event carries the rb_status.json#/bundle short name,
     // which is NOT the canonical bundle basename (the bundle directory name).
     const shortName = JSON.parse(readFileSync(join(dir, 'rb_status.json'), 'utf-8')).bundle;
@@ -1354,11 +1359,7 @@ describe('check-gate-wave1-complete', () => {
   });
 
   it('7b. @impl TRW-007 accepts a CLI-written wave1_completion with the canonical bundle basename', () => {
-    const dir = createBundle(unique('clitrace'));
-    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
-    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
-    writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
-    submitAndReviewWave1WorkUnit(dir);
+    const dir = createHappyBundle(unique('clitrace'));
     // log-event.mjs shape: writer 'cli' + bundle = directory basename.
     const events = witnessedHandoffEvents({
       sourceGate: 'wave0-complete',
@@ -1381,11 +1382,7 @@ describe('check-gate-wave1-complete', () => {
   });
 
   it('8. rejects reference files with placeholder source_url (example.com)', () => {
-    const dir = createBundle(unique('placehold'));
-    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
-    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
-    writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
-    submitAndReviewWave1WorkUnit(dir);
+    const dir = createHappyBundle(unique('placehold'));
     writeWave1Trace(dir);
     // Write a second reference with placeholder source_url — the first one has a real URL
     writeFileSync(join(dir, 'reference/topic-a-placeholder.md'),
@@ -1409,11 +1406,7 @@ describe('check-gate-wave1-complete', () => {
   });
 
   it('9. rejects orphan reference files not declared in ledger', () => {
-    const dir = createBundle(unique('orphan'));
-    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
-    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
-    writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
-    submitAndReviewWave1WorkUnit(dir);
+    const dir = createHappyBundle(unique('orphan'));
     writeWave1Trace(dir);
     writeFileSync(join(dir, 'reference/topic-a-orphan.md'),
       '# Orphan\n\n' +
@@ -1547,11 +1540,7 @@ describe('check-gate-wave1-complete', () => {
   });
 
   it('13. fails when accepted source claims lose cache content coverage', () => {
-    const dir = createBundle(unique('cachethin'));
-    writeFileSync(join(dir, 'artifacts/wave1/topic-a/evidence-summary.md'), VALID_EVIDENCE_SUMMARY);
-    writeFileSync(join(dir, 'artifacts/wave1/topic-a/question-list.md'), VALID_QUESTION_LIST);
-    writeFileSync(join(dir, 'seed_topics/topic-a.md'), VALID_SEED_TOPIC);
-    submitAndReviewWave1WorkUnit(dir);
+    const dir = createHappyBundle(unique('cachethin'));
     writeFileSync(join(dir, '_cache/wave1/primary/topic-a/deepening-topic-a/page.md'), '# Page\n');
     writeWave1Trace(dir);
     const result = runGate(dir);

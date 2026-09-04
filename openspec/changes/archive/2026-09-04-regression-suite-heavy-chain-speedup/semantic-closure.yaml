@@ -1,0 +1,9 @@
+schema_version: semantic-closure/v1
+change: regression-suite-heavy-chain-speedup
+status: not_applicable
+reason: >-
+  本 change 是纯测试用例内部去重、状态快照复用与调度分片装箱优化（tests/ 与 scripts/）。
+  不触碰任何 semantic fact family 的 verdict consumer，不改变 gate/queue/work-unit/research
+  的任何 runtime 语义结论，也不新增或改变具名 state、projection、status、Module 或 reader-facing view。
+  catalog（openspec/governance/semantic-fact-families.yaml）中全部 family 的 bounded_question
+  均与本 change 的 observable surface（测试执行耗时与分片调度）无交集，故无 affected family。

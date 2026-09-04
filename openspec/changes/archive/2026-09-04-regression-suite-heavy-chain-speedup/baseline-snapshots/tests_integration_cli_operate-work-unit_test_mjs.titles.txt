@@ -1,0 +1,49 @@
+/
+preflights a mixed claim batch before every allocation or authority mutation
+preserves sanctioned non-selector output customization through claim projection
+rechecks planned prefix hashes inside the transaction before its first mutation
+rejects a same-name nested bundle root without directory, transaction, trace, log, rejection, or beacon side effects
+uses one beacon root binding for inspect, dry-submit, and submit without rewriting the immutable beacon
+handles help and suspicious bundle arguments before runtime side effects
+claim allocates a delegated queue-front work unit
+claim reports missing actor observation with one same-command repair and no allocation
+rejects supplied empty or contradictory actor observations before trace or allocation mutation
+claim reports unnecessary fallback with the exact delegated-subagent rerun
+claim omits continuation when no work unit is claimed
+passes for a consistent work-unit index and envelope
+submits a claimed work unit through the CLI
+rejects a fabricated placeholder/filler cache leaf before ledger append (@impl CRC-009)
+accepts an explicit degraded capture despite the placeholder-shaped cache leaf (@impl CRC-009)
+serializes same-target Wave0 supplements and preserves append-only ordinal ownership
+rejects a retired assignment profile through the CLI before authority mutation
+dry-submits a valid claimed work unit through the CLI without completing it
+surfaces raw invalid ts and affected lines through CLI dry-submit diagnostics
+dry-submits and formally submits a v3 supplementary Wave1 result with empty output_files
+rejects a zero-claim Wave1 result before ledger append without inline backfill (@impl WAI-013)
+dry-submit reports duplicate accepted claim urls inside an invalid accepted-url root (@impl DEW-031)
+submits one claimed Wave1 work unit while another claimed actor owns its receipt and result
+dry-submit failure exits 1 with structured JSON on stdout and no submit rejection
+uses the selected dry-submit root for every normal formal-rejection repair field
+masks dependent output, cache, source, and direct-output repairs when the candidate result is absent
+emits complete claim JSON when existing in-flight records make the response large
+times out a claimed work unit and lets CLI claim a replacement
+replaces a failed terminal attempt through one stdout JSON result and returns to normal claim
+late-submits a timed-out work unit through the CLI
+keeps an existing contribution declaration idempotent and exactly recovers its missing row
+timeout-preflight CLI emits structured eligible and guard-refusal JSON
+forwards only the dry-submit action and primary code into timeout-preflight candidate advice
+default timeout refuses progress-positive attempts and force records audit diagnostics
+default timeout CLI refuses submit-ready, repairable, and invalid-binding attempts
+fails closed for index drift
+logs provenance mismatch diagnostics for ledger drift
+logs transaction mismatch diagnostics for uncommitted transaction journals
+allows a current claim beside a complete committed v1 diagnostic journal
+returns structured busy for same- and different-work submit CLI contenders without loser mutation
+reports a committed final-release holder as global busy without active-attempt semantics
+blocks default and forced timeout for valid holders and exposes no unrelated progress
+keeps held suspect transaction proof off wait, force-timeout, and recovery paths
+supersedes eligible drift once and replays the immutable relation through stdout JSON
+returns structured supersession no-path while keeping invocation faults on stderr
+recovers only one exact unlocked v2 journal and leaves original targets unchanged
+routes multi-orphan submit blocking through one deterministic recover coordinate
+returns settled recovery idempotently and rejects legacy, incomplete, and unsafe proof

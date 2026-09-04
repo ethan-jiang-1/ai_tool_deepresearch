@@ -1,0 +1,21 @@
+|
+\n
+\n
+\n
+traverses the full rerun chain through production checkpoints
+binds a production receipt to its round and rejects replay before recovering the delivery tail
+drives labeled add, update, and direction-only candidates through production apply/recovery before count synchronization
+preserves two simulated-Agent intent revisions through production rerun continuity
+### Rerun intent revision: 2
+### Rerun intent revision: 2
+fails at rerun-ready on malformed profile without downstream transition
+fails at rerun-ready when the profile is missing and preserves prior authority
+fails Wave2 on a missing required artifact without invoking its transition
+fails Wave1 on inconsistent submitted work-unit authority without advancing
+${direction.label} action:add direction does not activate the Wave2 full-synthesis restriction
+keeps a future add direction inactive until profile-count synchronization makes it current
+uses real submit and inspect authority for current and prior round rows in the long chain
+reports a real submitted row as legacy only after its round binding is removed
+fails closed when long-chain work-unit authority becomes inconsistent
+blocks omitted current-row seed projection and passes after an identity-bound Agent repair
+fails a partial Wave2 artifact, repairs it, and reruns the same gate once

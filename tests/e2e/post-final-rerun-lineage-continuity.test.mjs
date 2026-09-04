@@ -165,18 +165,28 @@ function driveAcceptedRerunToNewReadiness(bundle) {
   assert.equal(rerun.output.check.passed, true, JSON.stringify(rerun.output.inspect));
   enterPhase(bundle, rerun.output.check.next);
   advanceStatus(bundle, 'rerun_ready');
+
+  // After rerun-ready has verified accepted profile projection freshness,
+  // decouple downstream wave0/wave1 execution from quick_factual 5x redundancy
+  // for this audit lineage test by setting minimal floors.
+  const profilePath = join(bundle, 'rb_profile.yaml');
+  const profile = parseYaml(readFileSync(profilePath, 'utf8'));
+  profile.research_style_params.wave0_per_topic_source_floor = 1;
+  profile.research_style_params.wave0_shared_ref_total = 1;
+  profile.research_style_params.wave1_per_topic_ref_floor = 1;
+  writeFileSync(profilePath, stringifyYaml(profile));
+
   stageSeed(bundle, 1);
   const seed = runGate(bundle, 'seed-topics-ready', 'phases/phase-seed-topics.md');
   assert.equal(seed.output.check.passed, true, JSON.stringify(seed.output.inspect));
   enterPhase(bundle, seed.output.check.next);
   advanceStatus(bundle, 'seed_topics_ready');
-  for (let index = 1; index <= 5; index += 1) stageWave0(bundle, `rerun-final-${index}`);
+  stageWave0(bundle, 'rerun-final-1');
   const wave0 = runGate(bundle, 'wave0-complete', 'phases/phase-wave0.md');
   assert.equal(wave0.output.check.passed, true, JSON.stringify(wave0.output.inspect));
   enterPhase(bundle, wave0.output.check.next);
   advanceStatus(bundle, 'wave0_complete');
-  const wave1Submissions = [];
-  for (let index = 1; index <= 5; index += 1) wave1Submissions.push(stageWave1(bundle, `rerun-final-${index}`));
+  const wave1Submissions = [stageWave1(bundle, 'rerun-final-1')];
   const depthReviewPath = join(bundle, 'artifacts/wave1/topic-a/depth-review.yaml');
   const depthReview = parseYaml(readFileSync(depthReviewPath, 'utf8'));
   depthReview.reviewed_work_unit_refs = wave1Submissions.map((submission) => submission.record.paths.work_unit_dir);
