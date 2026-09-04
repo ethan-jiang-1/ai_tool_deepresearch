@@ -142,7 +142,8 @@ if (existsSync(bundleDir)) {
 }
 
 // ── Create directory structure ──
-const dirs = ['seed_topics', 'reference', 'artifacts/wave0', 'artifacts/wave1', 'artifacts/wave2', '_logs', '_cache', '_scripts', 'final', '_work_units'];
+// @impl CMI-011: _tmp/ is scaffolded as the run-scoped temporary-artifact location.
+const dirs = ['seed_topics', 'reference', 'artifacts/wave0', 'artifacts/wave1', 'artifacts/wave2', '_logs', '_cache', '_scripts', '_tmp', 'final', '_work_units'];
 for (const d of dirs) {
   mkdirSync(join(bundleDir, d), { recursive: true });
 }
@@ -172,6 +173,8 @@ const templates = [
   { tmpl: '_logs/README.md.tmpl', dest: '_logs/README.md', parse: null,                            schema: null },
   // Scripts scaffold — sanctioned home for run-scoped helper scripts (non-authority runtime area).
   { tmpl: '_scripts/README.md.tmpl', dest: '_scripts/README.md', parse: null,                      schema: null },
+  // Run-scoped tmp scaffold (CMI-011) — sanctioned staging location for script intermediates.
+  { tmpl: '_tmp/README.md.tmpl', dest: '_tmp/README.md', parse: null,                             schema: null },
 ];
 
 for (const t of templates) {
@@ -243,8 +246,8 @@ try {
 // ── Report ──
 console.error(`${G}Bundle ${currentRunBundleRoot} created.${B}`);
 console.error('  ✓ 7 control files (plan, profile, status, queue, trace, BUNDLE_MAP, BUNDLE_ENTRY)');
-console.error('  ✓ 10 data directories (seed_topics, reference, artifacts/wave0-2, _logs, _cache, _scripts, final, _work_units)');
-console.error('  ✓ 6 scaffolds (reference/_INDEX.md, reference/README.md, artifacts/README.md, _cache/README.md, _logs/README.md, _scripts/README.md)');
+console.error('  ✓ 11 data directories (seed_topics, reference, artifacts/wave0-2, _logs, _cache, _scripts, _tmp, final, _work_units)');
+console.error('  ✓ 7 scaffolds (reference/_INDEX.md, reference/README.md, artifacts/README.md, _cache/README.md, _logs/README.md, _scripts/README.md, _tmp/README.md)');
 console.error('  ✓ All files passed Zod validation');
 console.error('  ✓ validate-bundle + inspect-bundle passed');
 

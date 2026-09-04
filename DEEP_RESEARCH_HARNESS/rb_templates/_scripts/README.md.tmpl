@@ -13,10 +13,16 @@
 
 - run-scoped 辅助脚本 **必须**写入 current run bundle root 的 `_scripts/`；
   **禁止**写入 repo 根（如 `.wu*-*.mjs`、`.gen-*.mjs`）或 `DEEP_RESEARCH_HARNESS/`。
-- `_scripts/` 是 non-authority 运行时区域（与 `_logs/`、`_cache/` 同类）：内容可删除、可重建，
+- `_scripts/` 是 non-authority 运行时区域（与 `_logs/`、`_cache/`、`_tmp/` 同类）：内容可删除、可重建，
   不建立 gate / evidence / provenance / receipt 语义，也不进入 inspect-bundle required shape。
 - 脚本内使用的裸 runtime path（`rb_queue.json`、`_work_units/...` 等）都相对于 current run
   bundle root，不相对于 repo root。
+- **脚本产生的中间/临时产物**（queue 卡、enrich 输入、投影 packet、source 草稿、result 草稿等）
+  一律写入 current run bundle root 的 `_tmp/`（bundle 自带临时目录，随 bundle 归档）；
+  **禁止**写系统 `/tmp/`（不归档、跨环境丢失、多个 run 的信息会串起来）、repo 根或
+  `DEEP_RESEARCH_HARNESS/`。推荐用
+  `stagingFile(slug, kind)` helper（`DEEP_RESEARCH_HARNESS/engine/helpers/run-scoped-tmp.mjs`）
+  解析路径；正例 `_tmp/enrich-08_haiguang-shensuan4-dcu.json`，反例 `/tmp/enrich-*.json`。
 
 ---
 

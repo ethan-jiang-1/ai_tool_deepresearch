@@ -88,6 +88,7 @@ prefixes:
   RET: governance/requirement-traceability
   RRD: engine/runtime-reentry-debuggability
   RUE: bundle/run-entry
+  RUS: bundle/run-scoped-tmp-artifacts
   RWE: research/research-wave-experiments
   RWG: research/research-wave-gate-implementation
   RWP: research/research-wave-phase-content
@@ -357,6 +358,7 @@ CMI-007: "cmd-bundle-instantiation — retired framework_version creation stamp;
 CMI-008: cmd-bundle-instantiation — Production creator rejects malformed argv before filesystem side effects
 CMI-009: cmd-bundle-instantiation — Bundle creators render actual framework navigation coordinates
 CMI-010: cmd-bundle-instantiation — Additional bundle creation carries an explicit user decision
+CMI-011: cmd-bundle-instantiation — Run-scoped tmp directory scaffold (instantiation)
 
 # bundle/file-observability
 FIO-001: file-observability — Engine audits phase-owned directories with stable file finding classifications
@@ -388,6 +390,12 @@ RUE-003: run-entry — Project changelog records version history and known limit
 RUE-004: run-entry — Agent behavior files stay synchronized on the research shortcut override
 RUE-005: run-entry — RUN.md frames drag/paste trigger as one-time handoff into Agent-run framework execution
 RUE-006: run-entry — Explicit existing bundle routes before the new-run default; regressions lock the canonical section, not pointer restatement
+
+# bundle/run-scoped-tmp-artifacts
+RUS-001: run-scoped-tmp-artifacts — Bundle owns a run-scoped tmp directory
+RUS-002: run-scoped-tmp-artifacts — Run-scoped script intermediates SHALL land in bundle _tmp
+RUS-003: run-scoped-tmp-artifacts — Staging helper resolves bundle-scoped temp paths
+RUS-004: run-scoped-tmp-artifacts — Inspect diagnoses hardcoded system-tmp writes
 
 # engine/check-inspect-feedback
 CHI-001: check-inspect-feedback — Check fail → Inspect → Feedback loop

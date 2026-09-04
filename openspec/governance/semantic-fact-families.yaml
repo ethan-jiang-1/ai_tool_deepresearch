@@ -72,6 +72,10 @@ families:
     bounded_question: >-
       Where do run-scoped helper scripts durably live for the current run
       bundle, and what authority status does that location carry?
+  - id: bundle.run-scoped-tmp-artifacts
+    bounded_question: >-
+      Where do run-scoped script intermediate artifacts durably live for the
+      current run bundle, and what authority status does that location carry?
   - id: lifecycle.reentry-checkpoint-targeting
     bounded_question: >-
       For a post-final rerun entry, which checkpoint target SHALL the reentry

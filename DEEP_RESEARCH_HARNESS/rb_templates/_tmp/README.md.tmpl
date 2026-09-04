@@ -1,0 +1,29 @@
+# _tmp/ — Run-Scoped 临时产物目录（本 run bundle 自带）
+
+> **Non-authority**：本目录下的内容是 run-scoped 脚本的中间/临时产物，随 bundle 归档、
+> 可删除、可重建，不作为 gate 判定依据。
+
+## 这是什么
+
+`_tmp/` 是**本 run bundle 的临时目录**：run-scoped 辅助脚本（`_scripts/*.mjs`）在执行中产生的
+中间产物——queue/task 卡、enrich 输入、wave 投影 packet、source 草稿、result 草稿等——一律写进
+这里，让它们留在 bundle 范围内：随 bundle 归档、跨环境可恢复、provenance 可追溯。
+
+## 规则
+
+- run-scoped 脚本的中间/临时产物 **必须**写入 current run bundle root 的 `_tmp/`；
+  **禁止**写系统 `/tmp/`（不随 bundle 归档、系统清理即丢失、多个 run 的信息会串起来）、
+  也禁止写 repo 根或 `DEEP_RESEARCH_HARNESS/`。
+- 文件命名建议：`{kind}-{slug}.json`（如 `enrich-08_haiguang-shensuan4-dcu.json`、
+  `wave0-proj-03_kuafu3.json`），或直接用框架提供的
+  `stagingFile(slug, kind)` helper（`DEEP_RESEARCH_HARNESS/engine/helpers/run-scoped-tmp.mjs`）
+  解析路径。
+- 正例：`const p = stagingFile('/path/to/current/run/bundle', slug, 'enrich');`
+- 反例：`const p = '/tmp/enrich-' + slug + '.json';` —— 中间产物落到 bundle 外，不归档、
+  不可恢复、provenance 断链。
+- 若已在系统 `/tmp/` 发现可归属到本 bundle 的中间产物，可按本目录命名约定采纳进来作为
+  恢复依据（与 retain 机制同思路）。
+
+---
+
+此文件在 bundle instantiation 时自动创建。

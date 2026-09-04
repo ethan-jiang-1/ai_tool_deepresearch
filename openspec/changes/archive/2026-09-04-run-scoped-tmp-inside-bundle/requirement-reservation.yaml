@@ -1,0 +1,10 @@
+schema_version: requirement-reservation/v1
+change: run-scoped-tmp-inside-bundle
+reservations:
+  - capability_path: bundle/run-scoped-tmp-artifacts
+    prefix: RUS
+    requirements:
+      - RUS-001
+      - RUS-002
+      - RUS-003
+      - RUS-004

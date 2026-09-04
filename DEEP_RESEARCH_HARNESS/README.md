@@ -49,7 +49,7 @@ research；跑研究不必先读它们，也不改变随后 `continue-run-bundle
 
 ## 运行时边界
 
-Current run bundle root 是本次 research run、CLI invocation、task card 或实验明确选中的 `dpt_rb_*` / `dpt_disp_*` 目录。它是 runtime truth 的根；“current”只描述本次操作，不表示全局选择、最新 bundle 或生命周期状态。裸 runtime path（如 `rb_queue.json`、`rb_trace.jsonl`、`rb_output_declarations.jsonl`、`reference/`、`artifacts/`、`_cache/`、`_logs/`、`_scripts/`、`final/`、`_work_units/...`）都相对于 current run bundle root，不相对于 repo root，也不相对于 `DEEP_RESEARCH_HARNESS/`。run-scoped 辅助脚本（executor/生成器/恢复脚本）必须写入 current run bundle root 的 `_scripts/`，不得写入 repo 根或框架目录。
+Current run bundle root 是本次 research run、CLI invocation、task card 或实验明确选中的 `dpt_rb_*` / `dpt_disp_*` 目录。它是 runtime truth 的根；“current”只描述本次操作，不表示全局选择、最新 bundle 或生命周期状态。裸 runtime path（如 `rb_queue.json`、`rb_trace.jsonl`、`rb_output_declarations.jsonl`、`reference/`、`artifacts/`、`_cache/`、`_logs/`、`_scripts/`、`_tmp/`、`final/`、`_work_units/...`）都相对于 current run bundle root，不相对于 repo root，也不相对于 `DEEP_RESEARCH_HARNESS/`。run-scoped 辅助脚本（executor/生成器/恢复脚本）必须写入 current run bundle root 的 `_scripts/`，不得写入 repo 根或框架目录；脚本产生的中间/临时产物（queue 卡、enrich 输入、投影 packet、source 草稿、result 草稿等）必须写入 current run bundle root 的 `_tmp/`，禁止写系统 `/tmp/`（不归档、跨环境丢失、多个 run 的信息会串起来）。
 
 例如，如果 current run bundle root 是 `dpt_rb_climate-policy/`，那么 `_work_units/wave1/wu-w1-b000-deep-i0001/` 指的是 `dpt_rb_climate-policy/_work_units/wave1/wu-w1-b000-deep-i0001/`。
 

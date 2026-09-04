@@ -1,0 +1,47 @@
+schema_version: semantic-closure/v1
+change: run-scoped-tmp-inside-bundle
+status: affected
+catalog_additions: []
+affected:
+  - family: bundle.run-scoped-tmp-artifacts
+    fact: >-
+      Whether run-scoped script intermediate artifacts (queue/task cards,
+      enrich inputs, projection packets, source drafts, result drafts) resolve
+      inside the current run bundle root `_tmp/` (archivable, recoverable,
+      non-authority) or escape to the system `/tmp/` (not archived, lost across
+      environments, provenance-broken). This change makes bundle `_tmp/` the
+      sanctioned location and adds a read-only scan diagnosing hardcoded
+      system-tmp write paths in `_scripts/*.mjs`.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/helpers/run-scoped-tmp.mjs
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/run-scoped-tmp.mjs
+      - DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs
+    consumers:
+      - DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs
+    overlap:
+      - coordinate: DEEP_RESEARCH_HARNESS/cli/instantiate-run-bundle.mjs
+        relation: derived
+        detail: >-
+          The creator scaffolds `_tmp/` and `_tmp/README.md` at instantiation;
+          the location contract itself is owned by the run-scoped-tmp-artifacts
+          capability, not by the instantiation command.
+      - coordinate: DEEP_RESEARCH_HARNESS/rb_templates/_tmp/README.md.tmpl
+        relation: derived
+        detail: >-
+          The scaffolded README documents the temporary, bundle-scoped nature of
+          `_tmp/` for agents; it presents the contract, it does not own it.
+      - coordinate: DEEP_RESEARCH_HARNESS/rb_templates/_scripts/README.md.tmpl
+        relation: derived
+        detail: >-
+          The scripts README documents the intermediate-artifact location rule
+          (bundle `_tmp/`, never system `/tmp/`) for agents writing run-scoped
+          helpers; it routes the same contract into `_scripts/` guidance.
+      - coordinate: DEEP_RESEARCH_HARNESS/command_playbook/instantiate-run-bundle.md
+        relation: derived
+        detail: >-
+          The playbook text directs intermediates to bundle `_tmp/`; the
+          machine-diagnosed contract stays with the capability.
+    verification:
+      truth_table: tests/engine/helpers/run-scoped-tmp.test.mjs
+      cross_surface: tests/integration/cli/inspect-bundle-tmp-diagnostic.test.mjs

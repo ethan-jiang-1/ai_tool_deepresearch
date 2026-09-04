@@ -48,6 +48,7 @@ Do not list, scan, or read these paths as task context unless the user explicitl
 
 - Do not read `_old_topics` archives (under `_backlog/_done/`, including `_original_*` subdirectories) unless explicitly asked.
 - **Run-scoped helper scripts（work-unit executor / 生成器 / 恢复脚本）必须写入 current run bundle root 的 `_scripts/`**，禁止写入 repo 根（如 `.wu*-*.mjs`、`.gen-*.mjs`）或 `DEEP_RESEARCH_HARNESS/`。`_scripts/` 是 non-authority 运行时区域，随 bundle 归档。
+- **Run-scoped 脚本的中间/临时产物一律写入 current run bundle root 的 `_tmp/`**（bundle 自带临时目录，随 bundle 归档），禁止写系统 `/tmp/`（不归档、跨环境丢失、多个 run 的信息会串起来）、repo 根或 `DEEP_RESEARCH_HARNESS/`。推荐用 `DEEP_RESEARCH_HARNESS/engine/helpers/run-scoped-tmp.mjs` 的 `stagingFile(slug, kind)` 解析路径。
 - A verified selected bundle directory is the current run bundle root; bare runtime paths always resolve under that root.
 - Use Node.js >=20, pure JavaScript ESM (`.mjs`). No TypeScript. **Absolutely no Python.** Not for scripts, not for one-liners, not for prototyping — use Node.js for everything.
 - Do not add dependencies. Approved npm deps only: `zod`, `yaml`; otherwise use Node built-ins.

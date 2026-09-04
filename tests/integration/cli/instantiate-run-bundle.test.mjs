@@ -62,6 +62,9 @@ describe('instantiate-run-bundle.mjs integration', () => {
       '_cache',
       '_cache/README.md',
       '_logs/README.md',
+      '_scripts/README.md',
+      '_tmp',
+      '_tmp/README.md',
       'final',
       '_work_units',
     ]) {
@@ -86,10 +89,27 @@ describe('instantiate-run-bundle.mjs integration', () => {
     const logsReadme = readFileSync(join(dir, '_logs/README.md'), 'utf-8');
     assert.ok(logsReadme.includes('run.log') && logsReadme.includes('rb_trace.jsonl'),
       '_logs/README.md should explain the log and trace file inventory');
+    const tmpReadme = readFileSync(join(dir, '_tmp/README.md'), 'utf-8');
+    assert.ok(tmpReadme.includes('临时') && tmpReadme.includes('_tmp/') && tmpReadme.includes('/tmp/'),
+      '_tmp/README.md should declare the temporary bundle-scoped directory and the /tmp/ prohibition');
     const status = JSON.parse(readFileSync(join(dir, 'rb_status.json'), 'utf-8'));
     assert.equal(status.current_node, null);
     const profile = parseYaml(readFileSync(join(dir, 'rb_profile.yaml'), 'utf-8'));
     assert.deepEqual(profile.research_access, { status: 'unprobed' });
+  });
+
+  it('inspect still passes when _tmp/ is absent (non-required shape)', () => {
+    const name = uniqueName('notmp');
+    const dir = trackBundle(name);
+    const result = runInstantiate(name);
+    assert.equal(result.status, 0, result.stderr);
+    rmSync(join(dir, '_tmp'), { recursive: true, force: true });
+    const inspect = spawnSync('node', [join(REPO_ROOT, 'DEEP_RESEARCH_HARNESS/cli/inspect-bundle.mjs'), dir], {
+      cwd: REPO_ROOT,
+      encoding: 'utf-8',
+      timeout: 10000,
+    });
+    assert.equal(inspect.status, 0, inspect.stdout + inspect.stderr);
   });
 
   it('fails on name collision without overwriting existing content', () => {

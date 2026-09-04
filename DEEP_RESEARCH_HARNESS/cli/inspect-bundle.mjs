@@ -14,6 +14,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { checkCurrentEntryContract } from '../engine/helpers/current-entry-contract.mjs';
 import { scanBundle } from '../engine/helpers/cross-bundle-reference-scan.mjs';
+import { scanHardcodedSystemTmpWrites } from '../engine/helpers/run-scoped-tmp.mjs';
 
 const REQUIRED = [
   'rb_plan.md', 'rb_profile.yaml',
@@ -304,12 +305,23 @@ const ownBundleName = bundleBasename.startsWith('dpt_rb_') ? bundleBasename.slic
 const crossRefHits = scanBundle(bundleDir, ownBundleName);
 const crossRefBlocker = crossRefHits.length > 0;
 
+// Run-scoped tmp write scan (RUS-004)
+const tmpWriteHits = scanHardcodedSystemTmpWrites(bundleDir);
+const tmpWriteBlocker = tmpWriteHits.length > 0;
+
 if (crossRefBlocker) {
   console.log(`${Y}Cross-bundle reference diagnostics (BUI-003):${B}`);
   for (const hit of crossRefHits) {
     for (const cited of hit.citedBundles) {
       console.log(`${Y}  Bundle isolation diagnostic [active_bundle_blocker]: ${hit.file} cites dpt_rb_${cited}${B}`);
     }
+  }
+}
+
+if (tmpWriteBlocker) {
+  console.log(`${Y}Run-scoped tmp diagnostics (RUS-004):${B}`);
+  for (const hit of tmpWriteHits) {
+    console.log(`${Y}  Bundle isolation diagnostic [active_bundle_blocker]: ${hit.file}:${hit.line} hardcodes system tmp write ${hit.literal}${B}`);
   }
 }
 
@@ -323,12 +335,15 @@ if (leakDiagnostics.length > 0) {
     console.log(`${color}Bundle isolation diagnostic [${diag.severity}]: ${diag.path} — ${diag.message}${B}`);
   }
 }
-if (activeLeakDiagnostics.length > 0 || crossRefBlocker) {
+if (activeLeakDiagnostics.length > 0 || crossRefBlocker || tmpWriteBlocker) {
   if (activeLeakDiagnostics.length > 0) {
     console.log(`${R}Inspect bundle: repo-root runtime leak associated with current run bundle${B}`);
   }
   if (crossRefBlocker) {
     console.log(`${R}Inspect bundle: cross-bundle content references found — resolve before continuing${B}`);
+  }
+  if (tmpWriteBlocker) {
+    console.log(`${R}Inspect bundle: run-scoped scripts hardcode system tmp writes — write intermediates under _tmp/ instead${B}`);
   }
   process.exit(1);
 }

@@ -1,0 +1,89 @@
+schema_version: verification-routing/v1
+change: run-scoped-tmp-inside-bundle
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      Deterministic contract tests for the staging-file path resolver
+      (bundle-scoped resolution, traversal sanitization, stable distinct
+      names) exercised in-process.
+  integration:
+    status: selected
+    rationale: >-
+      CLI-boundary proof for the two new seams: instantiate-run-bundle
+      scaffolding `_tmp/` + `_tmp/README.md`, and inspect-bundle reporting
+      hardcoded system-tmp write paths in `_scripts/*.mjs` (with bundle-local
+      staging excluded), exercised through the CLI surface on temporary
+      target directories and fixture bundles.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      Change is bounded to a staging-path helper and two CLI diagnostic
+      seams; the integration claims cover the full CLI surface and add no
+      further verdict.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      The location rule also carries an Agent obligation (write intermediates
+      to bundle `_tmp/`, not system `/tmp/`) whose deterministic subset is the
+      machine scan; the semantic obligation is carried by the playbook and
+      README rewrites and requirement text, reviewable as change artifacts
+      rather than by a machine verdict in this change.
+claims:
+  - id: staging-file-bundle-scoped
+    statement: >-
+      stagingFile(slug, kind) with a bundle root resolves a path inside that
+      bundle root `_tmp/`, keeps repeated identical calls stable and distinct
+      across kind/slug variations, and rejects or neutralizes traversal and
+      separator inputs so the resolved path cannot escape `_tmp/`.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/run-scoped-tmp.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      external_calls: none
+      verdict_judge: deterministic
+      runtime: none
+    verdict_authority: node_test_exit
+  - id: instantiation-tmp-scaffold
+    statement: >-
+      instantiate-run-bundle.mjs creates `_tmp/` and `_tmp/README.md` in a
+      fresh bundle and mentions the scaffold in its success report, while a
+      bundle whose `_tmp/` is removed or empty still passes inspect-bundle
+      structural checks (absence is not a required-shape failure).
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/instantiate-run-bundle.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      external_calls: none
+      verdict_judge: deterministic
+      runtime: none
+    verdict_authority: node_test_exit
+  - id: hardcoded-tmp-write-scan
+    statement: >-
+      inspect-bundle reports a run-scoped-tmp diagnostic naming the file and
+      offending literal when a selected bundle's `_scripts/*.mjs` contains a
+      hardcoded system-tmp write path (e.g. '/tmp/enrich-' + slug + '.json'),
+      exits 1 for the active-bundle blocker without altering exit semantics
+      for unrelated surfaces, and reports nothing (no diagnostic, no exit 1
+      for this reason) for scripts that write only under bundle `_tmp/`
+      (directly or via the staging helper).
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/inspect-bundle-tmp-diagnostic.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      external_calls: none
+      verdict_judge: deterministic
+      runtime: none
+    verdict_authority: node_test_exit
