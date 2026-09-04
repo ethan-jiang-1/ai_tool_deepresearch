@@ -125,4 +125,65 @@ G 路线逐案评估（语义风险）与 spawn 成本的 engine 侧优化（如
 
 - 第一步 `regression-suite-tooling-speedup`：已 10/10 完成（c8+cache+wrapper+
   权重表）；`lptOrder` 与权重表是 P3 分片调度的直接输入；
-- 本计划 P0/P1/P2 每项独立小 change；P1-B 单独评审门禁语义。
+- 原底稿初拟按 P0/P1/P2/P3 拆分多个 change，但经实测与治理成本评估，多 change 的仪式与全量回归终审税过重，已正式收敛为**单一聚合 Change**（见第八、九节）。
+
+## 八、收敛方案：合并为单一 OpenSpec Change（`regression-suite-heavy-chain-speedup`）
+
+### 1. 合并动机与治理定性
+- **拒绝流程空转**：4 个独立 change 意味着经历 4 轮 propose/polish/apply，并触发 4 次全量 `npm test` 归档终审，空转时间严重吞噬收益；
+- **范围完全内聚**：所有改动纯粹限定在 `tests/` 和 `scripts/`，**不修改任何 `DEEP_RESEARCH_HARNESS/` 生产框架代码**，不增删 requirement，与第一步相同声明 `skip_specs: true`；
+- **P1-B 自然化解**：深挖证实 `change-feedback-finalizer.test.mjs` 测试夹具仅跑 smoke 用例，真实超时源于全量套件过慢；一旦前三大重型文件（179s/84s/62s）优化完成，全量回归降至 ~130-150s，Finalizer 超时误杀风险**不治自愈**，彻底无需冒风险改动治理终审脚本。
+
+### 2. 深挖病灶与针对性手术
+- **P0-A [`tests/e2e/rerun-round-continuity.test.mjs`]**：`before()` 已走完 baseline + wave2（累计 ~36 spawn），首个 `it` 无谓重复走同一条链。手术：断言前移至 baseline 或仅测增量，净削减 36 次串行 spawn；
+- **P0-B [`tests/e2e/post-final-rerun-lineage-continuity.test.mjs`]**：首个 it 无重复，但 `it 4` 在 `--style quick_factual` 门槛下循环提交了 5 个 wave0 + 5 个 wave1（10 次全套件提交）。手术：解耦血统验证与 5 门槛，改用 debug 或快照；
+- **P1-A & P2 [`tests/integration/cli/`]**：`operate-work-unit`（121 spawn）与 `check-gate-wave1`（50+ it）对细粒度纯逻辑规则支付了高昂的 Node 进程启动税。手术：以共享 snapshot 取代冷启动，或推行“哨兵 spawn 验证进程契约 + 规则矩阵快速断言”；
+- **P3 [`scripts/test-shard.mjs`]**：将现有 naive 的轮询分片升级为基于 `scripts/test-weights.json` 的贪心 LPT 装箱分片。
+
+### 3. OpenSpec 流程铁律：Propose 后必须执行 `polish-openspec-change`
+- 按照项目规范，执行 `/opsx:propose` 创建变更产物后，**严禁直接进入 apply**；
+- **必须立即调用 `.agents/skills/polish-openspec-change/SKILL.md`** 进行至少两轮全量与风险审视（Pass 1 整体一致性、Pass 2 风险专项），直至获得 `ready for apply` 判决后方可执行实施。
+
+---
+
+## 九、落地执行计划与检查清单（Execution Checklist）
+
+### 阶段 0：OpenSpec 提议与磨砺（Propose & Polish）
+- [ ] 0.1 运行 `/opsx:propose` 初始化变更 `regression-suite-heavy-chain-speedup`（声明 `skip_specs: true`，明确无生产框架修改）
+- [ ] 0.2 调用 `.agents/skills/polish-openspec-change/SKILL.md`，至少进行 2 轮深度审查，验证任务依赖与契约完整性
+- [ ] 0.3 达成 `ready for apply` 状态，获得推进授权
+
+### 阶段 1：基线快照锁定（Apply 前置守护）
+- [ ] 1.1 记录目标重型文件的 solo 独立运行墙钟基线：
+  - `node --test tests/e2e/rerun-round-continuity.test.mjs`
+  - `node --test tests/e2e/post-final-rerun-lineage-continuity.test.mjs`
+  - `node --test tests/integration/cli/operate-work-unit.test.mjs`
+- [ ] 1.2 导出目标文件的测试标题清单快照（确保重构过程中**断言一条不漏**）
+
+### 阶段 2：P0 级 E2E 长链手术（斩获最确定的 ~40s 墙钟）
+- [ ] 2.1 重构 `tests/e2e/rerun-round-continuity.test.mjs`：
+  - 将首个 it 中对全链 checkpoint 的遍历断言并入 `buildBaseline()` 钩子
+  - 首个 it 仅验证 rerun cycle 增量差异
+  - 验证 solo 耗时（预期从 60s 降至 25~30s），比对标题 diff 为 0
+- [ ] 2.2 优化 `tests/e2e/post-final-rerun-lineage-continuity.test.mjs`：
+  - 精简 `it 4` 中过度提交的 10 次 work-unit 链
+  - 验证 solo 耗时（预期从 25s 降至 ~15s），比对标题 diff 为 0
+
+### 阶段 3：P1/P2 级 CLI 集成测试去 spawn 税
+- [ ] 3.1 优化 `tests/integration/cli/operate-work-unit.test.mjs`：
+  - 将通用的前置 work-unit 准备状态改用已有的 snapshot/restore 共享夹具
+  - 消除跨 it 的重复冷启动，验证 solo 耗时
+- [ ] 3.2 优化 `tests/integration/cli/check-gate-wave1-complete.test.mjs` 及同族门禁用例：
+  - 保留 2~3 个真实 spawn 的 CLI 哨兵测试（守护 CLE-004 退出码与 stdout JSON）
+  - 规则断言复用模板或加速求值
+
+### 阶段 4：P3 调度装箱优化
+- [ ] 4.1 重构 `scripts/test-shard.mjs`：
+  - 接入 `scripts/test-weights.json`，实现基于 LPT 的贪心装箱分片算法
+  - 保证多 shard 执行时各分片总权重严格平衡
+
+### 阶段 5：全量验证与终审归档（Closeout & Archive）
+- [ ] 5.1 运行 `node scripts/regen-test-weights.mjs` 刷新全套件性能投影表
+- [ ] 5.2 验证全部重型测试的断言快照比对（diff 严格为空）
+- [ ] 5.3 运行全量 `npm test`，验证全部 3076+ 测试用例全绿，对比总墙钟改善（预期迈向 130~150s 区间）
+- [ ] 5.4 标记 `openspec-feedback:closeout-review` 完成，执行 `node openspec/governance/finalize-change-archive.mjs --change regression-suite-heavy-chain-speedup` 终审归档

@@ -2,7 +2,8 @@
 
 > 日期: 2026-09-01（压缩自同日初版） | 性质: 参照资料 | 范围: 用户划定 >1000 行三份（800–1000 行组不入 capability 研究，其 ≥190 行块走 R2 requirement 级处置）
 > 样板: `spec-lean-capability-split-dwu.md`（DWU，唯一拆分案例）。
-> 状态同步: 2026-09-03 复核——"三个不拆"的结构判定经 bug-fix 累积后仍成立。行数漂移：research-wave-gate-implementation 1380→**1426**（wave0-to-final bypass 完整性）、agentic-queue 1059→**1082**（AGQ-026 supersede retry lineage）、research-wave-phase-content **1165 不变**；800–1000 组 canonical-topic-state 903→**920**（HITL1 mutate_layout 授权）。重开触发条件复查：**均未触发**；但 BUG-249..253 全部为 wave1 侧硬化（evidence/trace/result-authoring/supersede）——wave1 专属内容在持续累积，下次复核时对 RWP 触发条件做一次有意识对照。下表三轴实测数字为 2026-09-01 勘察值，行数列以上述同步为准。
+> 状态同步: 2026-09-03 复核——"三个不拆"的结构判定经 bug-fix 累积后仍成立。行数漂移：research-wave-gate-implementation 1380→**1426**（wave0-to-final bypass 完整性）、agentic-queue 1059→**1082**（AGQ-026 supersede retry lineage）、research-wave-phase-content **1165 不变**；800–1000 组 canonical-topic-state 903→**920**（HITL1 mutate_layout 授权）。重开触发条件复查：**均未触发**；但 BUG-249..253 全部为 wave1 侧硬化（evidence/trace/result-authoring/supersede）——wave1 专属内容在持续累积，下次复核时对 RWP 触发条件做一次有意识对照。
+> **REVIEW（2026-09-03，证据版见 `_backlog/_scratch/handoff-spec-lean-plan-review-verdict.md` §5）**：RWP 触发条件有意识对照**已完成**——BUG-249..253 没有一行落在 RWP spec（最后触及 6559f35c6，09-01 resync；22 块、max 235 不变），RWP 触发未触发，不拆维持。wave1 硬化的实际累积落点需修正为 **DWU +88（DEW-030/031）/ AGQ +115（AGQ-026）/ CPT +57（BUG-249）**——BUG-250/251 零 main spec 触及。这强化 R1 的优先级（DWU 是吸积热点）；AGQ 触发条件未触发（AGQ-026 是既有 supersession 语义内增强，非新机器面）。下表三轴实测数字为 2026-09-01 勘察值，行数列以上述同步为准。
 
 ---
 

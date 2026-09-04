@@ -178,6 +178,7 @@
 ### R3（1 change）——registry 卫生（用户点名项）
 
 - 15 死前缀注记：**✅ 已达成（2026-09-03 核实；先于本 plan 定稿即存在）**——15 个前缀全部带行内注记 `# all entries deprecated; no spec directory`（部分带 replacement 指针）。剩余动作降级为：核对注记事实准确性（replacement 指针是否成立），不再需要立项级改动；check-project-reqs 现状全绿。
+- **REVIEW（2026-09-03，见 `_backlog/_scratch/handoff-spec-lean-plan-review-verdict.md`）**：retired ID 行实测 **59**——`grep -c '\[DEPRECATED\]'` 的 61 含 registry 头部 L4/L18 两条注释行（check-project-reqs 报 "59 retired" 佐证）。逐条核对范围以 **59** 为准。另：15 死前缀的 replacement 指针目标（WPG/FRE/DEW/AGQ/AGO/REL/SDC/SRL）已实测全部存在于 prefixes 区，注记事实核对完成。
 - 61 条 DEPRECATED 描述逐条核对：仅修正**事实性错误**（旧路径名、已更名家族的拼写），描述改为可读史实（如 "content no longer exists in any accepted surface (archaeology <date>)" 的既有风格）；不改 ID、不复活、不删行。
 - 产出对账表：退役家族 × 活表面回声 = 0/刻意否定/负向锁（F3 数据入档）。
 
@@ -216,6 +217,7 @@
 ## 4. 全局验收度量（随每批提交落地 before/after）
 
 - [ ] 全库无 requirement 块 > 160 行（含 post-final-recovery 357 与 R2 长尾全部）。**⚠️ 待拍板（2026-09-03 实测）**：全库 ≥160 行块共 **21 块**——11 块 ≥190 在 R2 清单内；160–190 区间另有 10 块不在任何批次清单（reference-flat-format 187 / agent-command-surface 187 / subagent-node-contract 182 / CPT-004 179 / RWP 177 / version-management 174 / CDP-Final 173 / change-feedback-loop 171 / HITL1 163 / wave1-intake 161）。二选一：扩 R2 长尾覆盖全量 ≥160，或本条验收口径改为 ≥190。
+  > **REVIEW 建议（2026-09-03）**：验收口径改 **≥190**（R2 清单 = 验收对象，可判定）；160–190 的 10 块登记为观察名单，任一吸积破 190 即入下一轮长尾批。扩 R2 长尾会把 R2 从 3-4 change 膨胀到 ~7+，违反 CLS-084 复盘的 pacing 教训。**待用户拍板。**
 - [ ] `agent/delegated-work-units` 总行数 before/after 随 R1 提交报告（基线 2360；目标量级以 R0 扫描器实测为准）。
 - [ ] registry：15 死前缀全部注记/迁出；61 条 DEPRECATED 核对对账表入档；活跃 ID 与政策零变化；`check-project-reqs` 全程绿。
 - [ ] §-guard 覆盖 prompt 自引用；引擎幽灵符号泛化 checker 接入 check-all；全库首扫定标。
@@ -270,6 +272,6 @@
   - [ ] rerun-incremental-node 191 行块 ×2（2026-09-03 补记，处置初稿见深挖 §11）
 - [ ] **R3 registry 卫生**：~~15 死前缀注记~~（✅ 已存在，降级为注记事实核对）+ 61 条 DEPRECATED 描述核对 + old→new 对账表（含 R1 迁移映射）
 - [ ] **R4 guard 扩展**（基线 guard 已落地，纯扩展）：prompt 内部 `§X.Y` 自引用可解析 + 引擎导航注释幽灵符号 checker（两者接入 check-all）
-- [ ] **R5 housekeeping**：小修合并（M1/M4/M5 若前批未顺手处理）
+- [ ] **R5 housekeeping**：小修合并（M1/M4/M5 若前批未顺手处理；REVIEW 2026-09-03：M5 的 "DEW L1102" 行号锚已漂移——BUG-252/253 后 L1102 为空行，执行时按内容重定位）
 
 - [ ] **完成定义**：§8 全勾 → 按 `_backlog/plans/README.md` 四步移档关闭本 plan。

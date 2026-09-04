@@ -88,6 +88,7 @@
 | H2 | P4-P11 | 五快捷选项、确认语义、候选形成、delivery/custom |
 
 **清理候选 HITL2-CONFIRM**：P5（"用户的清楚决定本身 SHALL 视为确认"）与 P9（"Clear acceptance, correction, or delegation SHALL itself confirm…"）疑似同一确认语义的两处陈述。执行时逐字比对：若同义则合并为一处（另一处改指针）；若语义不同（一个针对五选项、一个针对 candidate 流）则保留并加交叉引用。**不做无证据的删除。**
+> **REVIEW 实文比对（2026-09-03）**：P5 @ spec L272（"Agent SHALL NOT 对五个 existing action…"，针对五快捷选项 A-E）；P9 @ spec L373（"confirm the resolved **candidate**"，针对 composition candidate 流）。**对象不同，属预设第二种情况：保留并加交叉引用，不合并。**
 
 ### 8. runtime-reentry-debuggability L363-555（193 行）— 分割 ×2
 
@@ -121,6 +122,8 @@
 | K2 | P5, P6, P8 | S2@121、S3@126、S4@130、S5@135、S6@143、S12@177、S13@182、S14@188、S15@194、S16@202（10 个） | 授权与执行：route-bound witness、状态窗与 rerun-ready gate、rerun_count 循环保护、style projection、机械 blocker |
 
 **初稿性质**：K1/K2 主题分界与场景归组为 2026-09-03 人工勘察初稿，执行时按执行注记 1 的同款单元解析重核（declared==actual 断言）；两子块预期均 ≤160 行（勘察初估 ~130）。注意 CTS 的 mutate_layout 授权（BUG-248，commit bb145ccab）与本块 P3/S9 语义联动——若届时 canonical-topic-state 再动 layout 契约，先对齐再拆。
+
+> **REVIEW（2026-09-03，证据版见 `_backlog/_scratch/handoff-spec-lean-plan-review-verdict.md` §4）**：初稿**通过**——8 散文段分界、19 场景、K1/K2=9+10 归组与实文逐项零偏差；P8 授权段整段归 K2，主题分界未拆破 normative。两处执行注意：**(a)** K2 的 S4/S5（THEN 引用 apply 形态）依赖 K1 的 P3 定义，守恒规则只许净增标题行——K1/K2 新标题措辞要带出这层关系；**(b)** S12 横跨 P5（K2）与 P4（K1），按主导散文归 K2 正确，declared==actual 报偏差时勿强行搬场景。
 
 ---
 

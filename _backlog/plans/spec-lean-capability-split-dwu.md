@@ -20,6 +20,8 @@
 
 拆分判据（ADR 0005 + catalog Purpose 语义）：39 块（含 2026-09-03 新增 DEW-030/031）聚成 **4 个互不重叠的任务问题**，与 engine 模块缝一一对应——这是能力边界修订，不是文本搬家。
 
+> **REVIEW 修正（2026-09-03）**：per-requirement 内联实为 **31** 条（strict `^> req: DEW-\d{3}$`，与锁测试 L99 断言 31 一致）——grep 的 32 含文件头部 L3 的 ID 枚举行；无内联标题实为 **8** 个。S4/T1 计数重写以 31/8 为基线。另：catalog Purpose 实文为 "Production **delegated-work** path"（带连字符），本表转写无连字符，R1b 改写时以实文为准。
+
 ---
 
 ## 2. 拆分设计：一变四
@@ -34,6 +36,7 @@
 规模预期：母体 ~13 块 / submission ~10 块 / preflight ~6 块 / correction ~8 块（精确计数 = T1 首个交付物）。
 
 > **同步注（2026-09-03）**：BUG-252/253 新增两块的归属预判——DEW-030「Generated source-claim authoring guidance SHALL state exact cache/degraded-ref and source_ref value domains with an accepted-and-degraded example」（spec L2363）：generated 投影的 authoring 契约，母体（briefing/投影）与 submission（authoring/validation）双候选，T1.1 优先判定；DEW-031「Dry-submit invalid-result SHALL report duplicate accepted claim URLs and their count」（spec L2417）：dry-submit 诊断，明确归 preflight。两块均 ≤160 行，不影响粒度判据。
+> **REVIEW 证据（2026-09-03）**：`@impl DEW-030` 实测落在 `engine/work-unit-envelope.mjs`（母体缝列首模块）；DEW-031 落在 `work-unit-validation.mjs`（preflight 缝）。**模块缝证据倾向 DEW-030 归母体**，与"generated 投影 authoring 契约"的标题语义一致；T1.1 把 `@impl` 模块缝列为显式判据即可定案。
 
 ---
 
@@ -100,6 +103,13 @@
 2. **四分法边界**：母体/submission/preflight/correction 是否认可？候选调整：timeout 终态化归 preflight 还是 correction（本文归 correction——它是"执行"不是"预测"）。
 3. **catalog Purpose 改写措辞**：DWU 新 Purpose 草案 "Production delegated-work assignment surface: work-unit identity, envelope binding, claim profile, task projection, and actor policy."
 4. **supersession 块（137 行）归属**：本文归 correction（纠正语义）。若复核认为它属 submission 的"反向操作"，可调。
+
+> **REVIEW 判定（2026-09-03，证据版见 `_backlog/_scratch/handoff-spec-lean-plan-review-verdict.md` §1）**：四项全部建议**通过**——
+> ① 选项 B：reservation 基建实测存在（`requirement-reservation-contract.mjs` + check-project-reqs 支持 reserved→live）；实测 1:1 已稀释到 8 个标题无内联（见 §1 修正），更无理由接受选项 A 的永久弱化。
+> ② 四分法：engine 模块缝实查全部真实存在；timeout 终态化归 correction 成立（work-unit-lifecycle/-supersession 均在 correction 列）。
+> ③ Purpose 草案与母体保留块逐项对应，无漏项；引用措辞以实文连字符为准（见 §1 修正）。
+> ④ supersession 块（实测 L2151 起 137 行）标题本身即 "Submitted **correction** SHALL…"，归 correction 定案；supersession 块编号 137 行数字核验无误。
+> DEW-030 归属：倾向母体（`@impl` 在 work-unit-envelope.mjs，见 §2 REVIEW 证据）。
 
 ## 7. 验收断言（T2 完成即验）
 
