@@ -360,7 +360,7 @@ reentry SHALL not use `START_FROM_HERE.md` as compatibility fallback.
 - **THEN** it SHALL return the unsupported-current-entry-contract blocker
 - **AND** it SHALL not preserve or recommend the deprecated fallback
 
-### Requirement: Reentry diagnostics SHALL compose incident truth with schema-bound actions and read-only findings
+### Requirement: Reentry diagnostics SHALL summarize incident-shaped recovery truth
 
 `check-reentry` SHALL compose existing status, queue, artifact, ledger,
 checkpoint, file-observability, primary Final inventory, and post-final recovery
@@ -382,47 +382,6 @@ warning/info findings remain non-blocking. The projection SHALL reuse canonical
 inventory, backing, lifecycle, or post-final eligibility results rather than
 recompute them. It SHALL read current bundle files only and SHALL not mutate
 runtime authority or rely on chat memory.
-
-#### Scenario: Incident-shaped bundle produces one canonical recovery root
-
-- **WHEN** one registry-external durable Topic causes dependent missing surfaces
-- **THEN** diagnostics SHALL retain detail but project the unregistered Topic as one blocking root
-- **AND** dependent symptoms SHALL not create competing actions
-
-#### Scenario: Missing sanctioned path is explicit
-
-- **WHEN** no accepted path reaches the suggested owner
-- **THEN** the root SHALL report `missing_contract` and omit an unreachable command
-
-#### Scenario: Eligible terminal Final exposes one recovery action
-
-> **@deprecated behavior** — The historical scenario title is retained as an
-> archive anchor. Before ReopenResearchPass has accepted a request, the one reachable action is
-> now the current Final owner rather than ReopenResearchPass preparation.
-
-- **WHEN** the latest lineage is clean terminal Final, inventory is valid, and no publication or accepted ReopenResearchPass workspace exists
-- **THEN** recovery summary SHALL expose the current Final owner as reachable
-- **AND** it SHALL not emit post-final recovery preparation as the default action
-
-#### Scenario: Invocation error may omit recovery context
-
-- **WHEN** invocation cannot load a bundle or normalize target and exits `2`
-- **THEN** it MAY omit recovery while preserving structured invocation feedback
-
-
-#### Scenario: blocked inspection is not projected as reachable
-
-- **WHEN** a post-final inspection returns `verdict: blocked` for a root
-- **THEN** the summary SHALL project that root as blocked
-- **AND** it SHALL NOT project a `reachable` current-owner action with `blocker: null`
-
-#### Scenario: Recovery summary is read-only
-#### Scenario: Recovery summary is read-only
-
-- **WHEN** `check-reentry` produces a summary
-- **THEN** recursive before/after inspection SHALL show no mutation to runtime authority or content
-
-### Requirement: Post-final reentry projections SHALL preserve Final boundary owners and pass lineage
 
 Across a Final-boundary handoff and current terminal Final, owner precedence
 SHALL be:
@@ -470,6 +429,28 @@ owner; proven later normal handoff -> current lifecycle owner; exhausted rerun
 -> new-bundle user decision; stale/ambiguous/conflicting state -> one blocker.
 Immediately after legal post-final entry/status operations, existing
 postconditions SHALL continue to check the actual current source-gate window.
+
+#### Scenario: Incident-shaped bundle produces one canonical recovery root
+
+- **WHEN** one registry-external durable Topic causes dependent missing surfaces
+- **THEN** diagnostics SHALL retain detail but project the unregistered Topic as one blocking root
+- **AND** dependent symptoms SHALL not create competing actions
+
+#### Scenario: Missing sanctioned path is explicit
+
+- **WHEN** no accepted path reaches the suggested owner
+- **THEN** the root SHALL report `missing_contract` and omit an unreachable command
+
+#### Scenario: Eligible terminal Final exposes one recovery action
+
+> **@deprecated behavior** — The historical scenario title is retained as an
+> archive anchor. Before ReopenResearchPass has accepted a request, the one reachable action is
+> now the current Final owner rather than ReopenResearchPass preparation.
+
+- **WHEN** the latest lineage is clean terminal Final, inventory is valid, and no publication or accepted ReopenResearchPass workspace exists
+- **THEN** recovery summary SHALL expose the current Final owner as reachable
+- **AND** it SHALL not emit post-final recovery preparation as the default action
+
 #### Scenario: Newer Final lineage with zero append resumes immediate delivery
 
 - **WHEN** accepted ReopenResearchPass descendants reach a newer legal Final handoff, exact prior-inventory admission creates its route-bound Final load, Readiness status synchronization completes, and inventory has no appended canonical version
@@ -545,6 +526,18 @@ postconditions SHALL continue to check the actual current source-gate window.
 - **WHEN** an existing clean non-Final reentry case runs
 - **THEN** existing output fields, schema version, and exit codes SHALL preserve accepted semantics
 
+#### Scenario: Invocation error may omit recovery context
+
+- **WHEN** invocation cannot load a bundle or normalize target and exits `2`
+- **THEN** it MAY omit recovery while preserving structured invocation feedback
+
+
+#### Scenario: blocked inspection is not projected as reachable
+
+- **WHEN** a post-final inspection returns `verdict: blocked` for a root
+- **THEN** the summary SHALL project that root as blocked
+- **AND** it SHALL NOT project a `reachable` current-owner action with `blocker: null`
+
 #### Scenario: zero-append and proven-append projections are distinguishable
 
 - **WHEN** a newer Final lineage has no appended canonical version (delivery-pending)
@@ -553,6 +546,11 @@ postconditions SHALL continue to check the actual current source-gate window.
   project latest-report refinement instead
 - **AND** the two projections SHALL NOT be byte-identical
 
+#### Scenario: Recovery summary is read-only
+#### Scenario: Recovery summary is read-only
+
+- **WHEN** `check-reentry` produces a summary
+- **THEN** recursive before/after inspection SHALL show no mutation to runtime authority or content
 
 
 ### Requirement: Reentry SHALL consume canonical topic-state inspection without mutation

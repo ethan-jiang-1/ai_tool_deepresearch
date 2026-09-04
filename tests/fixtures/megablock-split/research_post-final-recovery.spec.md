@@ -8,7 +8,7 @@
 
 Define the post-final recovery capability: a narrow operation that records HITL2 `rerun` semantics after legal Final delivery, creates one lineage-bound `post_final_reentry` event through explicit exact recovery, and establishes a legal handoff to the existing rerun phase without widening lifecycle authority.
 ## Requirements
-### Requirement: Post-final recovery CLI SHALL expose one direct eligibility inspection
+### Requirement: Post-final recovery SHALL expose one direct eligibility and request contract
 
 The framework SHALL expose `operate-post-final-recovery.mjs inspect|apply|recover`
 with a closed action vocabulary containing only `post_final_rerun`. This
@@ -31,34 +31,6 @@ MAY run inspect to answer availability, but it SHALL construct and submit an
 verified research boundary. Ambiguous scope SHALL be clarified before
 submission; presentation-only scope SHALL remain in Final.
 
-#### Scenario: Clean terminal Final is eligible
-
-> **@deprecated behavior** — The historical title is retained as an archive
-> anchor. Clean terminal mechanics are necessary but no longer sufficient;
-> current explicit evidence-expanding intent is also required for ReopenResearchPass ownership.
-
-- **WHEN** the latest lineage is legal terminal Final with a valid primary report bound to that lineage, no active owner workspace/work, a supported available next increment, and a retained request for new evidence or research scope
-- **THEN** inspect SHALL report `eligible` and return exact request/apply preparation bindings
-
-#### Scenario: Presentation-only feedback remains in Final
-
-- **WHEN** current feedback asks only to change reader, view, structure, length, wording, emphasis, appendix, or explanation of existing verified evidence
-- **THEN** the Final Agent SHALL not construct or submit a ReopenResearchPass apply request
-- **AND** the nearest owner SHALL be `phases/phase-final.md`
-
-#### Scenario: Mechanical eligibility does not invent rerun intent
-
-- **WHEN** a clean terminal Final mechanically could rerun but no current retained evidence-expanding request exists
-- **THEN** inspect MAY report availability facts without making ReopenResearchPass the reentry owner
-- **AND** the Engine SHALL not infer a request from Final inventory or chat history
-
-#### Scenario: Inspect recognizes an accepted nonterminal recovery lineage
-
-- **WHEN** committed ReopenResearchPass has legally entered rerun or later accepted descendant stages
-- **THEN** inspect SHALL return unchanged with the one current owner without requiring terminal Final or testing another future increment
-
-### Requirement: Post-final apply SHALL validate the closed action and rerun budget
-
 The Engine SHALL validate the closed action, non-empty reason/scope, lineage,
 available permission preconditions, and optimistic concurrency. It SHALL not
 score or classify free-form reason/scope, infer user intent from chat, or decide
@@ -73,19 +45,6 @@ A supported unavailable result SHALL block before workspace creation and expose
 only the new-bundle decision. Unsupported rule/profile facts SHALL block with
 their concrete boundary and SHALL not claim a new bundle repairs them. ReopenResearchPass SHALL
 not reset, decrement, or bypass `rerun_count`.
-#### Scenario: Next rerun would exhaust the existing gate rule
-
-- **WHEN** fresh inspect obtains a supported unavailable next-increment result
-- **THEN** inspect/apply SHALL block before workspace creation without resetting the counter
-- **AND** the nearest boundary SHALL be a user decision about a new bundle
-
-#### Scenario: Unsupported rerun facts do not guess a remedy
-
-- **WHEN** active rule, parsed profile, or HITL2 parent is unsupported or unreadable
-- **THEN** inspect/apply SHALL block with that exact contract boundary and exit `1`
-- **AND** it SHALL not claim a new bundle repairs it
-
-### Requirement: ReopenResearchPass workspace precedence and evaluator authority SHALL stay deterministic
 
 An accepted artifact-persistence/publication workspace SHALL take precedence
 with the existing quiescent sweep action. An accepted topic-state workspace
@@ -115,23 +74,6 @@ fresh Agent-selected `post_final_rerun` request against the latest Final lineage
 A clean Final without an accepted ReopenResearchPass workspace or lineage SHALL remain outside
 ReopenResearchPass recovery ownership and project the Final delivery/refinement owner through
 reentry, even when side-effect-free inspect reports mechanical eligibility.
-#### Scenario: Pending artifact persistence keeps its owner
-
-- **WHEN** an accepted artifact-persistence/publication workspace exists
-- **THEN** ReopenResearchPass SHALL report only the existing quiescent sweep action
-- **AND** it SHALL not hash unstable inventory or create a ReopenResearchPass workspace
-
-#### Scenario: Accepted topic-state recovery keeps its owner
-
-- **WHEN** an accepted topic-state workspace exists after lifecycle drift into Final
-- **THEN** ReopenResearchPass SHALL report only its exact recover action and create no competing workspace
-
-#### Scenario: Multiple accepted ReopenResearchPass workspaces are ambiguous
-
-- **WHEN** more than one valid-looking ReopenResearchPass prepared workspace exists
-- **THEN** inspect/apply SHALL block without selecting or creating an operation
-
-### Requirement: Committed post-final lineage SHALL remain recognizable through rerun and handoffs
 
 A committed ReopenResearchPass lineage SHALL remain recognizable after legal rerun entry,
 status synchronization, topic preparation, style recomputation, event-bound
@@ -169,38 +111,6 @@ or more highest canonical versions are proven as immutable appends over that
 prior inventory MAY the newest report count as delivery for the newer lineage;
 only then MAY another explicit evidence-expanding request become a fresh ReopenResearchPass
 candidate.
-#### Scenario: Exact style recomputation remains accepted lineage
-
-- **WHEN** sanctioned topic-state change plus exact RES-001 style projection and bound count increment are present
-- **THEN** inspect SHALL recognize the count-incremented stage and return rerun-ready Gate
-
-#### Scenario: Style-before-count crash returns to the existing count owner
-
-- **WHEN** exact distinct style projection committed but event-bound count has not incremented
-- **THEN** inspect SHALL return the phase-rerun count owner without another ReopenResearchPass stage or user decision
-
-#### Scenario: Wrong style or unrelated profile change blocks
-
-- **WHEN** research profile or style/current profile facts differ outside accepted event-bound or exact projection forms
-- **THEN** ReopenResearchPass SHALL block without rewriting profile, selecting style, or continuing
-
-#### Scenario: Rerun-ready pass projects only its next proven normal owner
-
-- **WHEN** exact accepted rerun-ready attempt passes but its normal handoff is only partly consumed
-- **THEN** ReopenResearchPass SHALL project only the next proven enter/status/current owner stage
-- **AND** it SHALL not jump ahead
-
-#### Scenario: Conflicting descendant evidence blocks
-
-- **WHEN** a later attempt/load/transition/status/current-node fact conflicts with the accepted chain
-- **THEN** ReopenResearchPass SHALL block on the earliest continuity failure and not fall through to Final or fresh eligibility
-
-#### Scenario: Different request cannot stack on one Final lineage
-
-- **WHEN** an accepted ReopenResearchPass event owns the latest Final lineage and a different request arrives before a newer legal Final handoff retires that owner
-- **THEN** apply SHALL block without a second event or profile rewrite
-
-### Requirement: Final inventory lineage witnesses SHALL be deterministic sorted digests over safe files
 
 The Final inventory lineage witness SHALL be a deterministic sorted digest over
 the canonical primary series entries (the primary base plus its contiguous
@@ -259,6 +169,141 @@ removing a base/supplementary primary entry, a retained primary series that is
 no longer structurally valid, or ambiguous canonical history SHALL block. This
 proof SHALL reuse the existing ReopenResearchPass event field and SHALL not add timestamp
 authority, a delivery event, profile counter, or current-report pointer.
+
+`apply` SHALL accept one retained strict JSON request containing schema version,
+closed action, non-empty reason/scope, inspect-derived logical bundle identity,
+and expected Final lineage/inventory bindings. The identity tuple SHALL reuse
+current status bundle, matching plan/profile basename, and normalized selected-
+directory interpretation. ReopenResearchPass SHALL not add UUID identity, caller-selected
+node/gate/status/event/file lists, `human-directed`, force, override, or identity
+token fields. Request prose supplies semantic/audit input and optimistic
+concurrency only; it does not prove identity or expand host permission.
+
+Results SHALL retain Engine-owned, Zod-validated closed verdicts:
+
+- `inspect`: `eligible|unchanged|recover_required|blocked`;
+- `apply`: `committed|unchanged|recover_required|blocked`; and
+- `recover`: `committed|cleaned|blocked`.
+
+The existing shared capability schema version and external request/result/
+workspace/event envelope SHALL remain compatible. Each result SHALL carry at
+most one nearest action. `committed` means the profile/event operation is
+durable, not that rerun or a Gate completed; `cleaned` means committed state was
+already present and only accepted workspace cleanup finished. `unchanged`
+SHALL apply only to an already accepted stage, and apply additionally requires
+an identical request digest.
+
+Cross-field behavior SHALL remain closed: inspect `eligible` carries exact
+request preparation; recover-required carries exact recover; committed/cleaned
+carries the next legal mechanical stage; inspect unchanged projects accepted
+lineage without implying a caller request; apply unchanged requires matching
+request digest; blocked carries at most one existing-owner or user-decision
+boundary. Exit codes remain `0` for successful/eligible/unchanged/cleaned, `1`
+for deterministic blocked/recover-required, and `2` only for invalid invocation
+or inability to construct the validated envelope. Selected-bundle runtime
+contract failures SHALL use blocked exit `1`.
+
+#### Scenario: Clean terminal Final is eligible
+
+> **@deprecated behavior** — The historical title is retained as an archive
+> anchor. Clean terminal mechanics are necessary but no longer sufficient;
+> current explicit evidence-expanding intent is also required for ReopenResearchPass ownership.
+
+- **WHEN** the latest lineage is legal terminal Final with a valid primary report bound to that lineage, no active owner workspace/work, a supported available next increment, and a retained request for new evidence or research scope
+- **THEN** inspect SHALL report `eligible` and return exact request/apply preparation bindings
+
+#### Scenario: Presentation-only feedback remains in Final
+
+- **WHEN** current feedback asks only to change reader, view, structure, length, wording, emphasis, appendix, or explanation of existing verified evidence
+- **THEN** the Final Agent SHALL not construct or submit a ReopenResearchPass apply request
+- **AND** the nearest owner SHALL be `phases/phase-final.md`
+
+#### Scenario: Mechanical eligibility does not invent rerun intent
+
+- **WHEN** a clean terminal Final mechanically could rerun but no current retained evidence-expanding request exists
+- **THEN** inspect MAY report availability facts without making ReopenResearchPass the reentry owner
+- **AND** the Engine SHALL not infer a request from Final inventory or chat history
+
+#### Scenario: Next rerun would exhaust the existing gate rule
+
+- **WHEN** fresh inspect obtains a supported unavailable next-increment result
+- **THEN** inspect/apply SHALL block before workspace creation without resetting the counter
+- **AND** the nearest boundary SHALL be a user decision about a new bundle
+
+#### Scenario: Unsupported rerun facts do not guess a remedy
+
+- **WHEN** active rule, parsed profile, or HITL2 parent is unsupported or unreadable
+- **THEN** inspect/apply SHALL block with that exact contract boundary and exit `1`
+- **AND** it SHALL not claim a new bundle repairs it
+
+#### Scenario: Pending artifact persistence keeps its owner
+
+- **WHEN** an accepted artifact-persistence/publication workspace exists
+- **THEN** ReopenResearchPass SHALL report only the existing quiescent sweep action
+- **AND** it SHALL not hash unstable inventory or create a ReopenResearchPass workspace
+
+#### Scenario: Accepted topic-state recovery keeps its owner
+
+- **WHEN** an accepted topic-state workspace exists after lifecycle drift into Final
+- **THEN** ReopenResearchPass SHALL report only its exact recover action and create no competing workspace
+
+#### Scenario: Multiple accepted ReopenResearchPass workspaces are ambiguous
+
+- **WHEN** more than one valid-looking ReopenResearchPass prepared workspace exists
+- **THEN** inspect/apply SHALL block without selecting or creating an operation
+
+#### Scenario: Request fields do not create permission
+
+- **WHEN** retained reason/scope exists but permission or deterministic eligibility is absent
+- **THEN** apply SHALL reject without mutation and SHALL not treat prose as identity, override, or permission
+
+#### Scenario: Logical bundle identity mismatch blocks replay
+
+- **WHEN** request identity differs from current status, plan/profile basename, or normalized bundle facts
+- **THEN** apply SHALL reject before workspace creation without inventing another identity registry
+
+#### Scenario: Identical accepted request is idempotent
+
+- **WHEN** apply repeats an identical accepted request against the same Final lineage and event already exists
+- **THEN** it SHALL return unchanged without duplicate workspace, profile rewrite, or event
+- **AND** its next action SHALL match the current accepted stage owner
+
+#### Scenario: Inspect recognizes an accepted nonterminal recovery lineage
+
+- **WHEN** committed ReopenResearchPass has legally entered rerun or later accepted descendant stages
+- **THEN** inspect SHALL return unchanged with the one current owner without requiring terminal Final or testing another future increment
+
+#### Scenario: Exact style recomputation remains accepted lineage
+
+- **WHEN** sanctioned topic-state change plus exact RES-001 style projection and bound count increment are present
+- **THEN** inspect SHALL recognize the count-incremented stage and return rerun-ready Gate
+
+#### Scenario: Style-before-count crash returns to the existing count owner
+
+- **WHEN** exact distinct style projection committed but event-bound count has not incremented
+- **THEN** inspect SHALL return the phase-rerun count owner without another ReopenResearchPass stage or user decision
+
+#### Scenario: Wrong style or unrelated profile change blocks
+
+- **WHEN** research profile or style/current profile facts differ outside accepted event-bound or exact projection forms
+- **THEN** ReopenResearchPass SHALL block without rewriting profile, selecting style, or continuing
+
+#### Scenario: Rerun-ready pass projects only its next proven normal owner
+
+- **WHEN** exact accepted rerun-ready attempt passes but its normal handoff is only partly consumed
+- **THEN** ReopenResearchPass SHALL project only the next proven enter/status/current owner stage
+- **AND** it SHALL not jump ahead
+
+#### Scenario: Conflicting descendant evidence blocks
+
+- **WHEN** a later attempt/load/transition/status/current-node fact conflicts with the accepted chain
+- **THEN** ReopenResearchPass SHALL block on the earliest continuity failure and not fall through to Final or fresh eligibility
+
+#### Scenario: Different request cannot stack on one Final lineage
+
+- **WHEN** an accepted ReopenResearchPass event owns the latest Final lineage and a different request arrives before a newer legal Final handoff retires that owner
+- **THEN** apply SHALL block without a second event or profile rewrite
+
 #### Scenario: Newer Final handoff with unchanged inventory returns to delivery
 
 - **WHEN** accepted ReopenResearchPass descendants reach a newer legal Final handoff, `enter-phase` admits the exact event-bound prior inventory on its bound basis, Readiness status synchronization completes, and inventory still has zero appended canonical revisions
@@ -320,57 +365,6 @@ authority, a delivery event, profile counter, or current-report pointer.
 - **WHEN** the retained primary series no longer forms a valid contiguous series (for example an orphan revision chain after the base was removed, a duplicate revision, or a broken version sequence), or removing a base/supplementary primary entry would be required to match
 - **THEN** the append proof SHALL block as inventory drift on both the primary-scoped and the legacy whole-tree basis, with no structural fallback acceptance
 - **AND** byte-level retained-primary drift that leaves the series structurally valid SHALL be accepted only through the warned structural fallback diagnostic, never as a match on the exact bound basis
-
-### Requirement: Post-final apply SHALL retain strict request and verdict contracts
-
-`apply` SHALL accept one retained strict JSON request containing schema version,
-closed action, non-empty reason/scope, inspect-derived logical bundle identity,
-and expected Final lineage/inventory bindings. The identity tuple SHALL reuse
-current status bundle, matching plan/profile basename, and normalized selected-
-directory interpretation. ReopenResearchPass SHALL not add UUID identity, caller-selected
-node/gate/status/event/file lists, `human-directed`, force, override, or identity
-token fields. Request prose supplies semantic/audit input and optimistic
-concurrency only; it does not prove identity or expand host permission.
-
-Results SHALL retain Engine-owned, Zod-validated closed verdicts:
-
-- `inspect`: `eligible|unchanged|recover_required|blocked`;
-- `apply`: `committed|unchanged|recover_required|blocked`; and
-- `recover`: `committed|cleaned|blocked`.
-
-The existing shared capability schema version and external request/result/
-workspace/event envelope SHALL remain compatible. Each result SHALL carry at
-most one nearest action. `committed` means the profile/event operation is
-durable, not that rerun or a Gate completed; `cleaned` means committed state was
-already present and only accepted workspace cleanup finished. `unchanged`
-SHALL apply only to an already accepted stage, and apply additionally requires
-an identical request digest.
-
-Cross-field behavior SHALL remain closed: inspect `eligible` carries exact
-request preparation; recover-required carries exact recover; committed/cleaned
-carries the next legal mechanical stage; inspect unchanged projects accepted
-lineage without implying a caller request; apply unchanged requires matching
-request digest; blocked carries at most one existing-owner or user-decision
-boundary. Exit codes remain `0` for successful/eligible/unchanged/cleaned, `1`
-for deterministic blocked/recover-required, and `2` only for invalid invocation
-or inability to construct the validated envelope. Selected-bundle runtime
-contract failures SHALL use blocked exit `1`.
-#### Scenario: Request fields do not create permission
-
-- **WHEN** retained reason/scope exists but permission or deterministic eligibility is absent
-- **THEN** apply SHALL reject without mutation and SHALL not treat prose as identity, override, or permission
-
-#### Scenario: Logical bundle identity mismatch blocks replay
-
-- **WHEN** request identity differs from current status, plan/profile basename, or normalized bundle facts
-- **THEN** apply SHALL reject before workspace creation without inventing another identity registry
-
-#### Scenario: Identical accepted request is idempotent
-
-- **WHEN** apply repeats an identical accepted request against the same Final lineage and event already exists
-- **THEN** it SHALL return unchanged without duplicate workspace, profile rewrite, or event
-- **AND** its next action SHALL match the current accepted stage owner
-
 
 ### Requirement: Post-final recovery SHALL commit profile and one event through explicit exact recovery
 

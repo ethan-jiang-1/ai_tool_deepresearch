@@ -80,7 +80,7 @@ After a successful Wave0 submit, the Phase Agent SHALL obtain each Seed Projecti
 - **THEN** Wave0 guidance SHALL combine them into one demand or schedule later supplements only after the current owner terminalizes
 - **AND** it SHALL not fan them out as concurrent same-target work units
 
-### Requirement: Wave1 phase body SHALL materialize closeout through narrow index repair and depth review
+### Requirement: Wave1 phase body completeness with subagent boundary
 
 `phase-wave1.md` SHALL remain the Agent-facing controller for Wave1's
 queue-driven deepening flow. It SHALL load the shared reference template through
@@ -127,6 +127,25 @@ reference-count authority. The reference-floor deficit may be cited as a
 read-only queue objective when the existing supplementary decision records that
 queue ID, but depth review shall not create, certify, or recompute it.
 
+When the Phase Agent legally writes or updates a valid current
+`focus_coverage` block in that depth review, it SHALL run the same existing
+`sync-reference-index` operation before rerunning the named Wave1 inspect. The
+operation only refreshes the derived reader projection from direct facts; it
+does not make focus coverage a reference-file attribute, evidence authority,
+or new closeout transition. A blocked synchronization remains its own
+Engine-operation root: the Agent SHALL rerun the same operation from current
+bytes and SHALL not hand-edit README, `_INDEX.md`, focus coverage, or a Gate
+result to make the map appear current.
+
+At each affected inspect/gate/submit failure, Phase guidance SHALL consume the
+Engine-provided `repair_kind`, `missing_fact`, `write_to`, and `rerun` fields.
+When `repair_kind` is `agent_action|engine_operation`, `write_to` is an already
+authorized mutable surface/legal operation, and no new semantic/risk decision
+is needed, the Agent SHALL perform the mechanical repair and rerun the named
+checkpoint. `user_decision|external_action|missing_contract` identifies only
+the smallest Agent-facing boundary. Because Wave1 is `stop: no`, those
+classifications shall not themselves authorize a user-facing wait or escalation.
+
 #### Scenario: Wave1 materializes canonical closeout after submitted backing
 
 - **WHEN** a Wave1 work unit formally submits accepted backing that lacks its
@@ -164,6 +183,20 @@ queue ID, but depth review shall not create, certify, or recompute it.
 - **AND** it SHALL not enqueue supplementary search work merely because the
   count is presently low
 
+#### Scenario: Wave1 loads the shared reference template
+
+- **WHEN** the Phase Agent reaches a Wave1 materialization decision
+- **THEN** `phase-wave1.md` SHALL load the shared reference template through
+  its actual requires chain
+- **AND** it SHALL not require the Agent to discover that template indirectly
+
+#### Scenario: Wave1 uses dry-submit before formal submit
+
+- **WHEN** a Wave1 actor returns a candidate result
+- **THEN** the Phase Agent SHALL run the existing same-candidate dry-submit
+  check before formal submit and after mechanical candidate repair
+- **AND** it SHALL not treat chat confirmation or a template as submit authority
+
 #### Scenario: Wave1 materializes closeout after submitted backing
 
 - **WHEN** submitted Wave1 backing is accepted and a consumer projection is
@@ -179,63 +212,6 @@ queue ID, but depth review shall not create, certify, or recompute it.
 - **AND** it SHALL not make copied source/cache/URL or derived-floor arrays a
   second deterministic authority
 
-#### Scenario: Wave1 requires depth review before topic completion
-
-- **WHEN** a Topic's Wave1 outputs have submitted evidence but no valid depth
-  review
-- **THEN** Phase guidance SHALL repair or complete the existing depth-review
-  projection before Wave1 completion
-- **AND** it SHALL not treat reference/index navigation as a substitute
-
-### Requirement: Wave1 dry-submit and shared template guidance SHALL precede formal submit
-
-At each affected inspect/gate/submit failure, Phase guidance SHALL consume the
-Engine-provided `repair_kind`, `missing_fact`, `write_to`, and `rerun` fields.
-When `repair_kind` is `agent_action|engine_operation`, `write_to` is an already
-authorized mutable surface/legal operation, and no new semantic/risk decision
-is needed, the Agent SHALL perform the mechanical repair and rerun the named
-checkpoint. `user_decision|external_action|missing_contract` identifies only
-the smallest Agent-facing boundary. Because Wave1 is `stop: no`, those
-classifications shall not themselves authorize a user-facing wait or escalation.
-#### Scenario: Wave1 loads the shared reference template
-
-- **WHEN** the Phase Agent reaches a Wave1 materialization decision
-- **THEN** `phase-wave1.md` SHALL load the shared reference template through
-  its actual requires chain
-- **AND** it SHALL not require the Agent to discover that template indirectly
-
-#### Scenario: Wave1 uses dry-submit before formal submit
-
-- **WHEN** a Wave1 actor returns a candidate result
-- **THEN** the Phase Agent SHALL run the existing same-candidate dry-submit
-  check before formal submit and after mechanical candidate repair
-- **AND** it SHALL not treat chat confirmation or a template as submit authority
-
-#### Scenario: Agent performs authorized same-check repair
-
-- **WHEN** Engine feedback names an authorized same-check repair coordinate
-- **THEN** the Phase Agent SHALL perform the ordinary mechanical repair and
-  rerun that named checkpoint
-- **AND** it SHALL not ask the user to run ordinary pipeline commands
-
-#### Scenario: Wave1 deepening uses work-unit kind
-
-- **WHEN** Wave1 needs delegated topic-specific source acquisition
-- **THEN** phase guidance SHALL use `wave1_topic_deepening` through the
-  existing queue/work-unit path
-- **AND** it SHALL not substitute a direct-search or ad hoc task path
-
-### Requirement: Wave1 focus context SHALL convert into bounded supplementary commitments
-
-When the Phase Agent legally writes or updates a valid current
-`focus_coverage` block in that depth review, it SHALL run the same existing
-`sync-reference-index` operation before rerunning the named Wave1 inspect. The
-operation only refreshes the derived reader projection from direct facts; it
-does not make focus coverage a reference-file attribute, evidence authority,
-or new closeout transition. A blocked synchronization remains its own
-Engine-operation root: the Agent SHALL rerun the same operation from current
-bytes and SHALL not hand-edit README, `_INDEX.md`, focus coverage, or a Gate
-result to make the map appear current.
 #### Scenario: valid focus update refreshes only the derived reader map
 
 - **WHEN** the Phase Agent legally writes or updates valid current focus
@@ -245,12 +221,34 @@ result to make the map appear current.
 - **AND** it SHALL not make the focus declaration a reference-file label, Gate
   route, or manual README/index editing task
 
+#### Scenario: Agent performs authorized same-check repair
+
+- **WHEN** Engine feedback names an authorized same-check repair coordinate
+- **THEN** the Phase Agent SHALL perform the ordinary mechanical repair and
+  rerun that named checkpoint
+- **AND** it SHALL not ask the user to run ordinary pipeline commands
+
 #### Scenario: Recorded profile makes missing style parameters mechanical
 
 - **WHEN** Wave1 requires an explicit profile-derived floor or style parameter
 - **THEN** Phase guidance SHALL read the recorded profile fact and report a
   missing parameter as a direct mechanical blocker
 - **AND** it SHALL not invent a hidden default
+
+#### Scenario: Wave1 deepening uses work-unit kind
+
+- **WHEN** Wave1 needs delegated topic-specific source acquisition
+- **THEN** phase guidance SHALL use `wave1_topic_deepening` through the
+  existing queue/work-unit path
+- **AND** it SHALL not substitute a direct-search or ad hoc task path
+
+#### Scenario: Wave1 requires depth review before topic completion
+
+- **WHEN** a Topic's Wave1 outputs have submitted evidence but no valid depth
+  review
+- **THEN** Phase guidance SHALL repair or complete the existing depth-review
+  projection before Wave1 completion
+- **AND** it SHALL not treat reference/index navigation as a substitute
 
 #### Scenario: Shallow Wave1 output routes to supplementary work unit
 
@@ -316,7 +314,6 @@ and submitted evidence as history.
   submitted work
 - **AND** it SHALL preserve earlier submitted evidence and direction as history
   rather than current focus coverage
-
 
 ### Requirement: Wave2 phase body completeness
 

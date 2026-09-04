@@ -119,7 +119,7 @@ Persistence results SHALL remain mechanical durability facts, not business compl
 - **THEN** recursive before/after inspection SHALL show no mutation outside that bundle
 - **AND** no status, queue, trace, ledger, checkpoint, profile, plan, receipt, or work-unit transaction file SHALL be changed
 
-### Requirement: Artifact persistence SHALL derive canonical inventory and serialize Engine-owned allocation
+### Requirement: Final Markdown publication SHALL admit backing and protect the primary version series
 
 The artifact-persistence command SHALL retain `persist-final-report` for safe
 non-primary Markdown targets under `final/` and SHALL add one narrow
@@ -156,6 +156,12 @@ directly under `final/` and classify it before publication:
   unreadable entry, or an unparseable root-level reserved `final*.md` name SHALL
   block without guessing from mtime, directory order, chat, or report content.
 
+Non-primary nested or non-reserved Final artifacts MAY remain supplementary and
+SHALL not enter version allocation. When `final/final.md` exists, other
+non-reserved Final Markdown remains supplementary/historical rather than a
+second primary base. A legacy v0 selected by the classification above SHALL be
+immutable and retained after canonical revisions begin.
+
 Allocation SHALL be Engine-owned:
 
 - an empty valid inventory publishes the first staging bytes only to
@@ -185,6 +191,32 @@ Prepared recovery SHALL bind the allocated target, inventory/base
 classification, feature, version, staging digest, and backing result needed to
 finish exactly that publication; it SHALL not reallocate a different version
 during sweep.
+
+`publish-final-report` SHALL emit a strict Engine-validated result that separates
+backing `check`/`inspect`/`advice` from the mechanical publication verdict. A
+committed result SHALL expose the canonical target, base classification,
+allocated version (`0` for the first modern base, positive `N` for revisions),
+optional feature, prior latest target when any, and inventory binding. It SHALL
+not validate or establish legal Final entry, lifecycle position, handoff,
+delivery, semantic improvement, or user satisfaction. A committed primary-
+looking file without the independent accepted readiness-to-Final lineage SHALL
+remain only a mechanical persistence fact and SHALL not count as delivery.
+
+The direct-root reserved namespace `final/final*.md`, compared case-
+insensitively for collision safety, SHALL be writable only through
+`publish-final-report`; exact accepted canonical names remain case-sensitive.
+Generic `persist` and caller-targeted `persist-final-report` SHALL reject a
+reserved primary target before workspace creation and direct the Agent to the
+publication operation. They SHALL also reject replacement of an inventory-
+selected legacy v0. Existing safe non-primary Final Markdown and non-Final
+content persistence SHALL otherwise retain their accepted behavior.
+
+Before any operation classifies a path, it SHALL apply the existing safe-target
+contract. An unsafe or malformed target SHALL remain configuration failure
+(exit `2`), not an admission blocker or redirect. `sweep` SHALL rerun the same
+Final-backing evaluator before completing prepared Final Markdown work and
+SHALL preserve exact allocated-target/immutability rules. It SHALL continue to
+recover other accepted workspaces under the existing contract.
 
 #### Scenario: Empty inventory publishes canonical base mechanically
 
@@ -223,51 +255,6 @@ during sweep.
 - **THEN** publication and caller-targeted persistence SHALL reject before target mutation
 - **AND** every earlier primary byte sequence SHALL remain unchanged
 
-#### Scenario: Concurrent publication cannot share a version
-
-- **WHEN** two publication calls race against the same valid inventory
-- **THEN** at most one SHALL commit a given target and the other SHALL serialize, retry allocation, or return a recoverable blocker
-- **AND** no committed primary report SHALL be overwritten or share its version number
-
-#### Scenario: Existing non-Final persistence remains available
-
-- **WHEN** caller-targeted persistence receives a safe supported target outside the reserved primary namespace and outside an inventory-selected legacy base
-- **THEN** it SHALL retain existing backing and compare-and-swap behavior
-- **AND** it SHALL not allocate a primary version for that supplementary target
-
-### Requirement: Final publication SHALL emit strict results and protect the reserved primary namespace
-
-Non-primary nested or non-reserved Final artifacts MAY remain supplementary and
-SHALL not enter version allocation. When `final/final.md` exists, other
-non-reserved Final Markdown remains supplementary/historical rather than a
-second primary base. A legacy v0 selected by the classification above SHALL be
-immutable and retained after canonical revisions begin.
-
-`publish-final-report` SHALL emit a strict Engine-validated result that separates
-backing `check`/`inspect`/`advice` from the mechanical publication verdict. A
-committed result SHALL expose the canonical target, base classification,
-allocated version (`0` for the first modern base, positive `N` for revisions),
-optional feature, prior latest target when any, and inventory binding. It SHALL
-not validate or establish legal Final entry, lifecycle position, handoff,
-delivery, semantic improvement, or user satisfaction. A committed primary-
-looking file without the independent accepted readiness-to-Final lineage SHALL
-remain only a mechanical persistence fact and SHALL not count as delivery.
-
-The direct-root reserved namespace `final/final*.md`, compared case-
-insensitively for collision safety, SHALL be writable only through
-`publish-final-report`; exact accepted canonical names remain case-sensitive.
-Generic `persist` and caller-targeted `persist-final-report` SHALL reject a
-reserved primary target before workspace creation and direct the Agent to the
-publication operation. They SHALL also reject replacement of an inventory-
-selected legacy v0. Existing safe non-primary Final Markdown and non-Final
-content persistence SHALL otherwise retain their accepted behavior.
-
-Before any operation classifies a path, it SHALL apply the existing safe-target
-contract. An unsafe or malformed target SHALL remain configuration failure
-(exit `2`), not an admission blocker or redirect. `sweep` SHALL rerun the same
-Final-backing evaluator before completing prepared Final Markdown work and
-SHALL preserve exact allocated-target/immutability rules. It SHALL continue to
-recover other accepted workspaces under the existing contract.
 #### Scenario: Single legacy report becomes read-only v0
 
 - **WHEN** a selected historical bundle has no `final/final.md`, exactly one safe root-level report such as `final/report.md`, and no canonical revision
@@ -285,6 +272,12 @@ recover other accepted workspaces under the existing contract.
 - **WHEN** the primary namespace contains a duplicate number, a missing prior revision, an orphan revision, unsafe entry, case-fold collision, or unparseable reserved name
 - **THEN** publication SHALL return one direct inventory blocker before workspace creation
 - **AND** it SHALL not repair, renumber, delete, or overwrite history
+
+#### Scenario: Concurrent publication cannot share a version
+
+- **WHEN** two publication calls race against the same valid inventory
+- **THEN** at most one SHALL commit a given target and the other SHALL serialize, retry allocation, or return a recoverable blocker
+- **AND** no committed primary report SHALL be overwritten or share its version number
 
 #### Scenario: Invalid backing has no persistence side effect
 
@@ -304,12 +297,17 @@ recover other accepted workspaces under the existing contract.
 - **THEN** it SHALL return the existing configuration failure class with exit code `2` before workspace preparation
 - **AND** it SHALL not report normal backing rejection, primary allocation, or a generic-persist redirect
 
+#### Scenario: Existing non-Final persistence remains available
+
+- **WHEN** caller-targeted persistence receives a safe supported target outside the reserved primary namespace and outside an inventory-selected legacy base
+- **THEN** it SHALL retain existing backing and compare-and-swap behavior
+- **AND** it SHALL not allocate a primary version for that supplementary target
+
 #### Scenario: Crash recovery cannot bypass Final backing admission
 
 - **WHEN** publication crashes after a prepared payload is durable but before no-clobber target creation, or after target creation but before workspace cleanup
 - **THEN** `sweep` SHALL revalidate backing and recover or clean exactly that allocated publication
 - **AND** it SHALL not allocate another version, overwrite a conflicting target, or bypass inventory lineage
-
 
 ### Requirement: Final auxiliary directories SHALL bind to their primary version
 

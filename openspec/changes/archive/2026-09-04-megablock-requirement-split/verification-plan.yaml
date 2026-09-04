@@ -1,0 +1,53 @@
+schema_version: verification-routing/v1
+change: megablock-requirement-split
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: >-
+      拆分不新增纯函数逻辑；守恒/declared==actual 断言由装配器以 integration 级证明覆盖。
+  integration:
+    status: selected
+    rationale: >-
+      跨 11 spec 的机械拆分一致性：每块拆分前后内容多重集合守恒、子块全部 ≤160 行、
+      header 枚举与 registry 同步、场景零丢失。由 tests/integration/migration/ 下
+      megablock 拆分断言测试证明（读活体 specs + 冻结分组 fixture）。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: 无 temporary bundle 场景；全部证明项读活体 repo 文件，属 integration。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: 不涉及 experiments_playbook/ 用例与真实 Agent 执行。
+claims:
+  - id: megablock-conservation-and-size
+    statement: >-
+      11 个目标块按分组 fixture 拆分后：每块内容多重集合守恒（唯一净增 = 子块标题行）、
+      每块 ≤190 行(典型 ≤170)、场景标题集合与拆分前完全一致（零丢失零新增）。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/migration/megablock-split.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: header-registry-untouched
+    statement: >-
+      纯文本重构边界：11 个受影响 spec 拆分前后 header `> req:` 枚举行逐字不变；
+      req-registry 无新增、无废弃（相关前缀 ID 集合不变）。原块语义由首子块标题继承，
+      其余子块为无 ID 标题（DWU 39/31 现状先例）。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/migration/megablock-split.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

@@ -1,0 +1,1041 @@
+# Requirement ID Registry
+#
+# 规则:
+#   1. 只增不删 — 已分配的 ID 永不复用，废弃的在描述末尾追加 [DEPRECATED]
+#   2. 分配前先查 — 在此文件中搜索确认 ID 未被占用
+#   3. 格式:  PREFIX-NNN: <capability-name> — <description>
+#      - key 是全局唯一 ID，格式 [A-Z]{3}-\d{3}
+#      - value 的 <capability-name> 用 kebab-case
+#   4. 引号:  YAML 值不需要引号，除非值内包含 ": "（冒号+空格）
+#      例:  AGT-001: agent-testing — simple description        （无需引号）
+#           AGT-002: "agent-testing — 含 colon: 需引号包裹"     （需双引号）
+#      切勿用单引号——YAML 单引号内无法转义，双引号用 \" 即可。
+#   5. check-project-reqs.mjs 扫描本文件做一致性校验
+#
+# 三态:
+#   alive   — ID 出现在 openspec/specs/ 某个 main spec 的 > req: 行
+#   pending — ID 出现在 openspec/changes/<active>/specs/ 的 delta spec 中
+#   retired — 本行末尾标了 [DEPRECATED]，ID 占位永不复用
+#
+# 缩写规则: 首单词前 2 字母 + 次单词首字母，如 schema-core → SCO
+
+# ──────────────────────────────────────────────
+# prefixes: 缩写 → canonical capability path
+# 此映射块是唯一自文档化来源。活跃值为 domain/capability；key 不匹配 [A-Z]{3}-\d{3}，
+# check-project-reqs.mjs 自动忽略。
+# ──────────────────────────────────────────────
+prefixes:
+  ACR: agent/agent-context-routing
+  ACS: agent/agent-command-surface
+  AGO: agent/agent-output-declaration
+  AGQ: agent/agentic-queue
+  AGT: agent/agent-testing
+  ARP: bundle/artifact-persistence-recovery
+  BUI: bundle/bundle-data-isolation
+  BUM: bundle/bundle-map
+  BUS: bundle-start-from-here        # all entries deprecated; no spec directory
+  CDE: research/content-delivery-experiments
+  CDG: research/content-delivery-gate-implementation
+  CDP: research/content-delivery-phase-content
+  CHF: governance/change-feedback-loop
+  CHI: engine/check-inspect-feedback
+  CLE: engine/cli-exit-code-conventions
+  CMI: bundle/cmd-bundle-instantiation
+  COS: workflow/conditional-nodes
+  CPT: engine/cli-phase-transition
+  CRC: bundle/cache-raw-web-content
+  CSE: agent/cmd-subagent-environment
+  CTS: research/canonical-topic-state
+  DEW: agent/delegated-work-units
+  DYS: workflow/dynamic-node-loading
+  EEX: research/evidence-extraction
+  EXO: verification/experiment-observability
+  EXS: verification/experiment-shared-infra
+  EXR: verification/experiment-ref-integrity
+  ERS: verification/experiment-run-strategy
+  EXA: verification/experiment-agent-autorun
+  FDB: research/final-delivery-backing
+  FOR: fork-repair-converge        # all entries deprecated; no spec directory
+  FRE: engine/framework-engine
+  FIO: bundle/file-observability
+  GAC: gate-content-dedup      # all entries deprecated; no spec directory
+  GAF: engine/gate-fork-router
+  GAS: engine/gate-state-machine
+  GCO: governance/guidance-constitution
+  GSK: engine/gate-skeleton
+  HIU: agent/hitl-ux
+  INT: verification/integration-tests
+  IOC: engine/cli-inspect-output-conventions
+  LDC: agent/local-deepseek-claude-launcher
+  LFW: lifecycle-walker            # all entries deprecated; no spec directory
+  LOC: engine/logging-conventions
+  LOG: engine/logger
+  PHS: research/plan-hostfile-sections
+  PLR: workflow/playbook-runner
+  POF: research/post-final-recovery
+  PRE: research/pre-research-experiments
+  PRG: research/pre-research-gate-implementation
+  PRP: research/pre-research-phase-content
+  QIV: agent/queue-input-validation
+  REA: research/research-access-adapter
+  REF: bundle/reference-flat-format
+  REI: workflow/rerun-incremental-node
+  RPG: relay-provenance-gate       # all entries deprecated; no spec directory; replacement WPG
+  RTI: workflow/rerun-topic-integration
+  REL: workflow/repair-loop
+  RES: research/research-styles
+  RRM: research/research-return-map
+  RET: governance/requirement-traceability
+  RRD: engine/runtime-reentry-debuggability
+  RUE: bundle/run-entry
+  RWE: research/research-wave-experiments
+  RWG: research/research-wave-gate-implementation
+  RWP: research/research-wave-phase-content
+  SCO: engine/schema-core
+  SDC: agent/subagent-directory-contract
+  SEF: governance/semantic-fact-closure
+  SEG: seg2node                    # all entries deprecated; no spec directory
+  SHC: workflow/shared-node-content
+  SNC: agent/subagent-node-contract
+  SOR: engine/schema-core                 # sub-prefix of SCO
+  SRD: subagent-relay-driver       # all entries deprecated; no spec directory; replacement FRE/DEW
+  SRL: agent/subagent-runtime-logging
+  STM: research/seed-topic-materialization
+  SUC: subagent-collect            # all entries deprecated; no spec directory; replacement DEW/AGQ/AGO
+  SUD: agent/subagent-dispatch
+  SUR: subagent-repair             # all entries deprecated; no spec directory; replacement DEW/AGQ/REL
+  SUS: subagent-slots              # all entries deprecated; no spec directory; replacement DEW/SDC/SRL
+  SWE: workflow/silent-wave-execution
+  TEF: verification/test-fixtures
+  TRT: engine/transition-table
+  TRW: engine/trace-writer
+  URC: research/user-research-controls
+  VEM: governance/version-management
+  VER: verification/verification-routing
+  WAD: research/wave0-artifacts-directory
+  WAI: research/wave1-intake
+  WDC: workflow/workflow-directory-contract
+  WDM: workflow-dynamic-md-load    # all entries deprecated; no spec directory
+  WMD: workflow-md-dependencies    # all entries deprecated; no spec directory
+  WFS: workflow-fsm-definition     # all entries deprecated; no spec directory
+  WLO: workflow-chain-observability # all entries deprecated; no spec directory
+  WML: workflow-manifest-loading   # all entries deprecated; no spec directory
+  WNC: workflow/workflow-node-contract
+  WPG: agent/work-unit-provenance-gate
+  WTS: research/wave2-synthesis
+  WSU: agent/work-unit-submission
+  WUP: agent/work-unit-preflight
+  WUC: agent/work-unit-correction
+
+# agent/agent-command-surface
+ACS-001: agent-command-surface — Agent-facing command responsibility distinguishes autonomous execution, HITL/out-of-band human direction, legal repair, permission, and Engine authority
+ACS-002: agent-command-surface — Entry docs distinguish one-time human trigger from Agent-run command execution
+ACS-003: agent-command-surface — Existing static documentation regression locks stable Agent-owned helper markers and known audience/HITL drift phrases without prose classification
+ACS-004: agent-command-surface — Phase-boundary terminology is discoverable and aligned with guidance terminology canon
+ACS-005: agent-command-surface — Existing bundle continuation has one Agent-owned playbook
+ACS-006: agent-command-surface — Command index maps post-final iteration intent families to their existing legal routes as navigation only
+
+# agent/agent-context-routing
+ACR-001: agent-context-routing — Root CONTEXT.md preserves canonical terminology boundaries without becoming behavior, executable, or runtime authority
+ACR-002: agent-context-routing — Root and framework Agent entry routes open with Execution Brief; Deep Research Routing is a pointer only; Charter-then-context only when the next action depends on ownership vocabulary
+ACR-003: agent-context-routing — Root ADR records Markdown-driven Agent Flow and Engine-gated deterministic checkpoints without redefining behavior
+ACR-004: agent-context-routing — Static documentation regression preserves Execution Brief routing and locks entry-selection completeness on the canonical section, not pointer restatement
+ACR-005: agent-context-routing — Glossary field-name triage classifies the three repair vocabularies by field name with owner pointers and defers full value sets to their owners
+ACR-006: agent-context-routing — Archived OpenSpec change artifacts stay outside default task context via the root Do-Not-Read boundary with an explicit archive/history unlock
+
+# agent/agent-output-declaration
+AGO-001: agent-output-declaration — Work-unit result output_files declaration with role and source_url rules
+AGO-002: agent-output-declaration — Work-unit result leaf cache_trails declaration
+AGO-003: agent-output-declaration — Work-unit submit writes bundle-level rb_output_declarations.jsonl ledger
+AGO-004: agent-output-declaration — Engine consumes declaration ledger rather than scanning directories for Agent outputs
+AGO-005: agent-output-declaration — Ledger declarations preserve non-empty creation context for accepted outputs
+AGO-006: agent-output-declaration — cache_trails SHALL be Engine-verified during operate-work-unit submit per the AGO-006 body (agent-output-declaration)
+AGO-007: agent-output-declaration — Wave1 submitted ledger canonicalizes required output roles
+
+# agent/agent-testing
+AGT-001: agent-testing — Agent-assisted test playbook for gate-loop
+AGT-002: "agent-testing — Agent-assisted test playbook for gate-fork (3 levels: simple/medium/complex)"
+AGT-003: "agent-testing — Agent-assisted test playbook for subagent (3 levels: simple/medium/complex)"
+AGT-004: "agent-testing — Agent-assisted test playbook for workflow-chain (3 levels: simple/medium/complex) [DEPRECATED]"
+AGT-005: agent-testing — Playbook frontmatter weight field pending retirement after active removal delta archives
+AGT-006: agent-testing — Disposable experiment bundles use collision-resistant Supervisor-owned case roots and host cleanup
+AGT-007: agent-testing — Command experiment bundles use one bundle-root rb_trace.jsonl runtime trace
+AGT-008: agent-testing — Verdict console.log uses ANSI color (green PASS, red FAIL)
+AGT-009: agent-testing — Evidence extraction experiment suite uses empty 16 case segment starting at case-161 with light/standard/heavy proof roles and real-agent quality metrics
+AGT-010: agent-testing — Handoff witnessing experiment coverage for phase-entry truncation prevention
+
+# agent/agentic-queue
+AGQ-001: agentic-queue — Structured machine queue state and task card schema
+AGQ-002: agentic-queue — Queue Manager enqueue, claim, complete, fail, promote, and refill operations
+AGQ-003: agentic-queue — Conservative urgent preemption without hidden in-progress execution
+AGQ-004: agentic-queue — Fail-closed deterministic receipts and structured check/inspect/advice feedback
+AGQ-005: agentic-queue — Markdown projection generated from JSON queue state without mutation authority
+AGQ-006: agentic-queue — Current manifest-registered command experiment cases prove queue mechanics through V2 native completion and host cleanup
+AGQ-007: agentic-queue — Producer rule source_intake_fan_in for wave0 source intake task cards
+AGQ-008: agentic-queue — Current Wave0 queue-loop case uses real work-unit boundaries and native trace completion
+AGQ-009: agentic-queue — Producer rule seed_topic_materialize for seed-topics materialization task cards
+AGQ-010: agentic-queue — Current seed-topics queue-loop case covers three-topic queue drain and required field verification
+AGQ-011: agentic-queue — QueueItemSchema targets field (TargetSpec) replaces single enum target
+AGQ-012: agentic-queue — TargetSpec schema (controller enum, optional delegates with to/role_key/timeout_ms)
+AGQ-013: agentic-queue — Producer rule topic_deepening for wave1 deepening task cards
+AGQ-014: agentic-queue — Work-unit claim response reports delegated allocation and phase-drain diagnostics
+AGQ-015: agentic-queue — Producer rule cross_topic_synthesis for wave2 synthesis task cards
+AGQ-016: agentic-queue — Producer rule seed_topic_backfill_wave2 for wave2 backfill task cards
+AGQ-017: agentic-queue — Delegated task TargetSpec keeps controller main-agent and delegates.to sub-agent
+AGQ-018: agentic-queue — Delegated completion is work-unit submit with declaration, output file, and cache trail validation
+AGQ-019: agentic-queue — Queue v2 active_window, refill_pool, delegated_in_flight, and terminal_history state model
+AGQ-020: agentic-queue — pendingCount exposes active window plus refill pool task total
+AGQ-021: agentic-queue — Supplementary queue demand IDs may carry iteration labels when explicit topic identity is valid
+AGQ-022: agentic-queue — Wave delegated queue loops prefer bounded batched claims for independent demand
+AGQ-023: agentic-queue — Phase task-card examples preserve queue_item_id as queue demand identity
+AGQ-024: agentic-queue — Actor preflight no-claim preserves queue demand and lifecycle semantics
+AGQ-025: agentic-queue — New topic-scoped queue demand binds canonical topic UID and current slug
+AGQ-026: agentic-queue — Submitted predecessors with immutable supersession relations create a fresh queue successor without reactivation
+AGQ-027: agentic-queue — operate-queue check reports a distinct drained conclusion when the queue is fully drained
+AGQ-028: agentic-queue — Phase drain includes queue demand and in-flight attempts
+
+# agent/cmd-subagent-environment
+CSE-001: cmd-subagent-environment — Command playbook for project-level real subagent setup
+
+# agent/delegated-work-units
+DEW-001: delegated-work-units — Work-unit pipeline is the sole production delegated-work path
+DEW-002: delegated-work-units — Work-unit identity and Engine-owned allocation index
+DEW-003: delegated-work-units — Queue demand binding, leases, and in-flight attempt state
+DEW-004: delegated-work-units — Work-unit envelope, manifest, beacon, task, result, and receipt nonce surfaces
+DEW-005: delegated-work-units — Submit transaction is the only successful delegated completion transition [DEPRECATED]; migrated to WSU-001 (agent/work-unit-submission)
+DEW-006: delegated-work-units — Terminal attempts and timeout retry allocate replacement work IDs [DEPRECATED]; migrated to WUC-006 (agent/work-unit-correction)
+DEW-007: delegated-work-units — Submitted work-unit ledger rows are delegated gate coverage authority [DEPRECATED]; migrated to WSU-006 (agent/work-unit-submission)
+DEW-008: delegated-work-units — Non-work-unit delegated artifacts are cleanup diagnostics only [DEPRECATED]; migrated to WUC-005 (agent/work-unit-correction)
+DEW-009: delegated-work-units — Work-unit tasks expose bundle-root absolute paths and write-before-return verification
+DEW-010: delegated-work-units — Submitted result and ledger hashes detect post-submit drift before gate pass [DEPRECATED]; migrated to WSU-007 (agent/work-unit-submission)
+DEW-011: delegated-work-units — Successful work-unit submit verifies durable queue postconditions before reporting success [DEPRECATED]; migrated to WSU-008 (agent/work-unit-submission)
+DEW-012: delegated-work-units — Work-unit submit performs narrow canonicalization for predictable LLM-shaped result, receipt, cache, and nonce drift [DEPRECATED]; migrated to WSU-003 (agent/work-unit-submission)
+DEW-013: delegated-work-units — Work-unit dry-submit preflights submit validation without side effects [DEPRECATED]; migrated to WUP-001 (agent/work-unit-preflight)
+DEW-014: delegated-work-units — Timeout terminalization is guarded by progress-aware preflight [DEPRECATED]; migrated to WUP-003 (agent/work-unit-preflight)
+DEW-015: delegated-work-units — Audited late-submit recovers eligible timed-out work units without identity rewrite [DEPRECATED]; migrated to WUC-007 (agent/work-unit-correction)
+DEW-016: delegated-work-units — Work-unit claim evaluates one explicit role-bound actor observation before allocation
+DEW-017: delegated-work-units — Explicit single Phase Agent fallback remains inside the work-unit submit envelope [DEPRECATED]; migrated to WUC-008 (agent/work-unit-correction)
+DEW-018: delegated-work-units — Work-unit records preserve truthful execution actor provenance with legacy compatibility
+DEW-019: delegated-work-units — Work-unit provenance inherits UID-bound queue identity without duplicate result or ledger fields
+DEW-020: delegated-work-units — Existing task_brief may carry a beacon-rooted read-only user-controls coordinate without work-unit authority expansion
+DEW-021: delegated-work-units — Delegated work contract entry is constructible from one generated projection
+DEW-022: delegated-work-units — Work-unit attempts expose logical execution guidance from existing attempt bindings
+DEW-023: delegated-work-units — Submit exposes a bounded integrity preflight and transaction disposition [DEPRECATED]; migrated to WUC-002 (agent/work-unit-correction)
+DEW-024: delegated-work-units — Submitted correction uses audited supersession and one fresh successor [DEPRECATED]; migrated to WUC-009 (agent/work-unit-correction)
+DEW-025: delegated-work-units — Current Wave0 work-unit contracts expose submitted source contributions without a competing rich-reference route [DEPRECATED]; migrated to WSU-005 (agent/work-unit-submission)
+DEW-027: delegated-work-units — Sub-agents do not own workflow authority
+DEW-028: delegated-work-units — Dry-submit cache-URL mismatch diagnostics carry the recorded leaf urls [DEPRECATED]; migrated to WUP-004 (agent/work-unit-preflight)
+DEW-029: delegated-work-units — Dry-submit runtime-receipt schema diagnostics carry the raw value, all affected lines, and the expected format [DEPRECATED]; migrated to WUP-005 (agent/work-unit-preflight)
+DEW-030: delegated-work-units — Generated source-claim authoring guidance states cache/degraded-ref and source_ref value domains with an accepted-and-degraded example
+DEW-031: delegated-work-units — Dry-submit invalid-result reports duplicate accepted claim urls and their count [DEPRECATED]; migrated to WUP-006 (agent/work-unit-preflight)
+DEW-026: delegated-work-units — Affected delegated work receives current intent through the existing task brief
+
+# agent/hitl-ux
+HIU-001: hitl-ux — HITL conversational loop model (entry → in-loop → exit → anti-infinite-loop)
+HIU-002: hitl-ux — HITL1 recommendation-first alignment with concrete must-answer collection and natural-language acceptance or correction
+HIU-003: hitl-ux — HITL2 research review with one executable recommendation and natural-language decision mapping
+HIU-004: hitl-ux — Chinese-first interaction convention for all user-visible HITL prompts
+HIU-005: hitl-ux — Uncertain users receive concrete must-answer proposals without hidden sentinel or parser state
+HIU-006: hitl-ux — Semantic-progress guidance for stalled HITL discussion without fixed-round counters
+HIU-007: hitl-ux — HITL2 research review surfaces declared-focus coverage
+
+# agent/local-deepseek-claude-launcher
+LDC-001: local-deepseek-claude-launcher — Repo-owned launcher and shared pure invocation plan retain one root configuration authority
+LDC-002: local-deepseek-claude-launcher — Direct and supervised launch construct isolated provider environments without caller routing override
+LDC-003: local-deepseek-claude-launcher — Anthropic-compatible model endpoint is explicit, validated as a well-formed URL, and free of embedded credentials
+LDC-004: local-deepseek-claude-launcher — Redacted preflight reports all deterministic readiness failures without launching Claude Code
+LDC-005: local-deepseek-claude-launcher — Generic launch stays transparent while Supervisor owns one direct Claude child lifecycle
+LDC-006: local-deepseek-claude-launcher — Detectable setup and launch failures stop without remote, credential, settings, or provider fallback
+LDC-007: local-deepseek-claude-launcher — Tracked repo-root .env.example documents the safe contract while real .env and credentials remain ignored
+LDC-008: local-deepseek-claude-launcher — Generic launch has no bypass while explicit Autorun enables an effective Headless permission mode
+LDC-009: local-deepseek-claude-launcher — Host-tool docs distinguish provider config from explicit experiment runtime state and actor authority
+
+# agent/queue-input-validation
+QIV-001: queue-input-validation — Enqueue validates task card topic_slug against bundle topic_registry
+QIV-002: queue-input-validation — Queue schema includes bundle identity and operate-queue validates bundle_name
+QIV-003: queue-input-validation — Queue projection cache includes generated_at and source_queue_sha256 staleness detection
+QIV-004: queue-input-validation — operate-queue repair --remove-stale removes task cards outside topic_registry
+QIV-005: queue-input-validation — Queue and work-unit runtime CLIs reject help and suspicious bundle arguments before side effects
+QIV-006: queue-input-validation — Topic enqueue requires committed canonical registry and UID-bound seed state
+QIV-007: queue-input-validation — Topic enqueue accepts only UID-bound current layout coordinates
+
+# agent/subagent-directory-contract
+SDC-001: subagent-directory-contract — Work-unit directory is the production delegated runtime envelope
+SDC-002: subagent-directory-contract — Delegated artifact containment is enforced through work-unit directory and ledger contracts
+SDC-003: subagent-directory-contract — Work-unit wave directory convention matches encoded work_id wave and manifest wave
+
+# agent/subagent-dispatch
+SUD-001: subagent-dispatch — Work-unit claim creates dispatchable prompt and runtime envelope
+SUD-002: subagent-dispatch — Queue task card targets.delegates becomes eligible for work-unit claim
+SUD-003: subagent-dispatch — Batched sub-agent dispatch uses work-unit claim --count and submit-by-work-id returns
+SUD-004: subagent-dispatch — Work-unit claim writes beacon metadata with bundle, log CLI, work_id, queue_item_id, kind, and receipt_nonce
+SUD-005: subagent-dispatch — Work-unit index and manifest persist Engine-generated receipt nonce for forensic binding
+SUD-006: subagent-dispatch — buildSpawnPrompt hands sub-agent its work-unit directory plus beacon pointer
+SUD-007: subagent-dispatch — Work-unit claim and submit trace events carry receipt nonce across Engine trace chain
+SUD-008: subagent-dispatch — Work-unit claim stdout is one machine-parseable JSON document
+
+# agent/subagent-node-contract
+SNC-001: subagent-node-contract — Sub-agent role specs SHALL mandate lifecycle logging (read beacon, emit events with nonce, always-loaded)
+SNC-002: subagent-node-contract — Work-unit task Markdown includes lifecycle logging directives
+SNC-003: subagent-node-contract — Phase workflow nodes direct the Phase Agent through the work-unit claim/submit loop
+SNC-004: subagent-node-contract — Sub-agent role specs require beacon-first absolute path resolution and file existence verification before return
+SNC-005: subagent-node-contract — Sub-agent role contracts return source backing instead of owning consumer reference presentation
+SNC-006: subagent-node-contract — Generated work-unit result schema matches submit-time result contract
+SNC-007: subagent-node-contract — Sub-agent fetch guidance distinguishes per-URL fallback, multi-URL batching, and JS/Node-first fetch tiers
+SNC-008: subagent-node-contract — Sub-agent slow work emits observable progress before timeout risk
+
+# agent/subagent-runtime-logging
+SRL-001: subagent-runtime-logging — Sub-agent emits lifecycle events via log-event.mjs (search_start/done, fetch_done, file_written, error, work_done)
+SRL-002: subagent-runtime-logging — Lifecycle events carry the work-unit beacon receipt_nonce (UUID)
+SRL-003: subagent-runtime-logging — Sub-agent reads work-unit _beacon.json for bundle_dir/log_cli/work_id/queue_item_id/kind/nonce as single source of truth
+SRL-004: subagent-runtime-logging — Lifecycle events are work-unit provenance-forensics cross-check signals, not independent gate pass coverage
+SRL-005: subagent-runtime-logging — Explicit audited late-submit diagnostics distinguish normal terminal submit rejection from late-accept recovery [DEPRECATED]
+SRL-006: subagent-runtime-logging — Runtime receipts identify the claimed work-unit execution actor class
+
+# agent/work-unit-provenance-gate
+WPG-001: work-unit-provenance-gate — Gates verify submitted work-unit ledger rows
+WPG-002: work-unit-provenance-gate — Gates verify work-unit submission presence across binding surfaces
+WPG-003: work-unit-provenance-gate — Gates verify work-unit output coverage
+WPG-004: work-unit-provenance-gate — Gates reject non-work-unit delegated authority surfaces
+WPG-005: work-unit-provenance-gate — Wave2 work-unit provenance is conditional on delegated evidence search
+WPG-006: work-unit-provenance-gate — Work-unit provenance checks are standard gate definition checks
+WPG-007: work-unit-provenance-gate — Gates detect delegated bypass by phase
+WPG-008: work-unit-provenance-gate — Gate diagnostics carry work-unit binding context
+WPG-009: work-unit-provenance-gate — Gates emit work-unit nonce mismatch diagnostics
+WPG-010: work-unit-provenance-gate — Gates emit work-unit lifecycle evidence diagnostics
+WPG-011: work-unit-provenance-gate — Framework ships a work-unit provenance-forensics guide
+WPG-012: work-unit-provenance-gate — Provenance gates distinguish Phase-owned reference projections from delegated fetched evidence
+WPG-013: work-unit-provenance-gate — Wave1 required output coverage and Wave2 cross-reference provenance preserve authority contracts
+WPG-014: work-unit-provenance-gate — Gates count audited late-accepted work-unit ledger rows
+WPG-015: work-unit-provenance-gate — Work unit index record carries Engine-owned rerun_count stamped at claim time for round identification
+WPG-016: work-unit-provenance-gate — Provenance gates derive current submitted coverage from immutable supersession relations
+WPG-017: work-unit-provenance-gate — Wave0 provenance distinguishes legacy delegated references from submitted-backed Phase-owned projections
+
+# bundle/artifact-persistence-recovery
+ARP-001: artifact-persistence-recovery — Content-bearing bundle files use one crash-safe persistence workspace with compare-and-swap commit
+ARP-002: artifact-persistence-recovery — Quiescent sweep finalizes or cleans valid prepared workspaces and blocks incomplete or conflicting workspaces
+ARP-003: artifact-persistence-recovery — Persistence results remain structured mechanical facts without granting artifact or lifecycle authority
+ARP-004: artifact-persistence-recovery — Final Markdown reports use submitted-backing admission before the existing crash-safe persistence commit
+ARP-005: artifact-persistence-recovery — Final auxiliary directories bind to their primary version; orphan version-grammar directories block
+
+# bundle/bundle-data-isolation
+BUI-001: bundle-data-isolation — Multi-bundle coexistence
+BUI-002: bundle-data-isolation — Runtime output paths stay under current run bundle root and repo-root leaks are diagnosed
+BUI-003: bundle-data-isolation — Run bundle content is informationally self-contained
+
+# bundle/bundle-map
+BUM-001: bundle-map — BUNDLE_MAP.md is the canonical passive bundle map
+BUM-002: bundle-map — Bundle map content is organized as maps
+BUM-003: bundle-map — BUNDLE_MAP.md replaces START_FROM_HERE.md for new bundles
+BUM-004: bundle-map — Legacy START_FROM_HERE.md is diagnostic compatibility only
+BUM-005: bundle-map — BUNDLE_MAP.md offers a portable continuation card
+
+# bundle/bundle-start-from-here
+BUS-001: bundle-start-from-here — START_FROM_HERE.md boot entry [DEPRECATED]
+BUS-002: bundle-start-from-here — START_FROM_HERE.md documents flat reference/ and artifacts/wave0/ [DEPRECATED]
+BUS-003: bundle-start-from-here — START_FROM_HERE.md documents rb_status current_node as the resume phase coordinate [DEPRECATED]
+
+# bundle/cache-raw-web-content
+CRC-001: "cache-raw-web-content — Standardized _cache/ directory structure (wave/batch/scope/source four levels)"
+CRC-002: "cache-raw-web-content — Cache path delivery via spawn prompt (Cache directory line)"
+CRC-003: "cache-raw-web-content — source-slug consistency between _cache/ and reference/ filenames"
+CRC-004: "cache-raw-web-content — Cache is non-authority and deletable after dependent provenance verdicts; _cache/README.md created at instantiation"
+CRC-005: cache-raw-web-content — cache_trails SHALL be Engine-populated during work-unit submit or accepted Engine completion rather than Agent-declared or empty
+CRC-006: cache-raw-web-content — Gate cache_coverage rule cross-validates declaration cache_trails with filesystem
+CRC-007: cache-raw-web-content — Declared cache trails preserve fetched content or explicit degraded-capture records
+CRC-008: cache-raw-web-content — Cache leaf validation uses one Engine-owned contract projection
+CRC-009: cache-raw-web-content — Declared cache leaves fail submit-time validation on placeholder or filler content
+
+# bundle/cmd-bundle-instantiation
+CMI-001: cmd-bundle-instantiation — Command playbook for bundle production
+CMI-002: cmd-bundle-instantiation — JS helper validate-bundle.mjs (Zod validation)
+CMI-003: cmd-bundle-instantiation — JS helper inspect-bundle.mjs (structure check)
+CMI-004: cmd-bundle-instantiation — Template files (rb_templates/)
+CMI-005: cmd-bundle-instantiation — Bundle naming is Agent-derived or already-supplied, not a mid-pipeline user dependency
+CMI-006: cmd-bundle-instantiation — rb_status.json template includes current_node reentry coordinate
+CMI-007: "cmd-bundle-instantiation — retired framework_version creation stamp; never reuse [DEPRECATED]"
+CMI-008: cmd-bundle-instantiation — Production creator rejects malformed argv before filesystem side effects
+CMI-009: cmd-bundle-instantiation — Bundle creators render actual framework navigation coordinates
+CMI-010: cmd-bundle-instantiation — Additional bundle creation carries an explicit user decision
+
+# bundle/file-observability
+FIO-001: file-observability — Engine audits phase-owned directories with stable file finding classifications
+FIO-002: file-observability — Unplanned files produce inspect/advice and authority blockers when relevant
+FIO-003: file-observability — Agent file explanations are diagnostic trace/log entries only
+FIO-004: file-observability — Explained files remain non-authoritative until ledger or receipt authority exists
+FIO-005: file-observability — Root bundle map files follow canonical map policy
+FIO-006: file-observability — File observability detects canonical topic footprint drift without granting authority
+FIO-007: file-observability — File observability resolves current and historical topic layouts through one canonical resolver
+FIO-008: file-observability — File observability names its feedback field repair_directive
+
+# bundle/reference-flat-format
+REF-001: reference-flat-format — Flat reference directory with three-level naming prefixes (00-shared-/{topic_slug}-<qualifier>/00-cross-)
+REF-002: reference-flat-format — Rich MD reference file template (metadata block + Key Facts + Core Content + Relevance + Quotable Terms + Risks)
+REF-003: reference-flat-format — _INDEX.md as canonical reference inventory with source_layer column
+REF-004: reference-flat-format — README.md as human navigation for reference directory
+REF-005: reference-flat-format — Phase nodes enforce reference file naming convention
+REF-006: reference-flat-format — Wave1 sub-agent reference file format specification
+REF-007: reference-flat-format — Agent-facing source.yaml and reference metadata formats are complete and parser-aligned
+REF-008: reference-flat-format — Phase-owned reference materializations preserve submitted source backing
+REF-009: reference-flat-format — Wave0 Phase-owned shared references preserve exact submitted source backing
+REF-010: reference-flat-format — Reference metadata values are writable as valid YAML and frontmatter failures name the offending value
+REF-011: reference-flat-format — Canonical Wave1 locator derivation is visible to the Agent in guidance and inspect feedback
+
+# bundle/run-entry
+RUE-001: run-entry — RUN.md excludes an internal version projection
+RUE-002: run-entry — RUN.md Section 0 immediately follows the title and instructs agents not to use built-in research shortcuts
+RUE-003: run-entry — Project changelog records version history and known limitations [DEPRECATED]
+RUE-004: run-entry — Agent behavior files stay synchronized on the research shortcut override
+RUE-005: run-entry — RUN.md frames drag/paste trigger as one-time handoff into Agent-run framework execution
+RUE-006: run-entry — Explicit existing bundle routes before the new-run default; regressions lock the canonical section, not pointer restatement
+
+# engine/check-inspect-feedback
+CHI-001: check-inspect-feedback — Check fail → Inspect → Feedback loop
+CHI-002: check-inspect-feedback — C&I feedback loop for fork variant (topicReadiness validation)
+CHI-003: check-inspect-feedback — Recovery advice identifies one reachable nearest legal action per independent root
+CHI-004: check-inspect-feedback — Attempt recovery feedback exposes one ownership-safe legal action
+CHI-005: check-inspect-feedback — Generic parse/validation failures name the exact missing or offending contract fact with write surface and same-checkpoint rerun
+
+# engine/cli-exit-code-conventions
+CLE-001: cli-exit-code-conventions — Discoverable framework CLI exit-code contract in top-level command docs
+CLE-002: cli-exit-code-conventions — Exit codes remain control-flow signals and never encode morale or continuation encouragement
+CLE-003: cli-exit-code-conventions — Known CLI exit-code exceptions and drift are documented without behavior changes
+CLE-004: cli-exit-code-conventions — Regression coverage locks documented exit-code convention and exception inventory
+
+# engine/cli-inspect-output-conventions
+IOC-001: cli-inspect-output-conventions — inspect-wave0-output.mjs reuses the Wave0 evaluator and inspects H1-tolerant metadata, sections, index, README, and thin YAML without side effects
+IOC-002: cli-inspect-output-conventions — inspect-wave1-output.mjs ({topic.slug}*.md per topic, metadata/sections, evidence-summary, question-list, _INDEX.md wave1 entries)
+IOC-003: cli-inspect-output-conventions — inspect-wave2-output.mjs (no 00_shared/, 00-cross-* format, artifacts/wave2/ triple, no backfill tokens)
+IOC-004: cli-inspect-output-conventions — Inspect CLIs are documented non-gate structured-output commands with invocation-error code 2
+IOC-005: cli-inspect-output-conventions — Inspect output classifies blocking, advisory, and diagnostic-only findings according to pass/fail behavior
+
+# engine/cli-phase-transition
+CPT-001: "cli-phase-transition — Advance status CLI (advance-status.mjs): advance current_gate/next_gate using chain.json as truth source"
+CPT-002: "cli-phase-transition — Log event CLI extension (--event flag): write phase-completion trace events to rb_trace.jsonl"
+CPT-003: cli-phase-transition — Enter phase CLI witnesses lifecycle node entry through assessNode and load_complete trace
+CPT-004: cli-phase-transition — Advance status refuses unwitnessed or unpassed phase handoffs
+CPT-005: cli-phase-transition — Phase-boundary terminology separates status transition, Agent handoff, work completion, and witnessing
+CPT-006: cli-phase-transition — Phase status drift audit detects impossible current_gate/next_gate windows and manual bypass suspicion
+CPT-007: cli-phase-transition — current_node records active loaded lifecycle control surface without replacing gate window authority
+CPT-008: cli-phase-transition — Failed or missing source-gate handoffs cannot authorize downstream status or final lifecycle state
+CPT-009: cli-phase-transition — Route-bound entry output surfaces a bounded lifecycle-integrity summary (diagnostic-only, closed vocabulary)
+
+# engine/framework-engine
+FRE-001: framework-engine — DEEP_RESEARCH_HARNESS/engine/ as canonical directory for 6 production engine modules
+FRE-002: framework-engine — workflow-fsm standalone pure FSM transition resolver (5 exports, 241 lines, zero engine imports) [DEPRECATED]
+FRE-003: framework-engine — Gate helpers shared parseMdFrontmatter and readBundlePlan for YAML 1.2 frontmatter parsing
+FRE-004: framework-engine — Framework internal module layout and release hygiene for delegated-work engine replacement
+FRE-005: framework-engine — Queue Manager internal module layout + companion regression split (5 flat sub-modules + barrel, zero behavior change)
+
+# engine/gate-fork-router
+GAF-001: gate-fork-router — Gate branch classification and explicit resolver
+
+# engine/gate-skeleton
+GSK-001: gate-skeleton — Gate definition JSON skeleton structure (gate, description, rules[] with id/check/target/threshold/failure_message)
+GSK-002: "gate-skeleton — Gate CLI skeleton shape（shared parse/preflight/result builder；check/routing/inspect/advice/hints JSON；root-first repair_kind/missing_fact/write_to/rerun；documented exit codes）"
+GSK-003: gate-skeleton — One gate per CLI（active definition/CLI bijection currently yields 10 independent wrappers, including rerun-ready；无 generic Gate subcommand runner）
+GSK-004: "gate-skeleton — Gate CLI 从 shared schema-parsed definitions 与 checker-owned structured findings 执行 rules；definition/checker root contract 投影 failed_rule_ids、hints、inspect/advice，parent masking 与同-checkpoint rerun；active Gate inventory由 definition/CLI 自动派生"
+GSK-005: gate-skeleton — Shared gate attempt audit helper writeGateAttempt(bundlePath, result) writes to logger + trace with bundle; ALL gate CLIs MUST use it, inline appendFileSync to rb_trace.jsonl forbidden
+GSK-006: gate-skeleton — Gate CLI accepts --attempt N; buildGateResult injects fatigue_warning + step_back diagnostic signals when consecutive failures exceed threshold
+GSK-007: gate-skeleton — Lifecycle gate handoff preflight verifies prior gate pass and current load_complete witness
+GSK-008: gate-skeleton — Engine-derived gate attempt delta and pass-side fatigue diagnostics
+GSK-009: gate-skeleton — Gate CLI exit-code behavior and high-friction continuation advice align with the framework convention
+GSK-010: gate-skeleton — Lifecycle gate and final-readiness preflight rejects status-only or artifact-only downstream authorization
+GSK-011: gate-skeleton — Active gate rule audit is executable and maps rules to current helper or CLI dispatch
+GSK-012: gate-skeleton — Shared Wave1 gate-attempt writer accepts only a validated carried-target receipt and strict persistence failure emits one failed envelope
+GSK-013: gate-skeleton — Gate degradation eligibility is schema-parsed metadata, defaults fail-closed, and remains separate from hints and attempt diagnostics
+
+# engine/gate-state-machine
+GAS-001: gate-state-machine — Gate checkpoint feedback and transition lookup
+
+# engine/logger
+LOG-001: logger — Logger default zero-config usage (createLogger() → console only, 4 levels, ISO 8601 timestamps)
+LOG-002: "logger — Logger file output via option (createLogger({ file }) → console + file append, auto mkdir)"
+LOG-003: logger — Logger injection pattern in engine (logger = null trailing parameter, silent no-op)
+LOG-004: logger — Run-scoped logger creation at bundle initialization (logToRun for first line, createRunLogger for engines)
+LOG-005: logger — logToRun(bundlePath, level, msg, detail?) one-shot and createRunLogger(bundlePath) factory, encapsulating _logs/run.log path convention and bundle auto-injection
+LOG-006: logger — Engine hot-path accident-grade diagnostics for queue-manager, work-unit lifecycle, gate, and provenance mismatch events
+LOG-007: logger — Sub-agent spawn prompt includes diagnostic logging CLI instructions with copyable log-event.mjs examples
+
+# engine/logging-conventions
+LOC-001: logging-conventions — Bundle identity is the bundle name (dpt_rb_<name> → bundle=<name>); persisted in rb_status.json at instantiation, injected into all sink entries
+LOC-002: logging-conventions — Single diagnostic log file per bundle (_logs/run.log as chronological diagnostic dump, not verdict source)
+LOC-003: logging-conventions — Log level conventions (DEBUG/INFO/WARN/ERROR with defined usage for .mjs files)
+LOC-004: logging-conventions — Phase node log convention (## Log section in .md phase nodes declaring required log points)
+LOC-005: logging-conventions — Inspect-bundle observable extension (--summary/--timeline/--log flags for post-mortem diagnosis)
+LOC-006: logging-conventions — Logger activation in engines, including queue-manager and work-unit lifecycle helpers using createRunLogger at entry
+LOC-007: logging-conventions — One-shot log API (logToRun(bundlePath, level, msg, detail?) encapsulates path, format, bundle)
+LOC-008: logging-conventions — Run-scoped logger factory (createRunLogger(bundlePath) returns {info,warn,error,debug} bound to _logs/run.log)
+LOC-009: logging-conventions — Agent log CLI (log-event.mjs --bundle --level --msg, bash command for Phase Agent, zero JS knowledge)
+LOC-010: logging-conventions — Long-running phases emit stable diagnostics for post-mortem debugging
+LOC-011: logging-conventions — log-event.mjs always-zero behavior is a documented CLI exit-code exception
+
+# engine/runtime-reentry-debuggability
+RRD-001: runtime-reentry-debuggability — Gate attempts record lightweight reentry checkpoint manifests
+RRD-002: runtime-reentry-debuggability — Reentry check validates runtime consistency for closed target vocabulary
+RRD-003: runtime-reentry-debuggability — Queue state cannot conflict with lifecycle status after phase pass
+RRD-004: runtime-reentry-debuggability — Failed gates preserve full post-mortem diagnostic detail
+RRD-005: runtime-reentry-debuggability — Reentry tooling derives facts from bundle truth without chat memory
+RRD-006: runtime-reentry-debuggability — Reentry CLI exit-code semantics align with the documented framework convention
+RRD-007: runtime-reentry-debuggability — Reentry diagnostics use rb_status current_node as the current phase coordinate when present
+RRD-008: runtime-reentry-debuggability — Reentry diagnostics summarize incident-shaped recovery truth
+RRD-009: runtime-reentry-debuggability — Reentry consumes canonical topic-state inspection without mutation authority
+RRD-010: runtime-reentry-debuggability — Reentry short-circuits accepted topic layout workspaces and layout drift
+RRD-011: runtime-reentry-debuggability — Setup-ready handoff commits durable audit, final plan checkpoint, and consumable route in one ordered boundary
+RRD-012: runtime-reentry-debuggability — Route-pending setup checkpoints are diagnostic evidence only and never selected as a passed reentry baseline
+
+# engine/schema-core
+SCO-001: schema-core — Six domain enums
+SOR-001: schema-core — Source-of-record invariant marker for schema-core specs
+SCO-002: schema-core — Six Zod contracts
+SCO-003: schema-core — Retired abstract Gate FSM compatibility contract [DEPRECATED]
+SCO-004: schema-core — Direct node import (no compilation)
+SCO-005: schema-core-hitl — HumanCheckpointStatus enum
+SCO-006: schema-core-hitl — AnswerabilityClass enum
+SCO-007: schema-core-hitl — HITL2UserDecision distinguishes the not_started sentinel from five recorded actions while preserving current lifecycle enum coverage
+SCO-008: schema-core-hitl — ProfileSchema hitl1/hitl2 field update
+SCO-009: schema-core — Queue v2 contract separates queue_item_id demand identity from work_id attempt identity
+SCO-010: schema-core — _INDEX.md light validation (header completeness + at least 1 row)
+SCO-011: schema-core — Rerun tracking field rerun_count in HITL2 profile (optional non-negative integer, default 0; direction hints go in seed_topics not profile)
+SCO-012: schema-core — stripMdFrontmatter() extracts body from Markdown (inverse of parseMdFrontmatter)
+SCO-013: schema-core — Canonical and legacy plan schemas distinguish stable topic identity mode
+SCO-014: schema-core — Canonical plan schema validates unique current and previous topic layout coordinates
+
+# engine/trace-writer
+TRW-001: trace-writer — Unified append-only JSONL trace writer with createTrace factory (3 variants)
+TRW-002: trace-writer — Trace output validates against TraceEntrySchema contract
+TRW-003: trace-writer — Trace entries include bundle field for cross-sink correlation
+TRW-004: trace-writer — Run start trace marker (run_start at bundle creation; run_end terminal marker deferred to Phase 2)
+TRW-005: trace-writer — Agent Autorun surfaces use one rb_trace.jsonl sink with trace-bound native completion
+TRW-006: trace-writer — Successful Wave1 gate attempt explicitly projects its normalized carried-target receipt into the routed trace handoff
+TRW-007: trace-writer — Trace events carry writer identity and bundle consistency
+TRW-008: trace-writer — Audit verifies trace completion events have passed gate witnesses
+
+# engine/transition-table
+TRT-001: transition-table — File naming convention transitions.chain.json
+TRT-002: transition-table — transitions.chain.json structure (gate→state→next_node static map)
+TRT-003: transition-table — transition-chain.mjs engine (loadChain, resolveTransition, createChain)
+TRT-004: transition-table — ask-next.mjs unified dispatch (askNext dispatches to chain by file suffix) [DEPRECATED]
+TRT-005: transition-table — Detailed node-result router contract and node-keyed backend dispatch
+TRT-006: transition-table — Chain table includes rerun node and HITL2 rerun exit (HITL2 rerun→phase-rerun.md, phase-rerun passed→phase-seed-topics.md, preserve HITL2 passed→readiness)
+TRT-011: transition-table — Retired abstract gate.mjs FSM compatibility exports [DEPRECATED]
+TRT-012: transition-table — Phase MD test helper (md-phase-checks.mjs) validates against chain.json via manifest bridge without a separate abstract Gate FSM
+
+# governance/change-feedback-loop
+CHF-001: change-feedback-loop — Change review obligations are durable, scoped task markers rather than chat-only completion
+CHF-002: change-feedback-loop — Apply and archive operations deliver current feedback guidance without creating archive authority
+CHF-003: change-feedback-loop — One governed finalizer verifies mechanical closeout before native no-spec-write archive
+CHF-004: change-feedback-loop — Supported archive entry surfaces converge on the governed finalizer
+
+# governance/guidance-constitution
+GCO-001: guidance-constitution — Charter scope and guidance statement classification preserve accepted and executable authority
+GCO-002: guidance-constitution — Constitutional promotion is limited to implementation-neutral, falsifiable, cross-context invariants
+GCO-003: guidance-constitution — New or changed cross-boundary blocking obligations expose a legal path or an explicit missing-contract or terminal boundary
+GCO-004: guidance-constitution — Explicitly declared Agent-facing entry/handoff/recovery boundaries support bounded reentry without hidden choreography or Engine workflow control
+GCO-005: guidance-constitution — Authority, capability, permission, responsibility, liveness, and evidence remain non-interchangeable concepts
+GCO-006: guidance-constitution — Closure claims are bounded by claim-specific provenance, scope, and proof distance
+GCO-007: guidance-constitution — Semantic-precision direction makes new abstractions reviewable as bounded decision-ready semantic levels without creating runtime authority
+GCO-008: guidance-constitution — Charter, guidance navigation, and OpenSpec route relevant future designs through semantic precision, simple control, and helper responsibility
+GCO-009: guidance-constitution — Model documents do not present normative rules
+
+# governance/requirement-traceability
+RET-001: requirement-traceability — Prefix abbreviation registry as self-documenting source of truth
+RET-002: requirement-traceability — One capability one group header (dissolve synthetic and delta groups)
+RET-003: requirement-traceability — Capability boundary test (4 conditions) prevents scope confusion
+RET-004: requirement-traceability — Alphabetical ordering of groups and numeric ordering within groups
+RET-005: requirement-traceability — Deprecation without deletion (IDs never reused)
+RET-006: requirement-traceability — Check script compliance as hard gate for archive
+RET-007: requirement-traceability — Aggregated read-only governance health entry (check-all)
+RET-008: requirement-traceability — Capability catalog declares current-accepted scope
+RET-009: requirement-traceability — Main spec files carry a level-one title
+RET-010: requirement-traceability — Requirement IDs in guidance prose resolve against the registry
+RET-011: requirement-traceability — Requirement IDs in code implementation tags resolve against the registry
+RET-012: "requirement-traceability — Reuse-first gate: a new Agent-facing closed feedback vocabulary needs one code-derived frozen export, an enum-restatement SETS registration, and the root glossary triage row in the same change"
+
+# governance/semantic-fact-closure
+SEF-001: semantic-fact-closure — Semantic fact catalog provides a bounded shared vocabulary
+SEF-002: semantic-fact-closure — Each governed change declares semantic closure applicability
+SEF-003: semantic-fact-closure — A fact family converges on one semantic resolver
+SEF-004: semantic-fact-closure — Semantic closure checking remains structural and root-first
+
+# governance/version-management
+VEM-001: version-management — CHANGELOG is concise non-authoritative human history at project root
+VEM-002: version-management — Behavior changes do not require changelog updates
+VEM-003: version-management — RUN.md does not project a changelog version
+VEM-004: version-management — Proposals do not require an internal release number
+
+# research/canonical-topic-state
+CTS-001: canonical-topic-state — Topic registry owns stable UID and minimum durable intent
+CTS-002: canonical-topic-state — Topic progress is projected from direct runtime facts without persistence
+CTS-003: canonical-topic-state — Plan and seed intent commit through explicit crash-safe apply and recover
+CTS-004: canonical-topic-state — Topic operations preserve lifecycle and owner boundaries
+CTS-005: canonical-topic-state — Topic registry owns current and previous layout coordinates for stable UID resolution
+CTS-006: canonical-topic-state — Complete layout target commits through the existing explicit workspace and recovery path
+CTS-007: canonical-topic-state — One pure resolver maps current and historical slug bindings to canonical UID without moving provenance paths
+CTS-008: canonical-topic-state — Wave1 depth-review selection resolves one canonical topic UID and current intent binding before receipt projection
+CTS-009: canonical-topic-state — Wave0 deferred-contribution packets atomically expand exact current source identities
+CTS-010: canonical-topic-state — operate-topic-state schema projection exposes wave-dependent source-identity forms
+CTS-011: canonical-topic-state — Wave0 deferred-contribution guidance and collision feedback state the disposition-compatibility precondition and the explicit-entry recovery
+CTS-012: canonical-topic-state — Canonical reference binding SHALL resolve exact UID subsets (scalar current UID, all sentinel, related_topic_uids array) into one canonical Topic-set conclusion
+
+# research/content-delivery-experiments
+CDE-001: content-delivery-experiments — case-132 uses real HITL2 gate output for valid decisions, direct negative facts, sentinel rejection, and non-blocking diagnostic-event absence
+CDE-002: content-delivery-experiments — case-135 uses real readiness gate output for complete input and artifact, prior-gate, YAML, and JSONL boundary failures
+CDE-003: content-delivery-experiments — case-131 proves the deterministic delivery tail; the one case-137 Final-composition attempt is quarantined as no-evidence and makes no Agent-behavior PASS claim
+CDE-004: content-delivery-experiments — case-133 proves real HITL2 rerun output routes to phase-rerun and through rerun-ready to seed-topics
+CDE-005: content-delivery-experiments — case-134 proves same-check HITL2 and readiness repair loops from real failed and passed gate attempts
+
+# research/content-delivery-gate-implementation
+CDG-001: content-delivery-gate-implementation — HITL2 recorded gate checks decision brief and durable profile decision facts without a redundant blocking phase-authored trace event
+CDG-002: "content-delivery-gate-implementation — gate-readiness-passed rule set (dir_non_empty, file_exists x4, trace_has_all_gates, yaml_parse, jsonl_parse, status_value)"
+CDG-003: content-delivery-gate-implementation — HITL2 gate CLI evaluates definition/preflight, writes gate_attempt, routes proceed and rerun deterministically, and preserves passing no-transition decisions
+CDG-004: "content-delivery-gate-implementation — check-gate-readiness-passed CLI (gate-helpers pipeline, trace_has_all_gates from manifest topology, jsonl_parse, gate_attempt trace)"
+
+# research/content-delivery-phase-content
+CDP-001: content-delivery-phase-content — phase-hitl2 records five structured decisions, keeps repair in-place, routes rerun deterministically, and returns authorized mechanical execution to the Agent
+CDP-002: content-delivery-phase-content — phase-readiness.md 9-section body (deterministic precheck, all-prior-gate audit from manifest topology, anti-cheating)
+CDP-003: content-delivery-phase-content — phase-final.md 9-section body (terminal node gate=none, final report from verified bundle state, anti-cheating)
+CDP-004: content-delivery-phase-content — Final delivery is terminal; post-final feedback re-enters through HITL2 repair/rerun, not a Final-owned loop
+CDP-005: content-delivery-phase-content — Final artifacts count as delivery evidence only after legal readiness-to-final handoff and final node entry
+CDP-006: content-delivery-phase-content — Final guidance declares bounded evidence backing and uses submitted-backing admission without changing terminal semantics
+CDP-007: content-delivery-phase-content — Final regrounds in current research intent and current-lineage composition intent
+CDP-008: content-delivery-phase-content — Final guidance binds auxiliary detail archives to their version and maintains the final/README.md series index
+CDP-009: content-delivery-phase-content — Premature canonical Final presence is surfaced and blocked until relocated without becoming delivery evidence
+
+# research/evidence-extraction
+EEX-001: evidence-extraction — isCountable reference判定（authority-selected reference 的 accepted status + parseable source URL；不重复内容/表现启发式）
+EEX-002: evidence-extraction — countReferences Engine计算（默认只数Engine-ledgered declared references，支持target/topic scope）
+EEX-003: evidence-extraction — ref_count改为Engine计算（mergeResults用declared/countable references替代evidenceCount累加）
+EEX-004: evidence-extraction — cache_trails文件系统验证（validateDelegatedCompletion验证3文件+写入ledger，cache_coverage验证reference映射）
+
+# research/final-delivery-backing
+FDB-001: final-delivery-backing — Final Markdown reports expose one bounded reader-facing evidence map of declared key findings
+FDB-002: final-delivery-backing — Final report persistence validates declared refs against submitted backing before durable commit
+
+# research/plan-hostfile-sections
+PHS-001: plan-hostfile-sections — rb_plan.md frontmatter uses YAML format (plan_basename / derived_topic_count / topic_registry)
+PHS-002: "plan-hostfile-sections — rb_plan.md body has structured sections: ## Goal (### Purpose / ### Research Questions / ### Scope with In/Out/待定 substructure) as north-star anchor"
+PHS-003: "plan-hostfile-sections — ## Topic Registry body section as human-readable table with Status column"
+PHS-004: plan-hostfile-sections — ## Constraints 5-category bullet list / ## Decisions sections reserved for future use
+PHS-005: plan-hostfile-sections — "Gate body content checks (non-empty + no unfilled required-fill markers (待填充… and 尚无话题…))"
+PHS-006: plan-hostfile-sections — "Engine writes ## Progress on gate pass (idempotent checkbox flip, gate list from template)"
+PHS-007: plan-hostfile-sections — Canonical template-owned host-file sections exclude the bounded user research-controls snapshot from heading, progress, and required-fill interpretation
+PHS-008: plan-hostfile-sections — Progress write reports actual committed/no-change outcome and never claims a checkbox mutation that was not committed
+PHS-009: plan-hostfile-sections — Decisions retains accepted rerun intent revisions newest-first
+PHS-010: plan-hostfile-sections — Progress checkbox states are Engine-owned and tamper-evident (checked without passed witness is tamper evidence)
+
+# research/post-final-recovery
+POF-001: post-final-recovery — Terminal Final eligibility, retained post-final rerun request, owner precedence, and accepted-lineage replay
+POF-002: post-final-recovery — Prepared profile/event transaction uses event-last exact roll-forward recovery
+POF-003: post-final-recovery — Engine-written Final-lineage-bound exceptional handoff reuses existing HITL2 rerun owners
+POF-004: post-final-recovery — Focus-bearing post-Final requests retain wording and interpretation in the existing reason
+POF-005: post-final-recovery — Playbook intake guidance structures bounded rerun scope formation from a non-authority diagnostics dig-list
+POF-006: post-final-recovery — Post-final rerun entry diagnostics target the derived incoming checkpoint
+
+# research/pre-research-experiments
+PRE-001: pre-research-experiments — Current happy-path pre-research case uses real gates and native completion
+PRE-002: pre-research-experiments — Current repair-loop case preserves fail feedback repair rerun and last-per-gate completion semantics
+PRE-003: pre-research-experiments — Current review-surface case exposes deterministic interpretation and review directly in Markdown
+PRE-004: pre-research-experiments — Fixed interpretation review remains deterministic and repeatable without invented Subject behavior
+PRE-005: pre-research-experiments — Current HITL review case supports explicit Headless auto and bounded Interactive execution
+PRE-006: pre-research-experiments — Heavy HITL review cost does not imply Subject Sub-agent execution
+PRE-007: pre-research-experiments — Experiment review surfaces remain Markdown-first while Engine owns deterministic checkpoints
+PRE-008: pre-research-experiments — Topic rewrite cases separate structural gates, independent Subject Agent evidence and human or AI judgment
+
+# research/pre-research-gate-implementation
+PRG-001: "pre-research-gate-implementation — Instantiation complete gate rule set (~11 rules: dir_exists, file_exists, pattern_match, status_value)"
+PRG-002: "pre-research-gate-implementation — HITL1 recorded gate rule set (~6 rules: file_exists, schema_valid, field_non_empty, field_value)"
+PRG-003: "pre-research-gate-implementation — Setup ready gate rule set (~7 rules: file_exists, schema_valid, dir_exists, field_value, status_value, cross_field)"
+PRG-004: pre-research-gate-implementation — Gate CLI evaluates instantiation rules from definition (dir_exists, pattern_match, status_value support)
+PRG-005: pre-research-gate-implementation — Gate CLI evaluates HITL1 rules from definition (from hardcoded pass to definition-driven)
+PRG-006: pre-research-gate-implementation — Gate CLI evaluates setup rules from definition (from hardcoded pass to definition-driven; cross_field for basename)
+PRG-007: pre-research-gate-implementation — Gate JSON feedback and playbook verdict checks retain distinct owners in the root trace
+PRG-008: pre-research-gate-implementation — Gate audit and experiment verdict events share rb_trace.jsonl without sharing authority
+PRG-009: pre-research-gate-implementation — HITL1 recorded gate status rules (status_current_gate and status_next_gate added to gate-hitl1-recorded.definition.json)
+PRG-010: pre-research-gate-implementation — HITL1 unavailable access feedback names the selected adapter boundary and same-probe rerun
+
+# research/pre-research-phase-content
+PRP-001: pre-research-phase-content — Phase instantiation body completeness (9-section body, real CLI shape, scope boundary)
+PRP-002: "pre-research-phase-content — Phase HITL1 body completeness and stop semantics (stop: yes, payload checklist, writes to profile)"
+PRP-003: "pre-research-phase-content — Phase setup body completeness and stop semantics (stop: no, structural consistency, not readiness)"
+PRP-004: "pre-research-phase-content — Instantiation scope boundary enforcement (allowed: name+instantiate+check; forbidden: HITL/evidence/synthesis)"
+PRP-005: pre-research-phase-content — HITL1 body exposes concrete payload checklist (4 fields minimum)
+PRP-006: pre-research-phase-content — Setup body distinguishes production vs disposable naming contracts
+PRP-007: pre-research-phase-content — Anti-cheating rules in phase bodies (≥2 phase-specific bans + reference shared-anti-cheating-rules.md)
+PRP-008: pre-research-phase-content — HITL1 writes to bundle not status tree (rb_profile.yaml, not rb_status.json#/phases/hitl1/*)
+PRP-009: pre-research-phase-content — Setup stop semantics enforcement (auto-advance on pass, escalate on persistent failure)
+PRP-010: pre-research-phase-content — Invalid bundle name remains fail-stop (no rename, no patch; re-instantiate with legal name)
+PRP-011: pre-research-phase-content — HITL1 atomically materializes approved canonical topic registry and seeds
+PRP-012: pre-research-phase-content — HITL1 captures optional user research controls in one bounded host-file snapshot without creating profile or lifecycle authority
+PRP-013: pre-research-phase-content — Seed, Wave, and Final guidance consume the original user-controls host-file coordinate and preserve existing conflict/limitation paths
+PRP-014: pre-research-phase-content — HITL1 captures user controls before canonical topic-state apply so the committed host-file snapshot survives topic-state recovery
+PRP-015: pre-research-phase-content — HITL1 uses one selected semantic adapter without treating user confirmation as host capability permission
+PRP-016: pre-research-phase-content — Research phases consume baseline and current accepted amendments without reconstructing chat
+
+# research/research-access-adapter
+REA-001: research-access-adapter — One selected adapter declares semantic search and same-URL fetch facts
+REA-002: research-access-adapter — Adapter execution preserves bounded probe order and direct unavailable boundaries
+REA-003: research-access-adapter — Adapter availability evidence remains provider-scoped and outside research evidence authority
+
+# research/research-return-map
+RRM-001: research-return-map — Research wave returns include Agent-readable evidence-to-claim maps
+RRM-002: research-return-map — Seed-topic backfill preserves traceable meaning rather than only evidence lists or conclusions
+RRM-003: research-return-map — Shared guidance teaches the same return-map shape across waves
+RRM-004: research-return-map — Evidence-bearing return-map refs include concrete existing reference files
+RRM-005: research-return-map — Return-map parsing tolerates balanced bold field-label presentation
+RRM-006: research-return-map — Return-map inspection filters backfill tokens by target wave using explicit token-wave mapping
+RRM-007: research-return-map — Return-map inspection verifies per-row current-round authority references in seed projection with explicit no-projection disposition detection
+RRM-008: research-return-map — Template and command guidance SHALL preserve separate Seed Topic questions with the seed-topic-template.md as the sole canonical instantiable Seed Topic template
+
+# research/research-styles
+RES-001: research-styles — Research style JSON definition files under DEEP_RESEARCH_HARNESS/schema/research-styles/
+RES-002: research-styles — Profile stores research style parameters in rb_profile.yaml under research_style_params
+RES-003: research-styles — Gate count_floor reads dynamic threshold from profile via threshold_source
+RES-004: research-styles — Phase MD references style-specific targets from profile
+RES-005: "research-styles — Debug style (user_visible: false) hidden from HITL1, available for dev/testing"
+RES-006: research-styles — Supplementary task cards SHALL NOT produce placeholder references (three-layer defense)
+RES-007: research-styles — Topic-state add reuses the existing research-style owner after commit
+RES-008: research-styles — Safe topic removal reuses the existing research-style owner after commit
+
+# research/research-wave-experiments
+RWE-001: "research-wave-experiments — Wave0 happy-path + fail playbook (5 trace events: 1 pass + 4 fail, covers count_floor ⊕ schema_valid AND interaction, empty registry, {topic} expansion)"
+RWE-002: research-wave-experiments — Wave1 boundary enforcement playbook (placeholder marker + false completion claim detection, DO/DON'T list)
+RWE-003: research-wave-experiments — Wave2 synthesis playbook (Markdown link reference chain verification, no-link + dead-link fail cases)
+RWE-004: research-wave-experiments — Full-chain waves sequential playbook (seed-topics→wave0→wave1→wave2, 4 trace events all pass)
+RWE-005: research-wave-experiments — Wave repair-loop playbook (Wave2 gate fail→inspect/advice→repair→rerun→pass, before/after diff)
+RWE-006: "research-wave-experiments — Wave fault-tolerance playbook (malformed YAML, missing reference targets, status drift, no silent pass)"
+RWE-007: research-wave-experiments — Current Wave review surface exposes synthesis references and checklist directly in Markdown
+RWE-008: research-wave-experiments — Wave1 placeholder wording cannot substitute for independent Subject Agent evidence
+RWE-009: research-wave-experiments — Wave2 cross-artifact references become strict root-trace checks and native completion evidence
+RWE-010: research-wave-experiments — Playbook Agent writes wave completion events before gates without gate self-satisfaction
+RWE-011: research-wave-experiments — Timeout preflight and progress lease cases use production facts and Supervisor cleanup
+RWE-012: research-wave-experiments — Wave audited late-accept coverage for timed-out work units
+RWE-013: research-wave-experiments — Real-Agent degraded-handoff requalification case retains the Wave0-to-Wave2 behavioral evidence boundary
+
+# research/research-wave-gate-implementation
+RWG-001: research-wave-gate-implementation — Wave0 complete gate rule set (file_exists, dir_exists, schema_valid ReferenceMetadata, count_floor, trace_event_present, status_value)
+RWG-002: "research-wave-gate-implementation — Wave1 complete gate rule set (file_exists, dir_exists, pattern_match placeholder marker + negate false-claim detection, trace_event_present, status_value)"
+RWG-003: "research-wave-gate-implementation — Wave2 complete gate rule set (file_exists, field_non_empty, cross_field markdown_link_resolution, trace_event_present, status_value)"
+RWG-004: research-wave-gate-implementation — Wave0 gate CLI evaluates rules from definition (file_exists, dir_exists, schema_valid, count_floor, trace_event_present, status_value)
+RWG-005: research-wave-gate-implementation — Wave1 gate CLI evaluates rules from definition (file_exists, dir_exists, pattern_match with negate, trace_event_present, status_value)
+RWG-006: "research-wave-gate-implementation — Wave2 gate CLI evaluates rules from definition (file_exists, field_non_empty, cross_field markdown_link_resolution, trace_event_present, status_value)"
+RWG-007: research-wave-gate-implementation — Wave gate audit and playbook verdict checks use one root trace with distinct ownership
+RWG-008: research-wave-gate-implementation — Wave2 gate cross_field verifies Markdown link artifact references
+RWG-009: research-wave-gate-implementation — Wave2 gate CLI supports pattern_match check type with negate and topic expansion
+RWG-010: research-wave-gate-implementation — Wave2 phase-internal feedback checks are distinct from phase boundary gate
+RWG-011: research-wave-gate-implementation — Wave0 gate checks for 00-shared-*.md + _INDEX.md + README.md + artifacts/wave0/<topic>/source.yaml
+RWG-012: research-wave-gate-implementation — Wave1 gate checks for reference/*{topic}*.md per topic
+RWG-013: research-wave-gate-implementation — Wave2 gate removes reference/00_shared/ checks, 00-cross-* is optional
+RWG-014: research-wave-gate-implementation — setup-ready gate validates plan body content (non-empty + no unfilled required-fill markers)
+RWG-015: research-wave-gate-implementation — Wave0 and wave1 gate definitions include content_dedup rule from output declarations [DEPRECATED]
+RWG-016: research-wave-gate-implementation — Wave gates return repair-targeted diagnostics for YAML shape, ledger-only reference counting, cache coverage, and hash drift
+RWG-017: research-wave-gate-implementation — Wave gates implement Phase-owned reference projection and delegated evidence split
+RWG-018: research-wave-gate-implementation — Blocking judgment contracts close across producer instruction, runtime authority, checker diagnostics, and guard
+RWG-019: research-wave-gate-implementation — Wave gates aggregate current and previous layout paths by canonical topic UID
+RWG-020: research-wave-gate-implementation — Wave1 normalizes carried-target declarations and Wave2 verifies receipt-bound finding coverage through existing disposition routes
+RWG-021: research-wave-gate-implementation — Wave adapters project minimal independent evaluator roots and consume shared fail-closed degradation eligibility
+RWG-022: research-wave-gate-implementation — Wave0 shared-reference convergence evaluates submitted backing before a floor verdict
+RWG-023: research-wave-gate-implementation — Wave gates fail closed on premature canonical Final presence with the single relocation remediation
+
+# research/research-wave-phase-content
+RWP-001: research-wave-phase-content — Wave0 phase body completeness (9-section, foundation shared reference collection, ReferenceMetadata schema)
+RWP-002: "research-wave-phase-content — Wave1 phase body completeness with subagent boundary (9-section + Future Expansion Guidance, subagent:true as future marker)"
+RWP-003: research-wave-phase-content — Wave2 phase body completeness (9-section, queue-driven three-stage with finding triage + targeted search loop)
+RWP-004: research-wave-phase-content — Wave1 foundation placeholder boundary enforcement (5 prohibited completion claims, marker required)
+RWP-005: "research-wave-phase-content — Wave1 future expansion tracks documentation (6 tracks, read-only, not gate pass conditions) [DEPRECATED] — content no longer exists in any accepted surface (2026-08-31 archaeology)"
+RWP-006: research-wave-phase-content — Wave2 synthesis artifact references verified artifacts via Markdown links
+RWP-007: research-wave-phase-content — Anti-cheating rules in wave phase bodies (≥10 phase-specific bans for wave2)
+RWP-008: "research-wave-phase-content — Wave2 gap-fill sub-agent phase file behavior specification [DEPRECATED] — content no longer exists in any accepted surface (2026-08-31 archaeology)"
+RWP-009: research-wave-phase-content — Wave0 phase produces 00-shared-*.md + _INDEX.md + README.md + artifacts/wave0/<topic>/source.yaml
+RWP-010: research-wave-phase-content — Wave1 phase produces reference/{topic_slug}-<qualifier>.md rich MD per topic
+RWP-011: research-wave-phase-content — Wave2 phase produces 00-cross-*.md (optional), synthesis stays in artifacts/wave2/
+RWP-012: research-wave-phase-content — Wave2 rerun action:add full re-synthesis with gate coverage
+RWP-013: research-wave-phase-content — Wave2 gate rerun action:add check forbids delta-only synthesis and requires scan/index full topic slug coverage
+RWP-014: research-wave-phase-content — Rerun action:add SHALL include full cache trail（新增topic的source intake与首次运行一致，含_cache/写入）
+RWP-015: research-wave-phase-content — Wave phase bodies teach batch-poll-submit loops and Phase-owned reference materialization
+RWP-016: research-wave-phase-content — Wave phase bodies teach canonical gate-consumable refs, roles, and return-map navigation
+RWP-017: research-wave-phase-content — Wave0 and Wave1 fetch targets follow profile floors plus conservative margin
+RWP-018: research-wave-phase-content — Wave delegated drain loops route timeout through progress-aware preflight
+RWP-019: research-wave-phase-content — Wave delegated execution uses one visible role-bound actor decision loop
+RWP-020: research-wave-phase-content — Wave2 targeted-evidence classification with round-awareness; finding-index per-finding carries created_in_rerun_count
+RWP-021: research-wave-phase-content — Wave1 declares carried material targets in the Phase-owned review and Wave2 consumes the routed receipt without reopening a mutable parent
+RWP-022: research-wave-phase-content — Wave phases carry current intent at their actual decision points
+RWP-023: research-wave-phase-content — Wave0 phase guidance documents the deferred-selector disposition-compatibility precondition and directs a mixed contribution to explicit remaining-ordinal packets
+
+# research/seed-topic-materialization
+STM-001: seed-topic-materialization — Seed topic materialization phase node (9-section body, forces topic_registry→seed_topics/ materialization, seed_topics_completion trace event)
+STM-002: "seed-topic-materialization — Seed topics ready gate rule set (dir_non_empty, cross_field slug_consistency, field_non_empty title, trace_event_present, status_value)"
+STM-003: seed-topic-materialization — Seed topics gate CLI implementation (definition-driven, dir_non_empty evaluator, cross_field slug_consistency evaluator, double trace)
+STM-004: seed-topic-materialization — Workflow registration of seed-topics phase (manifest, transitions.chain, enums.mjs CurrentGate)
+STM-005: seed-topic-materialization — Current case-124 proves seed topic pass empty missing-slug and extra-file boundaries through native completion
+STM-006: seed-topic-materialization — Topic slug SHALL include zero-padded NN_ numeric prefix (NN = 1-based array position); gate triple-consistency byte-for-byte check naturally compatible
+STM-007: seed-topic-materialization — Canonical seed topics are exact UID-bound registry projections
+STM-008: seed-topic-materialization — Seed projections follow the committed current topic layout after atomic mutation
+STM-009: seed-topic-materialization — Seed materialization projects applicable baseline intent into existing topic-local surfaces
+STM-010: seed-topic-materialization — Seed topics ready gate SHALL reject a current-marker seed whose initialization region retains any renderer-owned template pending placeholder line; explicit gaps are rephrased specific missing facts, legacy seeds stay read-compatible
+
+# research/user-research-controls
+URC-001: user-research-controls — Optional per-run user research controls have one durable host-file snapshot and defined new/no-controls/legacy forms
+URC-002: user-research-controls — User controls guide Agent research judgment but cannot override Engine authority, provenance, floors, or lifecycle contracts
+URC-003: user-research-controls — HITL1 local-file convenience is snapshot-only and bounded to intended shareable material
+URC-004: user-research-controls — User research controls remain the HITL1 baseline for later amendments
+
+# research/wave0-artifacts-directory
+WAD-001: wave0-artifacts-directory — Bundle structure includes artifacts/wave0/ directory
+WAD-002: wave0-artifacts-directory — Wave0 thin YAML source lists use ReferenceMetadata schema
+WAD-003: wave0-artifacts-directory — instantiate-run-bundle.mjs creates artifacts/wave0/ directory
+
+# research/wave1-intake
+WAI-001: wave1-intake — Wave1 phase uses queue-driven three-stage execution for topic-specific deepening
+WAI-002: wave1-intake — Wave1 deepening task card targets sub-agent via targets.delegates (dpt-evidence-extractor)
+WAI-003: wave1-intake — Sub-agent tool degradation chain with honest failure recording
+WAI-004: wave1-intake — Inline per-topic backfill after each deepening task completion
+WAI-005: wave1-intake — Wave1 gate checks deepening artifacts and backfill token replacement
+WAI-006: wave1-intake — Wave1 queue-loop playbooks verify deepening end-to-end
+WAI-007: wave1-intake — Wave1 batch parallel sub-agent execution protocol via work-unit claim and submit
+WAI-008: wave1-intake — Wave1 topic references are Phase-owned materializations after successful submit
+WAI-009: wave1-intake — Reference-floor-deficit feedback names the depth-review sync for supplementary work units
+WAI-010: wave1-intake — Wave1 reference-floor inspect surfaces canonical reference targets
+WAI-011: wave1-intake — Evidence-summary Key Findings semantic section includes nested descendant subsection content
+WAI-012: wave1-intake — Focus coverage derives from current accepted intent and current-round backing
+WAI-013: wave1-intake — Wave1 topic deepening submit requires non-empty structured source claims or explicit degraded capture
+
+# research/wave2-synthesis
+WTS-001: wave2-synthesis — Wave2 phase queue-driven three-stage execution
+WTS-002: wave2-synthesis — Gap-fill sub-agent dispatch for targeted evidence search
+WTS-003: wave2-synthesis — Iterative finding triage + targeted search loop with convergence criteria
+WTS-004: wave2-synthesis — Wave2 three-artifact group with verified references
+WTS-005: wave2-synthesis — Per-topic backfill via queue task cards with ledger/index projection
+WTS-006: wave2-synthesis — Wave2 sub-agent behavior specification
+WTS-007: wave2-synthesis — Three-artifact Wave2 output with JS feedback integration
+WTS-008: wave2-synthesis — Finding taxonomy with explicit types, decisions, and consistency rules
+WTS-009: wave2-synthesis — Cross-topic scan matrix as process evidence surface
+WTS-010: wave2-synthesis — Wave2 materializes existing-backed cross references without weakening targeted evidence provenance
+WTS-011: wave2-synthesis — Finding index binds declared Wave1 carried targets to the exact routed handoff receipt without overloading artifact origin refs
+WTS-012: wave2-synthesis — Finding-index currentness contract (W2F-\d{3} id and created_in_rerun_count) is documented and named in apply feedback
+WTS-013: wave2-synthesis — Wave2 synthesis exposes current-intent coverage without becoming its authority
+
+# verification/experiment-agent-autorun
+EXA-001: experiment-agent-autorun — Canonical Agent Experiment Autorun vocabulary separates Supervisor, Launcher, Playbook Agent and Subject Agent
+EXA-002: experiment-agent-autorun — Manifest plus Agent Autorun and bounded Interactive instruction surfaces have unambiguous names
+EXA-003: experiment-agent-autorun — Autorun Supervisor launches a real Headless Playbook Agent and owns deterministic lifecycle only
+EXA-004: experiment-agent-autorun — Manifest order, filename cost and strict V2 frontmatter form one fail-closed selection contract
+EXA-005: experiment-agent-autorun — Trace-bound native completion is the only completed-case outcome authority
+EXA-006: experiment-agent-autorun — Supervisor-owned case roots bind explicit runtime paths without framework copies or bundle guessing
+EXA-007: experiment-agent-autorun — Native outcome, health, durable audit evidence and explicit containment-safe cleanup remain orthogonal
+EXA-008: experiment-agent-autorun — Human and AI judge bands, Agent runtime budget and ordinary-CI proof boundaries remain explicit
+EXA-009: experiment-agent-autorun — Autorun exposes bounded explicit run-profile selection without becoming a controller
+EXA-010: experiment-agent-autorun — Extreme-slow quarantine paths remain outside the active runnable corpus and cannot be registered for Autorun
+
+# verification/experiment-observability
+EXO-001: experiment-observability — Stable post-run bundle health report contract
+EXO-002: experiment-observability — Explicit V2 case health policy drives Light Standard Heavy bundle checks independently of cost
+EXO-003: experiment-observability — Gate monitor wrapper preserves gate exit status and diagnostics
+EXO-004: experiment-observability — Non-verdict diagnostic trace events for observability
+EXO-005: experiment-observability — Ledger-driven Heavy provenance inspection
+EXO-006: experiment-observability — Autorun Supervisor reports native outcome, health, durable trace and Subject evidence separately
+EXO-007: experiment-observability — Retained reports bind selection observations to an execution surface
+
+# verification/experiment-ref-integrity
+EXR-001: experiment-ref-integrity — case-401 verifies positive Agent-Engine boundary path
+EXR-002: experiment-ref-integrity — case-402 verifies delegated complete rejection matrix
+EXR-003: experiment-ref-integrity — case-403 verifies content_dedup via Engine-generated ledger [DEPRECATED]
+EXR-004: experiment-ref-integrity — case-404 verifies queue boundary contract
+EXR-005: experiment-ref-integrity — case-405 verifies rb_trace.jsonl is the only trace sink
+EXR-006: experiment-ref-integrity — case-406 verifies real Sub-agent boundary path
+
+# verification/experiment-run-strategy
+ERS-001: experiment-run-strategy — Virtual case observations retain separate current policy, historical runtime, outcome, health, and comparability facts
+ERS-002: experiment-run-strategy — Explicit bounded run profiles select an explainable next batch without persistent classification or scheduling
+ERS-003: experiment-run-strategy — Agent-behavior coverage gaps remain visible independently of deterministic selection
+
+# verification/experiment-shared-infra
+EXS-001: experiment-shared-infra — experiments_env/shared/ directory for experiment-scoped shared infrastructure
+EXS-002: "experiment-shared-infra — new-disposable-bundle.mjs moved from DEEP_RESEARCH_HARNESS/command_experiments_env/scripts/ to experiments_env/shared/"
+EXS-003: experiment-shared-infra — Disposable creator rejects malformed argv before filesystem side effects
+EXS-004: experiment-shared-infra — Disposable creator renders shared map navigation coordinates
+
+# verification/integration-tests
+INT-001: integration-tests — validate-bundle.mjs + inspect-bundle.mjs integration tests
+
+# verification/test-fixtures
+TEF-001: test-fixtures — Fixture framework for integration tests
+
+# verification/verification-routing
+VER-001: verification-routing — Verification claims route through exactly one of four canonical test classes with owned asset boundary and native verdict authority
+VER-002: verification-routing — Each change declares a verification-plan.yaml covering all four test classes with claim-to-test_class routing and rationale
+VER-003: verification-routing — check-verification-routing.mjs validates plan shape and asset existence without running tests or manufacturing verdicts
+VER-004: verification-routing — Rerun round continuity establishes focused unit/integration, deterministic_e2e, and real-Agent agent_flow_e2e proof without fabricated authority
+VER-005: verification-routing — The four-test-class taxonomy has one canonical authority; governance and guidance surfaces retain owned boundaries and pointers without competing restatement
+VER-006: verification-routing — Agent-flow routing distinguishes Supervisor and Launcher hosts from Playbook and Subject Agent actors
+
+# workflow/conditional-nodes
+COS-001: conditional-nodes — Deterministic branch checkpoint transforms
+
+# workflow/dynamic-node-loading
+DYS-001: dynamic-node-loading — Explicit fileRef Markdown closure loading with cached parsed node data
+
+# fork-repair-converge — all entries deprecated; no spec directory
+FOR-001: fork-repair-converge — Multi-fail shared repair checkpoint convergence [DEPRECATED]
+
+# workflow/playbook-runner
+PLR-001: playbook-runner — PLAYBOOK_MANIFEST plus Agent Autorun instruction is the normal Playbook Agent entry
+PLR-003: playbook-runner — Playbook Agent native completion hands deterministic health report and cleanup to the Supervisor
+PLR-004: playbook-runner — Normal Autorun guidance distinguishes virtual run strategy from filename cost and health policy
+
+# workflow/repair-loop
+REL-001: repair-loop — Repair checkpoint loopback and deterministic termination
+
+# workflow/rerun-incremental-node
+REI-001: rerun-incremental-node — Phase-rerun node frontmatter and identity (node_type:phase, phase:rerun, gate:rerun-ready, stop:no)
+REI-002: rerun-incremental-node — ProfileSchema rerun_count field (non-negative integer, default 0, optional)
+REI-003: rerun-incremental-node — Shared evaluator interprets active rerun-ready rule and profile facts for Gate and advisory consumers
+REI-004: rerun-incremental-node — Chain routes HITL2 rerun as deterministic outcome (passed→readiness, rerun→rerun-node)
+REI-005: rerun-incremental-node — Active rerun-ready definition owns max-iteration protection and exhaustion failure
+REI-006: rerun-incremental-node — Sanctioned rerun add and intent refinement use canonical topic-state apply
+REI-007: rerun-incremental-node — Rerun preparation materializes one target-round intent revision before topic-state planning
+
+# workflow/rerun-topic-integration
+RTI-001: rerun-topic-integration — Sub-agent reference format is explicit in rerun topic integration
+RTI-002: rerun-topic-integration — Wave2 action:add rerun performs full re-synthesis
+RTI-003: rerun-topic-integration — Gate detects rerun topic reference quality and provenance escape
+RTI-004: rerun-topic-integration — content_dedup SHALL NOT vacuously pass when ledger contains no reference declarations [DEPRECATED]
+RTI-005: rerun-topic-integration — Rerun-produced files remain traceable to rerun intent or declared provenance
+RTI-006: rerun-topic-integration — Rerun-produced reference files SHALL have traceable cache trails（cache_coverage gate对rerun路径与首次运行一视同仁）
+RTI-007: rerun-topic-integration — Phase-rerun binds rerun direction to target_rerun_count with crash-safe recovery; shared direction resolver outputs 5 states
+
+# workflow/shared-node-content
+SHC-001: shared-node-content — Shared profile projection covers the current ProfileSchema fields, disposable basename relation, authority boundary, and repair versus deterministic rerun semantics
+SHC-002: "shared-node-content — Generated gate summary follows definition/CLI authority, current HITL2 five-action routing, shared handoff preflight, and work-unit coverage wording"
+SHC-003: "shared-node-content — Shared schemas content matches current executable surface (profile/status/queue/plan/trace/gate, ReferenceMetadata schema, wave artifact directory structure, rb_trace vs _trace distinction)"
+SHC-004: shared-node-content — Shared repair guidance content (fail→inspect→repair→rerun, retry limit 3, escalation, check type repair directions)
+SHC-005: shared-node-content — Shared anti-cheating rules content (≥6 prohibitions with correct alternatives)
+SHC-006: shared-node-content — Shared node authority boundary enforcement (no phase/gate/next/stop frontmatter, no hidden phase language)
+
+# workflow/silent-wave-execution
+SWE-001: silent-wave-execution — Silent wave execution contract with degradation priority chain and repair escalation override
+SWE-002: silent-wave-execution — Fatigue resistance guidance (self-check protocol, structural vs fixable failure, step-back), universal scope extension to all stop:no phases
+SWE-003: silent-wave-execution — Positive continuation contract and terminal delivery visibility for autonomous phases
+SWE-004: silent-wave-execution — Autonomous silent execution has no implicit human co-runner outside HITL1/HITL2
+SWE-005: silent-wave-execution — Stop:no surfacing intent is recorded as trace before any prohibited user-facing pause
+SWE-006: silent-wave-execution — Stop:no delegated phases actively poll work-unit readiness after background spawn
+SWE-007: silent-wave-execution — Fatigue-path final synthesis and completion claims consume lifecycle-integrity facts with terminal-fact backing
+
+# workflow/workflow-directory-contract
+WDC-001: workflow-directory-contract — Read-only framework assets boundary (DEEP_RESEARCH_HARNESS/ = read-only, dpt_rb_*/ = mutable runtime truth)
+WDC-002: workflow-directory-contract — Workflow node directory structure (phases/ and shared/ under workflows/nodes/)
+WDC-003: workflow-directory-contract — Gate artifacts location and shape (gate definitions, CLI, engine, helpers, schema contract)
+WDC-004: workflow-directory-contract — Active runtime bundle root authority, bare runtime path resolution, and canonical runtime structure, including _work_units/ for delegated attempt state
+WDC-005: workflow-directory-contract — Test and experiment boundary (tests/ for regression, experiments_playbook/ for Agent-driven E2E)
+WDC-006: workflow-directory-contract — Naming conventions for workflow foundation artifacts (phase-*.md, shared-*.md, gate-*.definition.json, check-gate-*.mjs, dpt_rb_*, exp_*)
+WDC-007: workflow-directory-contract — Anti-mixing rules (what must not go where, including command_playbook/ boundary)
+WDC-008: workflow-directory-contract — Single canonical workflow package (v1 single workflow, one framework serves multiple bundles)
+WDC-009: workflow-directory-contract — Bundle canonical structure includes artifacts/wave0/ and flat reference/
+WDC-010: workflow-directory-contract — Manifest includes rerun phase entry (phases array gets rerun→phases/phase-rerun.md gate rerun-ready; manifest is inventory not routing table)
+WDC-011: workflow-directory-contract — command_playbook contains Agent-facing command instructions, not operator co-runner instructions
+
+# workflow/workflow-node-contract
+WNC-001: workflow-node-contract — Phase node metadata contract (node_type, id, phase, gate, stop, requires, suggested_context, subagent; no next authority)
+WNC-002: workflow-node-contract — Shared node metadata contract (node_type, id, shared_scope, authority, requires, suggested_context)
+WNC-003: workflow-node-contract — Phase manifest structure (9-phase array, 5 shared entries, lifecycle inventory/index; transition table owns next-node lookup)
+WNC-004: "workflow-node-contract — Phase node body structure (9 required sections — goal, inputs, actions, artifacts, gate cmd, on pass, on fail, stop, anti-cheating)"
+WNC-005: "workflow-node-contract — Final node terminal semantics (gate=none, no outgoing gate or next authority, user feedback via HITL2 repair/rerun)"
+WNC-006: workflow-node-contract — Skeleton completeness criteria (parseable frontmatter, executable CLI, valid JSON)
+WNC-007: workflow-node-contract — Workflow package consistency validation across manifest, frontmatter, gate definitions, transition tables, and loader runtime cache / dependency plan
+WNC-008: workflow-node-contract — Autonomous contract header injection in assessNode() for stop:no phases (prepended after frontmatter, before body)
+WNC-009: workflow-node-contract — Universal silent execution dependency (every stop:no phase SHALL require shared/shared-silent-execution)
+WNC-010: workflow-node-contract — Lifecycle phase handoff wiring consumes check.next through enter-phase
+WNC-011: workflow-node-contract — Lifecycle node wording uses canonical phase-boundary terminology and does not overclaim entry as completion
+
+# gate-content-dedup — all entries deprecated; no spec directory
+GAC-001: gate-content-dedup — content_dedup reads reference inputs from declaration ledger [DEPRECATED]
+GAC-002: gate-content-dedup — Jaccard similarity detects near-duplicate reference content [DEPRECATED]
+GAC-003: gate-content-dedup — URL dedup detects duplicate source URLs [DEPRECATED]
+GAC-004: gate-content-dedup — Homepage URL detection flags root-domain-only references [DEPRECATED]
+GAC-005: gate-content-dedup — Self-referential language detection and standard gate check result [DEPRECATED]
+GAC-006: gate-content-dedup — Reference declaration coverage prevents filesystem orphan pass-through [DEPRECATED]
+GAC-007: gate-content-dedup — Homepage URL detection includes shallow path heuristic and empty URL failure [DEPRECATED]
+GAC-008: gate-content-dedup — Ledger coverage rule detects filesystem reference files missing from declaration ledger [DEPRECATED]
+GAC-009: gate-content-dedup — Orphan reference diagnostics are durable in trace/log and diagnostic artifacts [DEPRECATED]
+
+# lifecycle-walker — all entries deprecated; no spec directory
+LFW-001: lifecycle-walker — Walker reads manifest and walks lifecycle (--bundle required, --manifest optional, 9 phases) [DEPRECATED]
+LFW-002: lifecycle-walker — Walker demonstrates gate fail → repair → pass (max 3 retries, escalation on exceeded limit) [DEPRECATED]
+LFW-003: "lifecycle-walker — Walker logs progress via logger (createLogger({ file: '<bundle>/_logs/run.log' })) [DEPRECATED]"
+LFW-004: lifecycle-walker — Walker requires --bundle flag (exit(2) on missing) [DEPRECATED]
+
+# relay-provenance-gate — all entries deprecated; no spec directory
+RPG-001: relay-provenance-gate — Replaced by work-unit-provenance-gate submitted ledger row checks [DEPRECATED]
+RPG-002: relay-provenance-gate — Replaced by work-unit submission presence and cross-check surfaces [DEPRECATED]
+RPG-003: relay-provenance-gate — Replaced by work-unit delegated bypass detection [DEPRECATED]
+RPG-004: relay-provenance-gate — Replaced by standard work-unit provenance check wiring in gate definitions [DEPRECATED]
+RPG-005: relay-provenance-gate — Replaced by work-unit output coverage checks [DEPRECATED]
+RPG-006: relay-provenance-gate — Replaced by conditional Wave2 work-unit provenance [DEPRECATED]
+RPG-007: relay-provenance-gate — Replaced by work-unit nonce mismatch diagnostics [DEPRECATED]
+RPG-008: relay-provenance-gate — Replaced by missing work-unit submit and ledger coverage diagnostics [DEPRECATED]
+RPG-009: relay-provenance-gate — Old timestamp-span diagnostic folded into work-unit provenance forensics guidance [DEPRECATED]
+RPG-010: relay-provenance-gate — Replaced by work-unit provenance-forensics guidance [DEPRECATED]
+RPG-011: relay-provenance-gate — Replaced by work-unit lifecycle evidence diagnostics [DEPRECATED]
+RPG-012: relay-provenance-gate — Replaced by work-unit cross-surface consistency diagnostics and forensics guidance [DEPRECATED]
+RPG-013: relay-provenance-gate — Replaced by work-unit binding context diagnostics [DEPRECATED]
+
+# seg2node — all entries deprecated; no spec directory
+SEG-001: seg2node — Global rename segments to nodes with explicit node directory configuration [DEPRECATED]
+
+# subagent-collect — all entries deprecated; no spec directory
+SUC-001: subagent-collect — Old slot result collection and merge contracts removed; replacement submit semantics live under delegated-work-units and agentic-queue [DEPRECATED]
+SUC-002: subagent-collect — Old per-slot collection and artifact-to-queue bridge contracts removed; replacement validation lives under delegated-work-units, agentic-queue, and agent-output-declaration [DEPRECATED]
+
+# subagent-relay-driver — all entries deprecated; no spec directory
+SRD-001: subagent-relay-driver — Old delegated driver production entrypoint replaced by operate-work-unit lifecycle CLI [DEPRECATED]
+SRD-002: subagent-relay-driver — Old driver boundary removed with the relay-slot CLI; replacement deterministic lifecycle semantics live under framework-engine and delegated-work-units [DEPRECATED]
+SRD-003: subagent-relay-driver — Old driver validation-bypass guard removed with the relay-slot CLI; replacement submit validation lives under delegated-work-units [DEPRECATED]
+SRD-004: subagent-relay-driver — Old driver trace-proof contract removed with the relay-slot CLI; replacement work-unit trace and nonce evidence lives under delegated-work-units, subagent-dispatch, and subagent-runtime-logging [DEPRECATED]
+
+# subagent-repair — all entries deprecated; no spec directory
+SUR-001: subagent-repair — Old all-slots-failed repair routing removed; replacement retry and repair semantics live under delegated-work-units, agentic-queue, and repair-loop [DEPRECATED]
+
+# subagent-slots — all entries deprecated; no spec directory
+SUS-001: subagent-slots — Replaced production slot lifecycle/path contracts removed in favor of work-unit runtime contracts [DEPRECATED]
+
+# workflow-chain-observability — all entries deprecated; no spec directory
+WLO-001: workflow-chain-observability — Runtime receipts and trace events for workflow-chain single-entry loader experiments [DEPRECATED]
+
+# workflow-dynamic-md-load — all entries deprecated; no spec directory
+WDM-001: workflow-dynamic-md-load — Single-entry just-in-time Markdown closure loading and execution [DEPRECATED]
+
+# workflow-fsm-definition — all entries deprecated; no spec directory
+WFS-001: workflow-fsm-definition — FSM definition file loading, validation, and node-keyed structure [DEPRECATED]
+WFS-002: workflow-fsm-transition — Pure node-keyed transition lookup (resolveTransition) plus low-level FSM tracker [DEPRECATED]
+WFS-003: workflow-fsm-runtime — Machine class with advance(), createMachine factory, runtime halt/completion state [DEPRECATED]
+
+# workflow-manifest-loading — all entries deprecated; no spec directory
+WML-001: workflow-manifest-loading — Workflow-next runtime initializes without manifest/cursor or preloading Markdown [DEPRECATED]
+
+# workflow-md-dependencies — all entries deprecated; no spec directory
+WMD-001: workflow-md-dependencies — Markdown frontmatter requires dependency closure resolution [DEPRECATED]
+WSU-001: work-unit-submission — Submit remains the only successful delegated completion authority
+WSU-002: work-unit-submission — Successful submit completes queue demand and records contribution boundaries
+WSU-003: work-unit-submission — Submit canonicalization stays a narrow bounded stage
+WSU-004: work-unit-submission — Accepted submits persist canonical authority without widening the boundary
+WSU-005: work-unit-submission — Current Wave0 work-unit contracts expose submitted source contributions without a competing rich-reference route
+WSU-006: work-unit-submission — Gates read submitted work-unit ledger coverage
+WSU-007: work-unit-submission — Submitted result and ledger hashes detect post-submit drift before gate pass
+WSU-008: work-unit-submission — Successful work-unit submit verifies durable queue postconditions
+WUP-001: work-unit-preflight — Dry-submit is a read-only structured preflight mirroring submit semantics
+WUP-002: work-unit-preflight — Dry-submit keeps provenance strict through one neutral target module
+WUP-003: work-unit-preflight — Timeout preflight is a progress-aware read-only recommendation
+WUP-004: work-unit-preflight — Dry-submit cache-URL mismatch diagnostics carry the recorded leaf urls
+WUP-005: work-unit-preflight — Dry-submit runtime-receipt schema diagnostics carry the raw value, affected lines, and expected format
+WUP-006: work-unit-preflight — Dry-submit invalid-result reports duplicate accepted claim urls and their count
+WUC-001: work-unit-correction — Timeout terminalization runs the same guard with explicit audit
+WUC-002: work-unit-correction — Submit integrity shares one read-only transaction fact
+WUC-003: work-unit-correction — Journal disposition is a closed enum with declared recovery boundaries
+WUC-004: work-unit-correction — Transaction recovery settles journals without stealing locks
+WUC-005: work-unit-correction — Invalid submit remains non-terminal
+WUC-006: work-unit-correction — Terminal attempt transitions fail closed
+WUC-007: work-unit-correction — Audited late-submit recovers eligible timed-out work units
+WUC-008: work-unit-correction — Phase Agent fallback stays inside the work-unit transaction
+WUC-009: work-unit-correction — Submitted correction uses audited supersession and one fresh successor
+DEW-032: delegated-work-units — Envelope readers and generated projections stay consistent with the claim profile
+DEW-033: delegated-work-units — Task verification and generated guidance bind required outputs and role contracts

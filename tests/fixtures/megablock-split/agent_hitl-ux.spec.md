@@ -259,13 +259,34 @@ not promise a duration, host permission, provider success, or automatic retry.
 - **THEN** the Agent SHALL use the existing exit text before advancing to setup
 - **AND** it SHALL not give a false precise duration estimate
 
-### Requirement: HITL2 review and rerun recommendations SHALL be brief-driven and profile-gated
+### Requirement: HITL2 research-review recommendation prompt
 
 Agent 在 HITL2 入口 SHALL 先写 research review，再给出一个明确推荐及其理由/预期影响，并提供自然语言决策入口。HITL2 SHALL 遵循 HIU-001 定义的环模型；本 requirement 定义 HITL2 独有的入口 prompt、recommendation 和 accepted decision mapping。
 
 research review SHALL 包含：目前证据足够回答的内容、仍然不足或需要谨慎的地方、一个推荐的用户可理解下一步，以及推荐理由和预期影响。当推荐或用户动作涉及 rerun 或明显增加研究投入时，Agent SHALL 用 current direct facts 简短披露可预见的 material effort/cost impact；不增加 estimator、field 或 checker。用户在看见该影响后清楚接受，即已确认该已披露成本；只有实际动作超出已披露影响或当前权限时，Agent 才 SHALL 再问最小边界。
 
 在把 rerun 描述为可执行推荐或记录用户的 rerun 决定之前，Agent SHALL 就近读取 current profile `rerun_count`。`phase-hitl2.md` SHALL 拥有一条 repo-root、只读的 inline Node ESM invocation，从现有 `the gate-helpers family` barrel import `loadGateDefinition('rerun-ready')`、profile reader 和 shared pure rerun-availability evaluator。该 invocation SHALL 只把 loader/profile facts 交给 evaluator 并输出其 closed availability result；它不写文件、trace 或 state，`brief/hitl2.md` SHALL NOT 复制该调用。The phase SHALL pass the loader-parsed definition and full parsed profile to the REI-003 shared evaluator with `includeNextIncrement: true`; it SHALL NOT extract an optional-chained count before evaluation. The evaluator's rule/profile/count interpretation remains owned by REI-003. A missing/unparseable profile, absent HITL2 parent or unsupported rule SHALL return an unsupported boundary; only a supported result whose next required increment is unavailable proves exhaustion. HITL2 SHALL NOT raw-parse Gate JSON, read `failure_message` as semantics, reimplement operator/value/count comparison in Markdown, or invent a wrapper/CLI. HITL2 SHALL present/record rerun as executable only when the shared result is supported and available. When `supported: true` and `available: false`, Agent SHALL only recommend/ask whether to start a new bundle for that scope. Loader/profile/config/evaluator unsupported facts SHALL instead state the concrete contract boundary without guessing that a new bundle resolves it. The result is conversation advice over one shared deterministic evaluation, not a second Gate, persisted eligibility field or copied numeric truth.
+
+HITL2 MAY 保留五个快捷选项（A/B/C/D/E），但 SHALL 以用户可理解的动作描述为主：`proceed_to_readiness`、`request_view_revision`、`rerun`、`repair`、`stop_blocked` 继续是唯一 existing enum。用户 SHALL 能自然语言选择这些动作；recommendation 本身 SHALL NOT 替代用户决定。只有当前 accepted HITL2 decision boundary 可将清楚意图映射到现有 enum、rationale 和现有可写字段；普通 non-HITL message 不获得 persistence、state mutation、permission 或 route authority。
+
+用户的清楚决定本身 SHALL 视为确认。Agent SHALL NOT 对五个 existing actions 统一要求第二次确认；只有实质歧义、真实成本/权限扩张或不可逆风险才请求最小确认。决定写入 accepted owner 后，Gate、repair、handoff、status sync 和后续执行 SHALL 回到 Agent。Agent SHALL 在展示 prompt 前完成 existing decision brief 和 `hitl2.status: pending_user` durable state。
+
+当用户选择 legal `rerun` 并表达新的或修订的 focus 时，Agent SHALL 在当前 HITL2 loop 中反映一段简短、可纠正的理解。用户接受后，existing `rationale` SHALL 保留两个 labelled narrative parts: the user's focus wording verbatim and the Agent's current interpretation. 它们不改变 enum、availability evaluation、Gate、route 或 prior evidence 的 provenance；未表达 focus 的 rerun 继续使用既有 rationale form。
+
+#### Scenario: User chooses proceed_to_readiness
+- **WHEN** Agent 展示 HITL2 research review + one recommendation，用户回复“够了，按这个出报告”或快捷选项“A”
+- **THEN** Agent SHALL 记录 `hitl2.user_decision: proceed_to_readiness`
+- **AND** Agent SHALL 写入 `hitl2.status: recorded`
+- **AND** Agent SHALL NOT 对清楚决定追加第二次确认
+- **AND** HITL2 gate SHALL pass（`user_decision` 在有效 enum 集合内）
+
+#### Scenario: User wants to change report view
+- **WHEN** 用户清楚回复“换成管理层视角”
+- **THEN** Agent SHALL 记录 `user_decision: request_view_revision`，并把清楚的目标视角映射到现有 `final_report_view` contract
+- **AND** Agent SHALL NOT 要求用户先选择字母或重复确认
+- **AND** 如果用户只说“换个视角”而目标视角确有实质歧义，Agent SHALL 只询问具体视角；该探索过程仍遵循 HIU-001 环模型
+- **AND** 如果用户在视角讨论中途反悔（如“算了，还是直接出报告”），Agent SHALL 将 `user_decision` 改为 `proceed_to_readiness` 并写入 `final_report_view: profile_default`
+
 #### Scenario: User chooses rerun to adjust direction
 - **WHEN** 用户清楚回复“资本约束这部分还不够，再补一下”或快捷选项“C”并给出方向
 - **AND** the shared rerun-availability result for current profile count plus the required increment is supported and available
@@ -289,40 +310,6 @@ research review SHALL 包含：目前证据足够回答的内容、仍然不足�
 - **AND** Agent SHALL ask only whether to start a new bundle for the requested scope
 - **AND** if the active rule/profile/HITL2 parent cannot be read reliably, Agent SHALL state that unsupported contract boundary and SHALL NOT assume a new bundle fixes it
 
-#### Scenario: Decision brief must exist before prompting
-- **WHEN** Agent 准备向用户展示 HITL2 prompt
-- **THEN** `artifacts/hitl2/decision-brief.md` SHALL 已存在且非空
-- **AND** decision brief SHALL 包含 research review、一个 Agent recommendation、理由和预期影响
-- **AND** `hitl2.status` SHALL 已设为 `pending_user`
-- **AND** session 断掉后 Agent 恢复时 SHALL 能通过 `rb_status.json` 定位到 HITL2 phase，从 `hitl2.status = pending_user` 得知用户尚未回复，从 `decision-brief.md` 恢复语境后继续等待用户决策
-
-#### Scenario: Ordinary mid-run message is not a HITL2 decision
-- **WHEN** 用户在非 HITL `stop: no` phase 主动发送普通消息
-- **THEN** HIU-003 SHALL NOT authorize the Agent to write `human_decision_checkpoints.hitl2`, mutate current run state, or select a HITL2 route from that message alone
-- **AND** 该消息 SHALL NOT 成为第三个 HITL checkpoint 或 permission source
-
-### Requirement: HITL2 user decisions SHALL confirm through quick actions, candidates, and delivery
-
-HITL2 MAY 保留五个快捷选项（A/B/C/D/E），但 SHALL 以用户可理解的动作描述为主：`proceed_to_readiness`、`request_view_revision`、`rerun`、`repair`、`stop_blocked` 继续是唯一 existing enum。用户 SHALL 能自然语言选择这些动作；recommendation 本身 SHALL NOT 替代用户决定。只有当前 accepted HITL2 decision boundary 可将清楚意图映射到现有 enum、rationale 和现有可写字段；普通 non-HITL message 不获得 persistence、state mutation、permission 或 route authority。
-
-用户的清楚决定本身 SHALL 视为确认。Agent SHALL NOT 对五个 existing actions 统一要求第二次确认；只有实质歧义、真实成本/权限扩张或不可逆风险才请求最小确认。决定写入 accepted owner 后，Gate、repair、handoff、status sync 和后续执行 SHALL 回到 Agent。Agent SHALL 在展示 prompt 前完成 existing decision brief 和 `hitl2.status: pending_user` durable state。
-
-当用户选择 legal `rerun` 并表达新的或修订的 focus 时，Agent SHALL 在当前 HITL2 loop 中反映一段简短、可纠正的理解。用户接受后，existing `rationale` SHALL 保留两个 labelled narrative parts: the user's focus wording verbatim and the Agent's current interpretation. 它们不改变 enum、availability evaluation、Gate、route 或 prior evidence 的 provenance；未表达 focus 的 rerun 继续使用既有 rationale form。
-
-#### Scenario: User chooses proceed_to_readiness
-- **WHEN** Agent 展示 HITL2 research review + one recommendation，用户回复“够了，按这个出报告”或快捷选项“A”
-- **THEN** Agent SHALL 记录 `hitl2.user_decision: proceed_to_readiness`
-- **AND** Agent SHALL 写入 `hitl2.status: recorded`
-- **AND** Agent SHALL NOT 对清楚决定追加第二次确认
-- **AND** HITL2 gate SHALL pass（`user_decision` 在有效 enum 集合内）
-
-#### Scenario: User wants to change report view
-- **WHEN** 用户清楚回复“换成管理层视角”
-- **THEN** Agent SHALL 记录 `user_decision: request_view_revision`，并把清楚的目标视角映射到现有 `final_report_view` contract
-- **AND** Agent SHALL NOT 要求用户先选择字母或重复确认
-- **AND** 如果用户只说“换个视角”而目标视角确有实质歧义，Agent SHALL 只询问具体视角；该探索过程仍遵循 HIU-001 环模型
-- **AND** 如果用户在视角讨论中途反悔（如“算了，还是直接出报告”），Agent SHALL 将 `user_decision` 改为 `proceed_to_readiness` 并写入 `final_report_view: profile_default`
-
 #### Scenario: User chooses repair to fix issues
 - **WHEN** 用户清楚回复“这里的证据似乎有错，先修正”或快捷选项“D”并描述问题
 - **THEN** Agent SHALL 写入 `user_decision: repair`，在 `rationale` 中记录用户要求修复的具体问题
@@ -345,6 +332,18 @@ HITL2 MAY 保留五个快捷选项（A/B/C/D/E），但 SHALL 以用户可理解
 - **WHEN** 用户说“这部分再处理一下”，而当前语境无法区分是只修复错误还是继续扩展研究
 - **THEN** Agent SHALL 只询问区分 `repair` 与 `rerun` 所需的最小问题
 - **AND** 澄清后 Agent SHALL 记录对应 enum/rationale 并自行执行后续合法步骤
+
+#### Scenario: Decision brief must exist before prompting
+- **WHEN** Agent 准备向用户展示 HITL2 prompt
+- **THEN** `artifacts/hitl2/decision-brief.md` SHALL 已存在且非空
+- **AND** decision brief SHALL 包含 research review、一个 Agent recommendation、理由和预期影响
+- **AND** `hitl2.status` SHALL 已设为 `pending_user`
+- **AND** session 断掉后 Agent 恢复时 SHALL 能通过 `rb_status.json` 定位到 HITL2 phase，从 `hitl2.status = pending_user` 得知用户尚未回复，从 `decision-brief.md` 恢复语境后继续等待用户决策
+
+#### Scenario: Ordinary mid-run message is not a HITL2 decision
+- **WHEN** 用户在非 HITL `stop: no` phase 主动发送普通消息
+- **THEN** HIU-003 SHALL NOT authorize the Agent to write `human_decision_checkpoints.hitl2`, mutate current run state, or select a HITL2 route from that message alone
+- **AND** 该消息 SHALL NOT 成为第三个 HITL checkpoint 或 permission source
 
 #### Scenario: HITL2 exit sets final generation expectation
 - **WHEN** 用户在 HITL2 中选择 `proceed_to_readiness` 且 Agent 已记录决策并 gate pass
@@ -454,7 +453,6 @@ composition semantics from `rationale`, decision brief, chat, or slug.
   and continue waiting
 - **AND** only a subsequently accepted profile handoff SHALL authorize
   Readiness or Final
-
 
 ### Requirement: HITL2 research review surfaces declared-focus coverage
 

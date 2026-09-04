@@ -125,7 +125,7 @@ current accepted runtime surface.
 - **THEN** it SHALL fail
 - **AND** it MUST NOT assume a default bundle or scan directories
 
-### Requirement: Runtime bundle roots and CLI path semantics SHALL distinguish coordinates
+### Requirement: Runtime bundle canonical structure
 
 Current runtime bundles SHALL contain canonical control files and data
 directories for runtime truth. Production runs use `dpt_rb_*`; disposable
@@ -168,6 +168,47 @@ named by the run entry, playbook setup, or current task card. When multiple
 `dpt_rb_*` or `dpt_disp_*` directories exist, every runtime read/write SHALL
 resolve against the explicitly selected root for that operation.
 
+Unless a path is explicitly rooted in `DEEP_RESEARCH_HARNESS/`, runtime paths
+in accepted specs and Agent-facing guidance SHALL be read as relative to
+`current_run_bundle_root`, not repository root or Harness root. This includes
+`rb_queue.json`, `rb_trace.jsonl`, `rb_output_declarations.jsonl`,
+`reference/`, `artifacts/`, `_cache/`, `_logs/`, `final/`, `_scripts/`, and
+`_work_units/...`.
+
+Bundle-root runtime surfaces include `BUNDLE_ENTRY.md`, `BUNDLE_MAP.md`,
+`rb_plan.md`, `rb_profile.yaml`, `rb_status.json`, `rb_queue.json`,
+`rb_trace.jsonl`, `rb_output_declarations.jsonl`, `seed_topics/`,
+`reference/`, `artifacts/`, `_cache/`, `_logs/`, `final/`, `_scripts/`, and
+`_work_units/`. Production delegated work SHALL use bundle-root `_work_units/`
+as its work-unit runtime tree. Bundle-root `_work_units/_index.json` SHALL be
+Engine-owned allocation and attempt-state truth, while submitted delegated
+output coverage SHALL remain in bundle-root `rb_output_declarations.jsonl`.
+
+Run-scoped helper scripts — one-shot work-unit executors, reference/seed
+generators, and recovery scripts that serve only the current run bundle — SHALL
+be written under the current run bundle root `_scripts/` so they travel with
+the bundle and never become repository-root or Harness-root files. `_scripts/`
+is a non-authority runtime area in the same class as `_logs/` and `_cache/`:
+its contents are Agent-produced execution aids that never establish gate,
+evidence, provenance, receipt, or lifecycle authority, and its presence or
+contents SHALL NOT be part of any gate or inspect-bundle required-shape check.
+The repository root and `DEEP_RESEARCH_HARNESS/` SHALL NOT be used as the
+location for run-scoped helper scripts.
+
+A current operational bundle root SHALL contain both `BUNDLE_ENTRY.md` and
+`BUNDLE_MAP.md`. A root missing either file, including one containing
+`RUN_BUNDLE.md`, `START_FROM_HERE.md`, or only `BUNDLE_MAP.md`, is not a current
+run bundle root for continue, inspect, reentry, or Engine operation. Those
+legacy files are historical Markdown only; they SHALL not establish a Harness
+source context, authorize a source-root fallback, migration, or compatibility
+path. Extra legacy files beside the complete pair are non-authoritative
+historical debris.
+
+Runtime choices and runtime data SHALL be persisted under the current run
+bundle root. Harness definitions, schemas, workflow nodes, CLIs, reusable
+Engine code, templates, and command playbooks SHALL remain under the canonical
+Harness root and SHALL NOT become per-run storage.
+
 #### Scenario: Coordinate vocabulary distinguishes roots
 
 - **WHEN** an Agent reads a spec, workflow node, playbook, or bundle entrypoint
@@ -199,6 +240,24 @@ resolve against the explicitly selected root for that operation.
 - **AND** no runtime state SHALL be written to `./_work_units/`,
   `./rb_queue.json`, or another repository-root runtime-looking path
 
+#### Scenario: Work-units directory is part of delegated runtime structure
+
+- **WHEN** a bundle has executed delegated work-unit claim for a wave
+- **THEN** `<current-run-bundle-root>/_work_units/waveN/{work_id}/` SHALL
+  contain the claimed work-unit envelope
+- **AND** `<current-run-bundle-root>/_work_units/_index.json` SHALL contain
+  the corresponding allocation record
+
+#### Scenario: Run-scoped scripts live under the bundle root
+
+- **WHEN** an Agent writes a work-unit executor, reference generator, or
+  recovery script during a run
+- **THEN** the script SHALL be written under `<current-run-bundle-root>/_scripts/`
+- **AND** it SHALL NOT be written to the repository root or
+  `DEEP_RESEARCH_HARNESS/`
+- **AND** `_scripts/` contents SHALL NOT count as gate, evidence, provenance,
+  or lifecycle authority
+
 #### Scenario: Incomplete legacy root is not a current bundle root
 
 - **WHEN** a supplied directory lacks `BUNDLE_ENTRY.md` or `BUNDLE_MAP.md`
@@ -206,6 +265,14 @@ resolve against the explicitly selected root for that operation.
   continuation, inspection, reentry, or Engine operations
 - **AND** legacy Markdown at that root SHALL not create a fallback or migration
   route
+
+#### Scenario: Bundle entry and map are canonical root surfaces
+
+- **WHEN** a new bundle is instantiated
+- **THEN** `BUNDLE_ENTRY.md` and `BUNDLE_MAP.md` SHALL be part of the canonical
+  bundle-root surface
+- **AND** `RUN_BUNDLE.md` and `START_FROM_HERE.md` SHALL NOT be required or
+  accepted as current canonical entry surfaces
 
 #### Scenario: Work-unit path expands under selected bundle
 
@@ -248,81 +315,12 @@ resolve against the explicitly selected root for that operation.
 - **AND** the Agent or Engine SHALL NOT write current run data into a Harness
   template, schema, workflow, CLI, or Engine directory
 
-### Requirement: Harness-root rules and canonical runtime surfaces SHALL stay bundle-scoped
-
-Unless a path is explicitly rooted in `DEEP_RESEARCH_HARNESS/`, runtime paths
-in accepted specs and Agent-facing guidance SHALL be read as relative to
-`current_run_bundle_root`, not repository root or Harness root. This includes
-`rb_queue.json`, `rb_trace.jsonl`, `rb_output_declarations.jsonl`,
-`reference/`, `artifacts/`, `_cache/`, `_logs/`, `final/`, `_scripts/`, and
-`_work_units/...`.
-
-Bundle-root runtime surfaces include `BUNDLE_ENTRY.md`, `BUNDLE_MAP.md`,
-`rb_plan.md`, `rb_profile.yaml`, `rb_status.json`, `rb_queue.json`,
-`rb_trace.jsonl`, `rb_output_declarations.jsonl`, `seed_topics/`,
-`reference/`, `artifacts/`, `_cache/`, `_logs/`, `final/`, `_scripts/`, and
-`_work_units/`. Production delegated work SHALL use bundle-root `_work_units/`
-as its work-unit runtime tree. Bundle-root `_work_units/_index.json` SHALL be
-Engine-owned allocation and attempt-state truth, while submitted delegated
-output coverage SHALL remain in bundle-root `rb_output_declarations.jsonl`.
-
-Run-scoped helper scripts — one-shot work-unit executors, reference/seed
-generators, and recovery scripts that serve only the current run bundle — SHALL
-be written under the current run bundle root `_scripts/` so they travel with
-the bundle and never become repository-root or Harness-root files. `_scripts/`
-is a non-authority runtime area in the same class as `_logs/` and `_cache/`:
-its contents are Agent-produced execution aids that never establish gate,
-evidence, provenance, receipt, or lifecycle authority, and its presence or
-contents SHALL NOT be part of any gate or inspect-bundle required-shape check.
-The repository root and `DEEP_RESEARCH_HARNESS/` SHALL NOT be used as the
-location for run-scoped helper scripts.
-
-A current operational bundle root SHALL contain both `BUNDLE_ENTRY.md` and
-`BUNDLE_MAP.md`. A root missing either file, including one containing
-`RUN_BUNDLE.md`, `START_FROM_HERE.md`, or only `BUNDLE_MAP.md`, is not a current
-run bundle root for continue, inspect, reentry, or Engine operation. Those
-legacy files are historical Markdown only; they SHALL not establish a Harness
-source context, authorize a source-root fallback, migration, or compatibility
-path. Extra legacy files beside the complete pair are non-authoritative
-historical debris.
-
-Runtime choices and runtime data SHALL be persisted under the current run
-bundle root. Harness definitions, schemas, workflow nodes, CLIs, reusable
-Engine code, templates, and command playbooks SHALL remain under the canonical
-Harness root and SHALL NOT become per-run storage.
-#### Scenario: Work-units directory is part of delegated runtime structure
-
-- **WHEN** a bundle has executed delegated work-unit claim for a wave
-- **THEN** `<current-run-bundle-root>/_work_units/waveN/{work_id}/` SHALL
-  contain the claimed work-unit envelope
-- **AND** `<current-run-bundle-root>/_work_units/_index.json` SHALL contain
-  the corresponding allocation record
-
-#### Scenario: Run-scoped scripts live under the bundle root
-
-- **WHEN** an Agent writes a work-unit executor, reference generator, or
-  recovery script during a run
-- **THEN** the script SHALL be written under `<current-run-bundle-root>/_scripts/`
-- **AND** it SHALL NOT be written to the repository root or
-  `DEEP_RESEARCH_HARNESS/`
-- **AND** `_scripts/` contents SHALL NOT count as gate, evidence, provenance,
-  or lifecycle authority
-
-#### Scenario: Bundle entry and map are canonical root surfaces
-
-- **WHEN** a new bundle is instantiated
-- **THEN** `BUNDLE_ENTRY.md` and `BUNDLE_MAP.md` SHALL be part of the canonical
-  bundle-root surface
-- **AND** `RUN_BUNDLE.md` and `START_FROM_HERE.md` SHALL NOT be required or
-  accepted as current canonical entry surfaces
-
 #### Scenario: Runtime truth is in bundle not chat memory
 
 - **WHEN** an Agent needs to recover current run state
 - **THEN** the Agent MUST reload current-run-bundle control files and work-unit
   state
 - **AND** it MUST NOT rely on chat memory or console summary as runtime state
-
 
 ### Requirement: Test and experiment boundary
 

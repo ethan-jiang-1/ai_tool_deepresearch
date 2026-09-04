@@ -8,7 +8,7 @@
 
 Define the complete 9-section phase body content for the three content-delivery lifecycle phases: HITL2 (`phase-hitl2.md`), readiness (`phase-readiness.md`), and final (`phase-final.md`). Each phase SHALL follow the standard phase node structure with correct frontmatter contracts and deterministic boundaries.
 ## Requirements
-### Requirement: HITL2 phase body SHALL be complete and brief-driven before rerun guidance
+### Requirement: Phase HITL2 body completeness
 
 `phase-hitl2.md` SHALL contain a complete 9-section body following the
 standard phase node structure. The node SHALL declare `phase: hitl2`, `gate:
@@ -46,25 +46,6 @@ the new-bundle decision, while unsupported loader/profile/config facts expose
 only their concrete contract boundary. Formal Gate authority remains unchanged,
 no concrete numeric limit or persisted eligibility SHALL be added, and
 post-final consumer stages remain owned by POF-001/POF-003.
-
-#### Scenario: HITL2 frontmatter contract
-- **WHEN** `phase-hitl2.md` is loaded
-- **THEN** its frontmatter SHALL contain `node_type: phase`, `id: phase-hitl2`, `phase: hitl2`, `gate: hitl2-recorded`, `stop: "yes"`
-- **AND** `requires` SHALL include at least `shared/shared-profile`
-- **AND** the phase SHALL NOT establish a competing frontmatter routing authority
-
-#### Scenario: HITL2 decision brief production
-- **WHEN** Agent executes the HITL2 phase
-- **THEN** Agent SHALL produce `artifacts/hitl2/decision-brief.md` with a research review, exactly one current recommendation, its reason, and expected effect
-- **AND** if the recommendation materially increases effort/cost, the brief SHALL disclose that foreseeable impact
-- **AND** the brief SHALL present the five accepted actions as optional user-facing affordances rather than requiring internal enum knowledge
-
-#### Scenario: Recommendation never substitutes for the user decision
-- **WHEN** the decision brief recommends one action but the user chooses another accepted action
-- **THEN** the Agent SHALL record the user's action rather than the recommendation
-- **AND** Engine verdict and route SHALL derive from the recorded accepted decision and existing contracts
-
-### Requirement: HITL2 decisions SHALL flow through a closed enum with recorded trace and user_decision
 
 The phase SHALL let the user accept or reject that recommendation, ask
 questions, use an optional shortcut, or express a different desired outcome in
@@ -137,6 +118,19 @@ override/reentry capability. `transitions.chain.json` SHALL encode only the
 existing fixed outcomes: `passed` to `phases/phase-readiness.md` and `rerun` to
 `phases/phase-rerun.md`; `request_view_revision`, `repair`, and `stop_blocked`
 remain Agent-level decisions without fixed chain entries.
+
+#### Scenario: HITL2 frontmatter contract
+- **WHEN** `phase-hitl2.md` is loaded
+- **THEN** its frontmatter SHALL contain `node_type: phase`, `id: phase-hitl2`, `phase: hitl2`, `gate: hitl2-recorded`, `stop: "yes"`
+- **AND** `requires` SHALL include at least `shared/shared-profile`
+- **AND** the phase SHALL NOT establish a competing frontmatter routing authority
+
+#### Scenario: HITL2 decision brief production
+- **WHEN** Agent executes the HITL2 phase
+- **THEN** Agent SHALL produce `artifacts/hitl2/decision-brief.md` with a research review, exactly one current recommendation, its reason, and expected effect
+- **AND** if the recommendation materially increases effort/cost, the brief SHALL disclose that foreseeable impact
+- **AND** the brief SHALL present the five accepted actions as optional user-facing affordances rather than requiring internal enum knowledge
+
 #### Scenario: HITL2 rerun records labelled focus rationale
 - **WHEN** the user clearly asks to continue research for a stated Topic and
   provides a new or revised focus while rerun availability is supported and available
@@ -201,6 +195,11 @@ remain Agent-level decisions without fixed chain entries.
 - **AND** it SHALL NOT claim completion, default to readiness, invent a chain edge, or hand-write status authority
 - **AND** the decision brief SHALL NOT recommend that known-unavailable action as immediately executable
 
+#### Scenario: Recommendation never substitutes for the user decision
+- **WHEN** the decision brief recommends one action but the user chooses another accepted action
+- **THEN** the Agent SHALL record the user's action rather than the recommendation
+- **AND** Engine verdict and route SHALL derive from the recorded accepted decision and existing contracts
+
 #### Scenario: Non-HITL message is not persisted as a HITL2 decision
 - **WHEN** the user voluntarily sends a message while the accepted current node is a non-HITL `stop: no` phase
 - **THEN** CDP-001 SHALL NOT authorize writing `human_decision_checkpoints.hitl2`, changing deterministic state, or selecting a HITL2 route from that message alone
@@ -232,10 +231,6 @@ SHALL never reconstruct custom semantics from slug, rationale, or chat. The
 phase SHALL preserve every existing decision enum and rerun, repair, stop, Gate,
 status, and route semantic, and SHALL not treat rationale, raw chat,
 `custom_slug`, or decision brief as a composition machine owner.
-
-### Requirement: Composition delivery SHALL resolve through one bounded clarification frontier
-
-Composition delivery SHALL resolve through one bounded clarification frontier before acceptance, correction, or custom projection.
 
 #### Scenario: Complete composition recommendation is accepted without a second confirmation
 
@@ -270,7 +265,6 @@ Composition delivery SHALL resolve through one bounded clarification frontier be
 - **THEN** the phase SHALL remain pending and SHALL not route to Readiness
 - **AND** Final SHALL never reconstruct the custom view from slug, rationale,
   or chat
-
 
 ### Requirement: Phase Readiness body completeness
 

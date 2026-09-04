@@ -36,9 +36,10 @@ const UnitSchema = z
     prose: z.array(z.number().int().positive()).optional(),
     prose_range: z.array(z.number().int().positive()).length(2).optional(),
     scenarios: z.array(z.number().int().positive()).optional(),
+    lead: z.string().min(1).optional(),
   })
-  .refine((u) => Boolean((u.prose ?? u.prose_range) && (u.prose ?? u.prose_range).length), {
-    message: 'unit must declare prose (list) or prose_range ([start, end])',
+  .refine((u) => Boolean(u.prose ?? u.prose_range) || Boolean((u.scenarios ?? []).length), {
+    message: 'unit must declare prose (list), prose_range ([start, end]), or a non-empty scenarios list',
   })
   .refine((u) => !(u.prose && u.prose_range), {
     message: 'declare either prose or prose_range, not both',
@@ -143,7 +144,7 @@ export function assembleSpec(text, grouping) {
       ...si.map((i) => ({ kind: 'scenario', index: i, range: scenRange.get(i) })),
     ];
     elems.sort((a, b) => a.range[0] - b.range[0]);
-    return { title: u.title, elems };
+    return { title: u.title, lead: u.lead, elems };
   });
 
   // Ownership map for unclaimed non-blank lines (e.g. inline `> req:` meta):
@@ -168,10 +169,16 @@ export function assembleSpec(text, grouping) {
   const out = [];
   for (let l = 1; l < block.startLine; l++) out.push(lines[l - 1]);
   const unitSummaries = [];
+  const allowedAdditions = [];
   for (let ui = 0; ui < unitElems.length; ui++) {
     const ue = unitElems[ui];
     out.push(ue.title);
     out.push('');
+    if (ue.lead) {
+      out.push(ue.lead);
+      out.push('');
+      allowedAdditions.push(ue.lead);
+    }
     const body = [];
     for (let l = blockFirst; l <= block.endLine; l++) {
       if (ownerOfLine(l) !== ui) continue;
@@ -192,7 +199,11 @@ export function assembleSpec(text, grouping) {
   const outputText = out.join('\n');
   const beforeLines = lines.slice();
   beforeLines.splice(block.startLine - 1, 1); // original block heading is replaced
-  const cons = multisetConservation(beforeLines, out, grouping.units.map((u) => u.title));
+  const cons = multisetConservation(
+    beforeLines,
+    out,
+    [...grouping.units.map((u) => u.title), ...allowedAdditions]
+  );
   if (!cons.ok) {
     const first =
       cons.missing.length > 0

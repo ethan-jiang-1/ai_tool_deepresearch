@@ -97,7 +97,7 @@ The existing `log-event.mjs` CLI SHALL be extended with a `--event` parameter fo
 - **THEN** the line SHALL be written to `_logs/run.log` in the existing format
 - **AND** `rb_trace.jsonl` SHALL NOT be modified
 
-### Requirement: Enter phase SHALL admit only route-bound witnessed node entry
+### Requirement: Enter phase CLI witnesses lifecycle node entry (CPT-003)
 
 After valid static invocation and latest trace-durable clean/degraded handoff
 authorization, `enter-phase` SHALL preflight the selected target's action-core
@@ -144,87 +144,6 @@ guarantee: such a bundle SHALL report the honest migration boundary rather than
 fabricate a historical baseline, pretend compatibility, or require a replacement
 load.
 
-#### Scenario: First Final entry requires an empty primary baseline
-
-- **WHEN** the latest legal handoff authorizes the bundle's first entry to `phases/phase-final.md` and no route-bound legal Final load exists
-- **THEN** `enter-phase` SHALL require the shared primary-series resolver to return a valid empty inventory before `assessNode()` or entry mutation
-- **AND** any existing modern, revision, legacy-primary, invalid, or ambiguous primary inventory SHALL reject without guessing creation order
-
-#### Scenario: Post-final return requires the event-bound prior inventory
-
-- **WHEN** accepted ReopenResearchPass descendants reach a newer legal Readiness-to-Final handoff with no route-bound Final load for that handoff
-- **THEN** `enter-phase` SHALL require current safe sorted Final inventory to reproduce the unique retired event's `previous_final.final_inventory_sha256` exactly
-- **AND** any premature append, supplementary drift, unsafe inventory, missing witness, or conflicting lineage SHALL reject before `load_complete` or `current_node` mutation
-
-#### Scenario: Existing bound Final entry remains compatible
-
-- **WHEN** the authorized Final handoff already has its route-bound `load_complete`, including an already-entered post-`0edb58310` bundle or a partial current-node write retry
-- **THEN** the new inventory admission SHALL not retroactively reject that established entry or fabricate a historical baseline
-- **AND** existing compatibility, audit, and partial-entry recovery contracts SHALL remain responsible for subsequent interpretation
-
-#### Scenario: Later Final handoff without accepted ReopenResearchPass provenance is rejected
-
-- **WHEN** an earlier legal Final load exists and a different authorized Final handoff has no unique accepted ReopenResearchPass descendant provenance
-- **THEN** `enter-phase` SHALL reject before workflow dependency loading, `load_complete`, or `current_node` mutation
-- **AND** it SHALL not reuse first-entry admission or choose an older event by timestamp, filename, or append order
-
-#### Scenario: Enter phase accepts degraded source pass
-
-- **WHEN** the latest deterministic source gate has a valid degraded pass and matching next node
-- **THEN** enter-phase SHALL accept the same route-binding conditions as a clean pass
-- **AND** degraded context SHALL remain in `load_complete`
-
-#### Scenario: Post-final recovery enters the existing rerun node
-
-- **WHEN** the latest legal handoff is a valid non-superseded `post_final_reentry` event bound to the current Final lineage and target status/profile bytes
-- **AND** the Agent invokes `enter-phase --node phases/phase-rerun.md`
-- **THEN** enter-phase SHALL load the existing rerun dependency closure and append a route-bound `load_complete` referencing the recovery operation/event
-- **AND** it SHALL NOT write or claim a synthetic `gate_attempt`
-
-#### Scenario: Accepted workspace must be cleaned before entry
-
-- **WHEN** the exact recovery event exists but its accepted ReopenResearchPass workspace still remains after cleanup interruption
-- **THEN** enter-phase SHALL reject without another load or current-node mutation
-- **AND** its only advice SHALL be the exact post-final recovery command for that operation
-
-#### Scenario: Legal entry exposes existing status synchronization
-
-- **WHEN** enter-phase has consumed a valid recovery event and written its route-bound rerun load while updating `current_node` to `phases/phase-rerun.md`
-- **THEN** the event/load lineage SHALL authorize only existing `advance-status --to hitl2_recorded` as the next status action
-- **AND** downstream topic-state/reentry SHALL remain blocked until the derived rerun window and phase_transition exist
-
-#### Scenario: Enter phase rejects unauthorized or stale route
-
-- **WHEN** the target node is not authorized by the latest deterministic source-gate or accepted post-final recovery handoff
-- **THEN** enter-phase SHALL exit non-zero
-- **AND** it SHALL not append a successful continuation block, `load_complete`, or current-node update
-
-#### Scenario: Current node write failure is partial entry failure
-
-- **WHEN** loading succeeded but updating `current_node` fails
-- **THEN** stdout SHALL be diagnostic JSON rather than successful Markdown
-- **AND** a later audit SHALL treat the existing load with terminal Final `current_node` as incomplete entry and recommend the same `enter-phase` retry, not `advance-status`
-
-#### Scenario: Default entry keeps action and status synchronization visible
-
-- **WHEN** `enter-phase` legally enters `phases/phase-wave1.md`
-- **THEN** default stdout SHALL place the continuation cue and exact
-  `advance-status --to wave0_complete` command before the Wave1 action core
-- **AND** it SHALL list only the load-ordered dependency refs other than the
-  target node, without concatenating their full contents
-- **AND** `load_complete` and `current_node` behavior SHALL remain the existing
-  entry witness behavior
-
-#### Scenario: Full entry retains reference closure explicitly
-
-- **WHEN** a caller invokes a legal `enter-phase` entry with `--full`
-- **THEN** stdout SHALL include the complete loaded dependency closure, including
-  the target node, in addition to the bounded entry information
-- **AND** the command SHALL not run `advance-status` or create a second
-  lifecycle transition
-
-### Requirement: Enter phase help and handoff vocabulary SHALL stay a closed static surface
-
 `enter-phase --help` and `-h` SHALL return static invocation help with exit
 code `0` and no bundle, trace, status, or loader side effect. Its only non-help
 form is exactly one `--bundle <bundle-path>` and one `--node <file-ref>`, with
@@ -239,15 +158,6 @@ The accepted handoff vocabulary SHALL contain exactly two Engine-written classes
 
 - the existing latest legal passed `gate_attempt` with non-null `next`; and
 - one `post_final_reentry` event produced by the accepted post-final recovery operation, whose closed action is `post_final_rerun`, whose recorded HITL2 decision outcome is `rerun`, and whose target/window are resolved through the existing transition table and manifest helpers.
-#### Scenario: Help and invalid invocation do not create an entry witness
-
-- **WHEN** `enter-phase` receives `--help`, `-h`, or an invalid invocation
-  before a valid bundle/node pair is supplied
-- **THEN** help SHALL exit `0` and invalid invocation SHALL exit `2`
-- **AND** neither path SHALL read a bundle, append `load_complete`, or mutate
-  `rb_status.json#/current_node`
-
-### Requirement: Enter phase stdout, continuation blocks, and preflight SHALL stay projections of legal entry
 
 Handoff selection SHALL compare structurally valid authorities from both classes in append-only trace order rather than let a ReopenResearchPass-specific selector compete with the existing gate selector. A valid post-final event becomes the latest handoff only after its Final lineage and route resolution pass; a later valid normal gate handoff or newer valid post-final lineage supersedes it for future entry. Failed gate attempts, arbitrary events and partial lookalikes SHALL NOT become a newer handoff authority merely because they appear later.
 
@@ -300,11 +210,61 @@ before `assessNode()` runs; it SHALL not append `load_complete`, mutate
 action core. The preflight SHALL read only the selected framework target source;
 it SHALL not invoke the workflow loader or resolve the target dependency
 closure.
+
+#### Scenario: First Final entry requires an empty primary baseline
+
+- **WHEN** the latest legal handoff authorizes the bundle's first entry to `phases/phase-final.md` and no route-bound legal Final load exists
+- **THEN** `enter-phase` SHALL require the shared primary-series resolver to return a valid empty inventory before `assessNode()` or entry mutation
+- **AND** any existing modern, revision, legacy-primary, invalid, or ambiguous primary inventory SHALL reject without guessing creation order
+
+#### Scenario: Post-final return requires the event-bound prior inventory
+
+- **WHEN** accepted ReopenResearchPass descendants reach a newer legal Readiness-to-Final handoff with no route-bound Final load for that handoff
+- **THEN** `enter-phase` SHALL require current safe sorted Final inventory to reproduce the unique retired event's `previous_final.final_inventory_sha256` exactly
+- **AND** any premature append, supplementary drift, unsafe inventory, missing witness, or conflicting lineage SHALL reject before `load_complete` or `current_node` mutation
+
+#### Scenario: Existing bound Final entry remains compatible
+
+- **WHEN** the authorized Final handoff already has its route-bound `load_complete`, including an already-entered post-`0edb58310` bundle or a partial current-node write retry
+- **THEN** the new inventory admission SHALL not retroactively reject that established entry or fabricate a historical baseline
+- **AND** existing compatibility, audit, and partial-entry recovery contracts SHALL remain responsible for subsequent interpretation
+
+#### Scenario: Later Final handoff without accepted ReopenResearchPass provenance is rejected
+
+- **WHEN** an earlier legal Final load exists and a different authorized Final handoff has no unique accepted ReopenResearchPass descendant provenance
+- **THEN** `enter-phase` SHALL reject before workflow dependency loading, `load_complete`, or `current_node` mutation
+- **AND** it SHALL not reuse first-entry admission or choose an older event by timestamp, filename, or append order
+
+#### Scenario: Enter phase accepts degraded source pass
+
+- **WHEN** the latest deterministic source gate has a valid degraded pass and matching next node
+- **THEN** enter-phase SHALL accept the same route-binding conditions as a clean pass
+- **AND** degraded context SHALL remain in `load_complete`
+
+#### Scenario: Post-final recovery enters the existing rerun node
+
+- **WHEN** the latest legal handoff is a valid non-superseded `post_final_reentry` event bound to the current Final lineage and target status/profile bytes
+- **AND** the Agent invokes `enter-phase --node phases/phase-rerun.md`
+- **THEN** enter-phase SHALL load the existing rerun dependency closure and append a route-bound `load_complete` referencing the recovery operation/event
+- **AND** it SHALL NOT write or claim a synthetic `gate_attempt`
+
 #### Scenario: Forged exceptional event is rejected
 
 - **WHEN** a `post_final_reentry` trace object has an unsupported action/target, wrong Final lineage, mismatched current profile/status bytes, missing operation binding or stale supersession
 - **THEN** enter-phase SHALL reject the target without `load_complete` or `current_node` mutation
 - **AND** one direct inspect/advice item SHALL identify the failed binding
+
+#### Scenario: Accepted workspace must be cleaned before entry
+
+- **WHEN** the exact recovery event exists but its accepted ReopenResearchPass workspace still remains after cleanup interruption
+- **THEN** enter-phase SHALL reject without another load or current-node mutation
+- **AND** its only advice SHALL be the exact post-final recovery command for that operation
+
+#### Scenario: Legal entry exposes existing status synchronization
+
+- **WHEN** enter-phase has consumed a valid recovery event and written its route-bound rerun load while updating `current_node` to `phases/phase-rerun.md`
+- **THEN** the event/load lineage SHALL authorize only existing `advance-status --to hitl2_recorded` as the next status action
+- **AND** downstream topic-state/reentry SHALL remain blocked until the derived rerun window and phase_transition exist
 
 #### Scenario: stop:no rendered output ends with continuation cue
 
@@ -328,6 +288,44 @@ closure.
 - **WHEN** enter-phase loads HITL2
 - **THEN** the leading generated block SHALL state that user interaction is required
 
+#### Scenario: Enter phase rejects unauthorized or stale route
+
+- **WHEN** the target node is not authorized by the latest deterministic source-gate or accepted post-final recovery handoff
+- **THEN** enter-phase SHALL exit non-zero
+- **AND** it SHALL not append a successful continuation block, `load_complete`, or current-node update
+
+#### Scenario: Current node write failure is partial entry failure
+
+- **WHEN** loading succeeded but updating `current_node` fails
+- **THEN** stdout SHALL be diagnostic JSON rather than successful Markdown
+- **AND** a later audit SHALL treat the existing load with terminal Final `current_node` as incomplete entry and recommend the same `enter-phase` retry, not `advance-status`
+
+#### Scenario: Default entry keeps action and status synchronization visible
+
+- **WHEN** `enter-phase` legally enters `phases/phase-wave1.md`
+- **THEN** default stdout SHALL place the continuation cue and exact
+  `advance-status --to wave0_complete` command before the Wave1 action core
+- **AND** it SHALL list only the load-ordered dependency refs other than the
+  target node, without concatenating their full contents
+- **AND** `load_complete` and `current_node` behavior SHALL remain the existing
+  entry witness behavior
+
+#### Scenario: Full entry retains reference closure explicitly
+
+- **WHEN** a caller invokes a legal `enter-phase` entry with `--full`
+- **THEN** stdout SHALL include the complete loaded dependency closure, including
+  the target node, in addition to the bounded entry information
+- **AND** the command SHALL not run `advance-status` or create a second
+  lifecycle transition
+
+#### Scenario: Help and invalid invocation do not create an entry witness
+
+- **WHEN** `enter-phase` receives `--help`, `-h`, or an invalid invocation
+  before a valid bundle/node pair is supplied
+- **THEN** help SHALL exit `0` and invalid invocation SHALL exit `2`
+- **AND** neither path SHALL read a bundle, append `load_complete`, or mutate
+  `rb_status.json#/current_node`
+
 #### Scenario: Action-core configuration failure does not create an entry witness
 
 - **WHEN** a validly authorized target lacks one unambiguous `## 0. Execution
@@ -338,7 +336,6 @@ closure.
   `rb_status.json#/current_node`
 - **AND** it SHALL not emit a workflow, trace, or receipt event while attempting
   the action-core preflight
-
 
 
 ### Requirement: Advance status refuses unwitnessed or unpassed phase handoffs (CPT-004)

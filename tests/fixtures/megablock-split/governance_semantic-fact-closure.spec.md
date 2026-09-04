@@ -95,7 +95,7 @@ unregistered family identifier.
 - **AND** its closure record SHALL name that registered family rather than
   `other` or a change-local alias
 
-### Requirement: Governed changes SHALL declare closure with coordinates and affected facts
+### Requirement: Each governed change SHALL declare semantic closure applicability
 
 Each project change selected through a supported project apply or archive entry
 after this capability is accepted SHALL contain a strict, change-local
@@ -139,6 +139,67 @@ mode, the addition SHALL be absent from the current catalog; in assets mode, it
 SHALL be present in the catalog with the same identifier and bounded question.
 A change SHALL reference an already cataloged family directly rather than
 re-add it.
+
+The affected entry's roles SHALL be classified relative to the family's bounded
+conclusion. `consumers` SHALL contain only surfaces that use that conclusion to
+authorize, reject, pass, fail, block, or otherwise establish a verdict. An
+Agent-facing task, schema, starter, prompt, or other projection that only
+presents the resolved contract SHALL be represented through an applicable
+`overlap` relation, using `derived` when it is projected from the conclusion;
+it SHALL NOT be listed as a verdict consumer merely because it reads or displays
+the fact. Likewise, a raw or diagnostic reader SHALL NOT become a verdict
+consumer merely because it exposes an input or historical row. The existing
+semantic resolver and `established_by` roles remain distinct from both
+projection and verdict consumption.
+
+An affected record with a catalog addition SHALL have an approved task that
+writes that addition to the global catalog before the first target edit relying
+on its family. A structurally valid plan-mode declaration is not a substitute
+for that ordered global-catalog write.
+
+The semantic-closure checker SHALL obtain selected verification assets through
+the canonical `the verification-routing contract` parser. It SHALL not define a
+second `verification-plan.yaml` schema, route taxonomy, or asset-boundary
+interpretation.
+
+The checker SHALL validate only the existing structural and referential
+coordinate boundary. It SHALL NOT treat a `#fragment` as machine proof of a
+symbol declaration or semantic role, scan arbitrary source tokens or callsites
+to infer that proof, or report an affected entry's role inventory as
+semantically complete. Fragment truth and role classification remain explicit
+plan and closeout review obligations.
+
+The affected entry's `overlap` list SHALL be non-empty. Each real overlap SHALL
+provide a safe projection/legacy-field coordinate, one relation of
+`authoritative`, `derived`, or `retired`, and a non-empty detail. A no-overlap
+declaration SHALL instead be one `relation: none` entry with a non-empty detail
+and no coordinate; it SHALL not coexist with a real overlap. The assets check
+SHALL require each real-overlap coordinate to exist, without claiming that its
+declared relation is semantically correct.
+
+The record is a change-governance declaration. It SHALL not be a runtime schema,
+Gate verdict, receipt, or persistent runtime state.
+
+The two status branches SHALL be closed beyond their common `schema_version`,
+`change`, and `status` fields: `not_applicable` contains only `reason`, while
+`affected` contains only `catalog_additions` and a non-empty `affected`
+sequence. It SHALL reject an omitted `catalog_additions` field, an empty
+affected sequence, or a field from the other branch.
+
+#### Scenario: A documentation-only change is explicitly not applicable
+
+- **WHEN** a change modifies only explanatory prose and does not alter an
+  outcome-changing deterministic fact or its verdict consumer
+- **THEN** its record SHALL use `not_applicable` with a non-empty reason
+- **AND** it SHALL not invent an affected family merely to satisfy the checker
+
+#### Scenario: Affected branch makes no catalog additions explicit
+
+- **WHEN** a change affects only already cataloged families
+- **THEN** its `affected` record SHALL include `catalog_additions: []` and a
+  non-empty `affected` sequence
+- **AND** it SHALL not omit the additions field or carry a `reason`
+
 #### Scenario: Proposal guidance starts from the catalog
 
 - **WHEN** an Agent obtains project proposal instructions for a future change
@@ -161,32 +222,6 @@ re-add it.
 - **AND** the author SHALL NOT add a guessed `#fragment` merely to imply symbol
   precision
 
-### Requirement: Affected closure entries SHALL classify roles, approvals, and overlaps
-
-The affected entry's roles SHALL be classified relative to the family's bounded
-conclusion. `consumers` SHALL contain only surfaces that use that conclusion to
-authorize, reject, pass, fail, block, or otherwise establish a verdict. An
-Agent-facing task, schema, starter, prompt, or other projection that only
-presents the resolved contract SHALL be represented through an applicable
-`overlap` relation, using `derived` when it is projected from the conclusion;
-it SHALL NOT be listed as a verdict consumer merely because it reads or displays
-the fact. Likewise, a raw or diagnostic reader SHALL NOT become a verdict
-consumer merely because it exposes an input or historical row. The existing
-semantic resolver and `established_by` roles remain distinct from both
-projection and verdict consumption.
-
-An affected record with a catalog addition SHALL have an approved task that
-writes that addition to the global catalog before the first target edit relying
-on its family. A structurally valid plan-mode declaration is not a substitute
-for that ordered global-catalog write.
-
-The affected entry's `overlap` list SHALL be non-empty. Each real overlap SHALL
-provide a safe projection/legacy-field coordinate, one relation of
-`authoritative`, `derived`, or `retired`, and a non-empty detail. A no-overlap
-declaration SHALL instead be one `relation: none` entry with a non-empty detail
-and no coordinate; it SHALL not coexist with a real overlap. The assets check
-SHALL require each real-overlap coordinate to exist, without claiming that its
-declared relation is semantically correct.
 #### Scenario: Agent-facing projection is not a verdict consumer
 
 - **WHEN** a generated task, schema, starter, or prompt only projects a family
@@ -245,43 +280,6 @@ declared relation is semantically correct.
   entry and no real-overlap coordinate
 - **AND** plan mode SHALL reject mixing `none` with a real overlap
 
-### Requirement: The closure checker SHALL validate structure only and keep branches closed
-
-The semantic-closure checker SHALL obtain selected verification assets through
-the canonical `the verification-routing contract` parser. It SHALL not define a
-second `verification-plan.yaml` schema, route taxonomy, or asset-boundary
-interpretation.
-
-The checker SHALL validate only the existing structural and referential
-coordinate boundary. It SHALL NOT treat a `#fragment` as machine proof of a
-symbol declaration or semantic role, scan arbitrary source tokens or callsites
-to infer that proof, or report an affected entry's role inventory as
-semantically complete. Fragment truth and role classification remain explicit
-plan and closeout review obligations.
-
-The record is a change-governance declaration. It SHALL not be a runtime schema,
-Gate verdict, receipt, or persistent runtime state.
-
-The two status branches SHALL be closed beyond their common `schema_version`,
-`change`, and `status` fields: `not_applicable` contains only `reason`, while
-`affected` contains only `catalog_additions` and a non-empty `affected`
-sequence. It SHALL reject an omitted `catalog_additions` field, an empty
-affected sequence, or a field from the other branch.
-
-#### Scenario: A documentation-only change is explicitly not applicable
-
-- **WHEN** a change modifies only explanatory prose and does not alter an
-  outcome-changing deterministic fact or its verdict consumer
-- **THEN** its record SHALL use `not_applicable` with a non-empty reason
-- **AND** it SHALL not invent an affected family merely to satisfy the checker
-
-#### Scenario: Affected branch makes no catalog additions explicit
-
-- **WHEN** a change affects only already cataloged families
-- **THEN** its `affected` record SHALL include `catalog_additions: []` and a
-  non-empty `affected` sequence
-- **AND** it SHALL not omit the additions field or carry a `reason`
-
 #### Scenario: Fragment existence is not checker proof
 
 - **WHEN** plan or assets mode accepts an affected coordinate whose base file is
@@ -289,7 +287,6 @@ affected sequence, or a field from the other branch.
 - **THEN** the checker SHALL report only structural and referential validity
 - **AND** it SHALL NOT claim that an optional fragment names an actual symbol or
   that the declared surface performs its stated semantic role
-
 
 ### Requirement: A fact family SHALL converge on one semantic resolver
 

@@ -1,0 +1,326 @@
+# C3 分块纲要(2026-09-04 解析器实测,续跑分组依据)
+
+> prose/scenario 索引 = 块内 1-based 序号;标题为稳定锚点,不含 ID。
+
+## research/post-final-recovery :: L11-367 (357)
+> ### Requirement: Post-final recovery SHALL expose one direct eligibility and request contract
+- P1@13 The framework SHALL expose `operate-post-final-recovery.mjs inspect|apply|recover`
+- P2@23 `inspect` SHALL remain side-effect-free and derive mechanical eligibility from
+- P3@34 The Engine SHALL validate the closed action, non-empty reason/scope, lineage,
+- P4@40 The active `rerun_count_limit` rule in `gate-rerun-ready.definition.json` SHALL
+- P5@49 An accepted artifact-persistence/publication workspace SHALL take precedence
+- P6@57 External inspect/apply SHALL always treat an accepted ReopenResearchPass workspace as reco
+- P7@64 Three deterministic responsibilities SHALL remain distinct: REI-003 interprets
+- P8@70 The ReopenResearchPass evaluator SHALL resolve accepted ownership and replay before fresh
+- P9@78 A committed ReopenResearchPass lineage SHALL remain recognizable after legal rerun entry,
+- P10@93 After rerun-ready passes, ReopenResearchPass SHALL use existing normal Gate/load/transitio
+- P11@115 The Final inventory lineage witness SHALL be a deterministic sorted digest over
+- P12@173 `apply` SHALL accept one retained strict JSON request containing schema version,
+- P13@182 Results SHALL retain Engine-owned, Zod-validated closed verdicts:
+- P14@188 The existing shared capability schema version and external request/result/
+- P15@196 Cross-field behavior SHALL remain closed: inspect `eligible` carries exact
+- S1@206 Clean terminal Final is eligible
+- S2@215 Presentation-only feedback remains in Final
+- S3@221 Mechanical eligibility does not invent rerun intent
+- S4@227 Next rerun would exhaust the existing gate rule
+- S5@233 Unsupported rerun facts do not guess a remedy
+- S6@239 Pending artifact persistence keeps its owner
+- S7@245 Accepted topic-state recovery keeps its owner
+- S8@250 Multiple accepted ReopenResearchPass workspaces are ambiguous
+- S9@255 Request fields do not create permission
+- S10@260 Logical bundle identity mismatch blocks replay
+- S11@265 Identical accepted request is idempotent
+- S12@271 Inspect recognizes an accepted nonterminal recovery lineage
+- S13@276 Exact style recomputation remains accepted lineage
+- S14@281 Style-before-count crash returns to the existing count owner
+- S15@286 Wrong style or unrelated profile change blocks
+- S16@291 Rerun-ready pass projects only its next proven normal owner
+- S17@297 Conflicting descendant evidence blocks
+- S18@302 Different request cannot stack on one Final lineage
+- S19@307 Newer Final handoff with unchanged inventory returns to delivery
+- S20@313 Loaded newer Final preserves the existing status-sync owner
+- S21@319 Pre-load inventory drift blocks the post-ReopenResearchPass Final return
+- S22@325 Non-primary presentation drift does not block a primary-scoped load
+- S23@331 Immutable append establishes the newer delivery lineage
+- S24@337 Modern primary series append proof reproduces the bound digest
+- S25@343 Non-primary updates during a rerun do not block the next rerun
+- S26@350 Unreachable primary-series binding recovers through the structural fallback
+- S27@357 Primary-series tampering remains drift on both bases
+## research/content-delivery-phase-content :: L11-267 (257)
+> ### Requirement: Phase HITL2 body completeness
+- P1@13 `phase-hitl2.md` SHALL contain a complete 9-section body following the
+- P2@19 The phase SHALL produce a decision brief that reviews what the research can
+- P3@31 Before the brief presents rerun as executable or the Agent records a clear
+- P4@50 The phase SHALL let the user accept or reject that recommendation, ask
+- P5@59 The allowed decision enum values SHALL remain: `proceed_to_readiness`,
+- P6@69 When the user selects the existing legal `rerun` decision and supplies a new
+- P7@79 The phase SHALL record the existing `hitl2_recorded` trace event. This event
+- P8@84 After gate pass, the Agent SHALL read `user_decision` from `rb_profile.yaml`
+- P9@105 For any context-dependent action without a legal path at the current position,
+- P10@111 `Human-directed` in this phase SHALL identify the source of the semantic
+- S1@122 HITL2 frontmatter contract
+- S2@128 HITL2 decision brief production
+- S3@134 HITL2 rerun records labelled focus rationale
+- S4@142 HITL2 user decision recorded to profile
+- S5@150 HITL2 stop behavior
+- S6@156 Ambiguous HITL2 intent gets one minimum clarification
+- S7@162 Human repair decision returns execution to the Agent
+- S8@167 HITL2 rerun follows deterministic rerun handoff
+- S9@176 HITL2 does not accept a known-impossible rerun
+- S10@182 HITL2 proceed_to_readiness follows chain
+- S11@187 Context-dependent decisions do not gain fixed handoffs
+- S12@192 Context-dependent decision without a path stays honest
+- S13@198 Recommendation never substitutes for the user decision
+- S14@203 Non-HITL message is not persisted as a HITL2 decision
+- S15@235 Complete composition recommendation is accepted without a second confirmation
+- S16@243 One clarification frontier resolves material ambiguity
+- S17@252 Delivery intent waits at an unresolved boundary
+- S18@261 Custom view cannot cross with guessed semantics
+## engine/cli-phase-transition :: L100-338 (239)
+> ### Requirement: Enter phase CLI witnesses lifecycle node entry (CPT-003)
+- P1@102 After valid static invocation and latest trace-durable clean/degraded handoff
+- P2@108 Before the first route-bound `load_complete` for an authorized
+- P3@118 For a later Readiness-to-Final handoff descended from one accepted
+- P4@130 If an earlier route-bound legal Final load exists but the new authorized Final
+- P5@136 The Final inventory admission SHALL apply only before the first bound load for
+- P6@147 `enter-phase --help` and `-h` SHALL return static invocation help with exit
+- P7@157 The accepted handoff vocabulary SHALL contain exactly two Engine-written classes:
+- P8@162 Handoff selection SHALL compare structurally valid authorities from both classes in append
+- P9@164 The exceptional event SHALL bind its request digest, operation id, previous readiness->Fin
+- P10@166 Successful stdout SHALL remain Agent-readable Markdown with stable markers and
+- P11@181 The generated continuation block SHALL contain:
+- P12@187 The generated block SHALL be a feedback projection, not a new authority
+- P13@195 ```markdown
+- P14@203 For a post-final recovery handoff, route-bound `load_complete` SHALL reference the recover
+- P15@205 The action-core preflight is a read-only framework configuration check over the
+- S1@214 First Final entry requires an empty primary baseline
+- S2@220 Post-final return requires the event-bound prior inventory
+- S3@226 Existing bound Final entry remains compatible
+- S4@232 Later Final handoff without accepted ReopenResearchPass provenance is rejected
+- S5@238 Enter phase accepts degraded source pass
+- S6@244 Post-final recovery enters the existing rerun node
+- S7@251 Forged exceptional event is rejected
+- S8@257 Accepted workspace must be cleaned before entry
+- S9@263 Legal entry exposes existing status synchronization
+- S10@269 stop:no rendered output ends with continuation cue
+- S11@282 stop:yes rendered output ends with interaction cue
+- S12@291 Enter phase rejects unauthorized or stale route
+- S13@297 Current node write failure is partial entry failure
+- S14@303 Default entry keeps action and status synchronization visible
+- S15@313 Full entry retains reference closure explicitly
+- S16@321 Help and invalid invocation do not create an entry witness
+- S17@329 Action-core configuration failure does not create an entry witness
+## research/research-wave-phase-content :: L83-316 (234)
+> ### Requirement: Wave1 phase body completeness with subagent boundary
+- P1@85 `phase-wave1.md` SHALL remain the Agent-facing controller for Wave1's
+- P2@95 After a successful formal Wave1 submit with accepted backing, the Phase Agent
+- P3@109 For an index-sync root, the Phase Agent SHALL run the narrow synchronizer and
+- P4@121 After successful submit, `depth-review.yaml` SHALL continue to contain only
+- P5@130 When the Phase Agent legally writes or updates a valid current
+- P6@140 At each affected inspect/gate/submit failure, Phase guidance SHALL consume the
+- S1@149 Wave1 materializes canonical closeout after submitted backing
+- S2@160 stale index takes the narrow repair path
+- S3@169 true deficit uses the existing supplementary path
+- S4@178 materialization root does not become a research demand
+- S5@186 Wave1 loads the shared reference template
+- S6@193 Wave1 uses dry-submit before formal submit
+- S7@200 Wave1 materializes closeout after submitted backing
+- S8@208 Depth review records judgment instead of ledger copies
+- S9@215 valid focus update refreshes only the derived reader map
+- S10@224 Agent performs authorized same-check repair
+- S11@231 Recorded profile makes missing style parameters mechanical
+- S12@238 Wave1 deepening uses work-unit kind
+- S13@245 Wave1 requires depth review before topic completion
+- S14@253 Shallow Wave1 output routes to supplementary work unit
+- S15@284 Phase Agent turns current focus context into bounded commitments
+- S16@293 Repairable commitment uses existing supplementary work
+- S17@301 No legal repair records an honest limitation
+- S18@310 Rerun coverage does not consume historical work as current
+## governance/semantic-fact-closure :: L98-289 (192)
+> ### Requirement: Each governed change SHALL declare semantic closure applicability
+- P1@100 Each project change selected through a supported project apply or archive entry
+- P2@112 Project proposal instructions SHALL direct the author to read the current
+- P3@120 Project proposal instructions SHALL also make the record's coordinate and role
+- P4@130 An affected entry SHALL state the bounded fact, its one semantic resolver
+- P5@143 The affected entry's roles SHALL be classified relative to the family's bounded
+- P6@155 An affected record with a catalog addition SHALL have an approved task that
+- P7@160 The semantic-closure checker SHALL obtain selected verification assets through
+- P8@165 The checker SHALL validate only the existing structural and referential
+- P9@172 The affected entry's `overlap` list SHALL be non-empty. Each real overlap SHALL
+- P10@180 The record is a change-governance declaration. It SHALL not be a runtime schema,
+- P11@183 The two status branches SHALL be closed beyond their common `schema_version`,
+- S1@189 A documentation-only change is explicitly not applicable
+- S2@196 Affected branch makes no catalog additions explicit
+- S3@203 Proposal guidance starts from the catalog
+- S4@216 Actual symbol or honest bare path
+- S5@225 Agent-facing projection is not a verdict consumer
+- S6@233 Prior-output authorization is affected once per family
+- S7@243 Catalog growth cannot be speculative
+- S8@251 Assets mode verifies that an approved addition was written
+- S9@260 A catalog addition is written before a dependent target edit
+- S10@268 An overlap has one structural meaning
+- S11@276 No overlap is explicit
+- S12@283 Fragment existence is not checker proof
+## workflow/workflow-directory-contract :: L128-323 (196)
+> ### Requirement: Runtime bundle canonical structure
+- P1@130 Current runtime bundles SHALL contain canonical control files and data
+- P2@135 The current run bundle root SHALL be the single mutable runtime directory
+- P3@144 A CLI MAY accept an explicitly supplied relative bundle path at its boundary,
+- P4@151 Current specs, Harness docs, workflow nodes, bundle templates, and Agent-facing
+- P5@164 For CLI operations, `current_run_bundle_root` SHALL be the explicit bundle
+- P6@171 Unless a path is explicitly rooted in `DEEP_RESEARCH_HARNESS/`, runtime paths
+- P7@178 Bundle-root runtime surfaces include `BUNDLE_ENTRY.md`, `BUNDLE_MAP.md`,
+- P8@187 Run-scoped helper scripts — one-shot work-unit executors, reference/seed
+- P9@198 A current operational bundle root SHALL contain both `BUNDLE_ENTRY.md` and
+- P10@207 Runtime choices and runtime data SHALL be persisted under the current run
+- S1@212 Coordinate vocabulary distinguishes roots
+- S2@224 Explicit relative bundle input resolves before handoff
+- S3@233 Command root is not runtime root
+- S4@243 Work-units directory is part of delegated runtime structure
+- S5@251 Run-scoped scripts live under the bundle root
+- S6@261 Incomplete legacy root is not a current bundle root
+- S7@269 Bundle entry and map are canonical root surfaces
+- S8@277 Work-unit path expands under selected bundle
+- S9@286 Runtime paths are bundle-root relative
+- S10@297 Bare work-unit path requires current run bundle root
+- S11@308 Harness templates are not runtime state
+- S12@318 Runtime truth is in bundle not chat memory
+## research/seed-topic-materialization :: L15-209 (195)
+> ### Requirement: Seed topic materialization phase node
+- P1@17 `phase-seed-topics.md` SHALL provide a complete 9-section body between setup
+- P2@22 On an empty queue, the phase SHALL read `rb_plan.md#/topic_registry`, create
+- P3@32 `phase-seed-topics.md` SHALL load `templates/seed-topic-template` through its
+- P4@42 Every newly rendered canonical seed SHALL have exactly two visibly distinct
+- P5@64 For the Wave0 `wave0_evidence` card specifically, its
+- P6@75 `rb_plan.md#/topic_registry` remains Topic identity/intent authority;
+- S1@84 Seed phase loads the pure document template
+- S2@92 New seed has an aligned empty appendix
+- S3@100 Editing initialization cannot leave a second template ghost
+- S4@109 New seed renders fixed backfill cards
+- S5@117 Wave0 card makes ordinal fillable without owning protocol
+- S6@124 One template card does not turn candidates into evidence
+- S7@132 Template and renderer drift fail deterministically
+- S8@138 Initialization remains a structured authoring loop
+- S9@147 Legacy body remains readable
+- S10@153 Phase Agent executes seed-topics via queue-driven loop
+- S11@160 Seed topic file is a search-relevant decision document
+- S12@167 Shared contract is the complete readable skeleton
+- S13@173 Seed topic contains the research-round appendix
+- S14@179 Renderer and shared appendix remain structurally aligned
+- S15@185 Missing upstream information is recorded as a gap
+- S16@192 Canonical and structured fields are not authored twice
+- S17@199 Legacy duplicate body sections remain read-compatible
+- S18@205 Rerun direction is not prefilled without rationale
+## agent/hitl-ux :: L262-455 (194)
+> ### Requirement: HITL2 research-review recommendation prompt
+- P1@264 Agent 在 HITL2 入口 SHALL 先写 research review，再给出一个明确推荐及其理由/预期影响，并提供自然语言决策入口。HITL2 SHALL 遵循 HI
+- P2@266 research review SHALL 包含：目前证据足够回答的内容、仍然不足或需要谨慎的地方、一个推荐的用户可理解下一步，以及推荐理由和预期影响。当推荐或用户动作涉及 rer
+- P3@268 在把 rerun 描述为可执行推荐或记录用户的 rerun 决定之前，Agent SHALL 就近读取 current profile `rerun_count`。`phase-h
+- P4@270 HITL2 MAY 保留五个快捷选项（A/B/C/D/E），但 SHALL 以用户可理解的动作描述为主：`proceed_to_readiness`、`request_view_r
+- P5@272 用户的清楚决定本身 SHALL 视为确认。Agent SHALL NOT 对五个 existing actions 统一要求第二次确认；只有实质歧义、真实成本/权限扩张或不可逆风险
+- P6@274 当用户选择 legal `rerun` 并表达新的或修订的 focus 时，Agent SHALL 在当前 HITL2 loop 中反映一段简短、可纠正的理解。用户接受后，exis
+- S1@276 User chooses proceed_to_readiness
+- S2@283 User wants to change report view
+- S3@290 User chooses rerun to adjust direction
+- S4@299 User chooses rerun with a focus correction
+- S5@307 Unavailable rerun is not offered as executable
+- S6@313 User chooses repair to fix issues
+- S7@319 User chooses stop blocked
+- S8@326 Context-dependent action without a legal path remains honest
+- S9@331 Ambiguous HITL2 intent gets one minimum question
+- S10@336 Decision brief must exist before prompting
+- S11@343 Ordinary mid-run message is not a HITL2 decision
+- S12@348 HITL2 exit sets final generation expectation
+- S13@396 User accepts a complete delivery recommendation
+- S14@405 Material composition ambiguity gets one bounded frontier
+- S15@414 Delivery intent plus clarification completes one decision
+- S16@423 User corrects the displayed candidate
+- S17@431 Custom view remains pending until executable
+- S18@440 Non-delivery action remains unblocked without a handoff
+- S19@449 Decision brief supports resume without becoming authority
+## engine/runtime-reentry-debuggability :: L363-553 (191)
+> ### Requirement: Reentry diagnostics SHALL summarize incident-shaped recovery truth
+- P1@365 `check-reentry` SHALL compose existing status, queue, artifact, ledger,
+- P2@372 The Engine-owned schema SHALL require an action only for `reachable`, forbid one
+- P3@380 Blocking canonical findings SHALL keep `check.passed: false` and exit `1`;
+- P4@386 Across a Final-boundary handoff and current terminal Final, owner precedence
+- P5@407 A post-final inspection whose verdict is `blocked` SHALL project that root as blocked and 
+- P6@418 Final refinement MAY be projected as the existing `current_owner` action kind
+- P7@424 Once post-final rerun is accepted, the existing ReopenResearchPass stage/owner mapping SHA
+- S1@433 Incident-shaped bundle produces one canonical recovery root
+- S2@439 Missing sanctioned path is explicit
+- S3@444 Eligible terminal Final exposes one recovery action
+- S4@454 Newer Final lineage with zero append resumes immediate delivery
+- S5@460 Post-ReopenResearchPass Final entry drift keeps the exact entry owner
+- S6@466 Loaded newer Final keeps status synchronization ahead of delivery
+- S7@472 Newer Final lineage with proven append resumes refinement
+- S8@478 Accepted post-final request exposes post-final recovery
+- S9@484 Prepared post-final operation masks downstream symptoms
+- S10@490 Pending artifact persistence precedes ReopenResearchPass
+- S11@501 Ambiguous primary inventory blocks before rerun
+- S12@507 Style-before-count summary uses the shared current owner
+- S13@513 Equal projection keeps the idempotent phase owner
+- S14@519 Exhausted rerun limit does not expose an impossible path
+- S15@524 Existing reentry output remains compatible
+- S16@529 Invocation error may omit recovery context
+- S17@535 blocked inspection is not projected as reachable
+- S18@541 zero-append and proven-append projections are distinguishable
+- S19@549 Recovery summary is read-only
+- S20@550 Recovery summary is read-only
+## bundle/artifact-persistence-recovery :: L122-310 (189)
+> ### Requirement: Final Markdown publication SHALL admit backing and protect the primary version series
+- P1@124 The artifact-persistence command SHALL retain `persist-final-report` for safe
+- P2@130 `publish-final-report` SHALL accept the selected bundle, one completed retained
+- P3@133 `--feature` SHALL be accepted only by `publish-final-report`. `persist` and `persist-final
+- P4@143 The Engine SHALL derive one canonical primary inventory from safe regular files
+- P5@159 Non-primary nested or non-reserved Final artifacts MAY remain supplementary and
+- P6@165 Allocation SHALL be Engine-owned:
+- P7@174 The operation SHALL serialize allocation and publication against concurrent
+- P8@182 Before creating a publication workspace or writing a primary target, the
+- P9@195 `publish-final-report` SHALL emit a strict Engine-validated result that separates
+- P10@205 The direct-root reserved namespace `final/final*.md`, compared case-
+- P11@214 Before any operation classifies a path, it SHALL apply the existing safe-target
+- S1@221 Empty inventory publishes canonical base mechanically
+- S2@227 Later Final delivery appends instead of recreating the base
+- S3@233 Publisher does not witness lifecycle delivery
+- S4@239 Valid Final report commits through the existing durability path
+- S5@246 Unlabelled and labelled revisions share one sequence
+- S6@252 Primary history is immutable
+- S7@258 Single legacy report becomes read-only v0
+- S8@264 Ambiguous legacy inventory fails closed
+- S9@270 Invalid canonical inventory fails closed
+- S10@276 Concurrent publication cannot share a version
+- S11@282 Invalid backing has no persistence side effect
+- S12@288 Generic persist cannot bypass Final backing admission
+- S13@294 An unsafe Final-looking target remains invalid configuration
+- S14@300 Existing non-Final persistence remains available
+- S15@306 Crash recovery cannot bypass Final backing admission
+## workflow/rerun-incremental-node :: L39-228 (190)
+> ### Requirement: Rerun node analyzes rationale vs seed_topics and produces topic adjustment plan
+- P1@41 `phase-rerun.md` SHALL instruct the Agent to read the existing
+- P2@49 When a legal HITL2 rerun rationale contains a labelled focus wording and Agent
+- P3@58 The phase SHALL prepare exactly one existing explicit topic-state apply form:
+- P4@67 For every successfully added, refined, or direction-adjusted Topic, the
+- P5@75 The phase SHALL run topic-state apply before queueing new work, consume
+- P6@86 If update-intent or mutate-layout is blocked by queued, delegated-in-flight,
+- P7@92 Rename/reorder/renumber SHALL use only canonical topic-state apply; it SHALL
+- P8@100 Topic-state apply in rerun SHALL remain authorized only when
+- S1@113 Rerun uses a current focus only for the new increment
+- S2@121 Rerun preserves incoming HITL2 status window before gate pass
+- S3@126 Rerun status sync happens only after rerun-ready pass
+- S4@130 Route-bound rerun entry authorizes topic apply
+- S5@135 Route-bound post-final recovery entry authorizes the same topic apply
+- S6@143 Missing or superseded rerun witness blocks apply
+- S7@148 New rerun topic materializes before work
+- S8@152 Existing Topic intent update preserves layout
+- S9@156 Complete layout target preserves historical outputs
+- S10@163 Safe remove is Engine-proven
+- S11@171 Direction-only focus refinement preserves canonical Topic identity
+- S12@177 First rerun increments count and writes guidance
+- S13@182 Second rerun preserves existing loop protection
+- S14@188 Existing rerun count mutation does not invalidate entry lineage
+- S15@194 Style projection crash before count increment resumes existing owner
+- S16@202 Style projection cannot hide profile drift
+- S17@210 Existing artifacts remain preserved
+- S18@216 Remove or layout mutation remains blocked without a complete target
+- S19@225 Rerun does not prepare historical migration

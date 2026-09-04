@@ -12,7 +12,7 @@
 
 Gate 只做 deterministic 结构/数量/一致性检查；seed topic 的语义质量（topic 是否"好"、是否与研究问题对齐）由人类在 HITL1（`stop: yes`）审查，本阶段不新增 stop 点。
 ## Requirements
-### Requirement: Seed topic phase node SHALL render complete canonical seeds from the shared template
+### Requirement: Seed topic materialization phase node
 
 `phase-seed-topics.md` SHALL provide a complete 9-section body between setup
 and Wave0. It SHALL declare `phase: seed-topics`, `gate: seed-topics-ready`,
@@ -61,6 +61,26 @@ template is its readable mirror. Static parity SHALL fail on missing, extra,
 reordered, or renamed region/heading/token/owner/card descriptors while
 ignoring prose bytes, YAML field order, and presentation-only whitespace.
 
+For the Wave0 `wave0_evidence` card specifically, its
+`<work_id>/<positive ordinal>` notation SHALL define the positive ordinal as
+the exact global ordinal owned by that work unit's submitted source contribution
+in the current validated `artifacts/wave0/<topic>/source.yaml` array. It SHALL
+state that a later legal append gets its own contribution identity and SHALL not
+describe `result_hash` as a source-byte snapshot. A multi-element source
+intake is backfilled with one entry or exact identity-bound deferred disposition
+per contribution-owned candidate, potentially in one packet. The card SHALL NOT
+embed packet JSON, lifecycle authorization, source parsing mechanics, or a
+second source-authority claim.
+
+`rb_plan.md#/topic_registry` remains Topic identity/intent authority;
+frontmatter remains the structured enrichment surface; submitted work-unit and
+finding facts remain projection authority. The template, renderer, and initial
+seed phase SHALL not create a new evidence, identity, gate, or receipt authority.
+Empty later-Wave slots remain legal for `seed-topics-ready`; no semantic quality
+judgment is introduced. Legacy seeds remain readable: their body prose is not
+retroactively migrated or inferred into frontmatter, but a newly rendered seed
+must never contain duplicate initialization skeletons.
+
 #### Scenario: Seed phase loads the pure document template
 
 - **WHEN** the Phase Agent enters `phase-seed-topics.md`
@@ -94,6 +114,13 @@ ignoring prose bytes, YAML field order, and presentation-only whitespace.
 - **AND** the card SHALL survive later writer materialization without becoming
   an entry or a second source of authority
 
+#### Scenario: Wave0 card makes ordinal fillable without owning protocol
+
+- **WHEN** a Phase Agent reads a newly rendered Wave0 card before closeout
+- **THEN** the card SHALL explain that `<work_id>/N` uses the current source
+  array ordinal owned by that submitted contribution
+- **AND** it SHALL direct the Agent to the existing command playbook for packet
+  formation and apply/repair mechanics
 #### Scenario: One template card does not turn candidates into evidence
 
 - **WHEN** a Wave0 card describes multiple candidates from one source intake
@@ -123,6 +150,20 @@ ignoring prose bytes, YAML field order, and presentation-only whitespace.
   duplicate historical headings outside canonical structured fields
 - **THEN** the initial enrichment path SHALL preserve it as body history
 - **AND** it SHALL not require a bulk migration or infer body prose as authority
+#### Scenario: Phase Agent executes seed-topics via queue-driven loop
+
+- **WHEN** the Phase Agent loads `phase-seed-topics.md`
+- **THEN** Section 3 SHALL direct fill, body edit plus structured enrichment apply, queue completion, and finalize-plus-gate
+- **AND** the body SHALL NOT regress to free-form Allowed Actions or raw canonical YAML authoring
+- **AND** the loaded required context SHALL include the shared seed-topic authoring contract
+
+#### Scenario: Seed topic file is a search-relevant decision document
+
+- **WHEN** the Phase Agent materializes or enriches a seed topic
+- **THEN** the output SHALL contain registry-projected canonical fields, all accepted structured enrichment frontmatter fields and the non-duplicating search-relevant semantic body sections
+- **AND** SHALL preserve explicit gap values when upstream semantics are absent
+- **AND** SHALL NOT be only UID/id/slug/title plus a generic chapter-label body
+
 #### Scenario: Shared contract is the complete readable skeleton
 
 - **WHEN** an Agent needs to materialize an initial or rerun-added seed topic
@@ -161,54 +202,11 @@ ignoring prose bytes, YAML field order, and presentation-only whitespace.
 - **THEN** `enrich_seed` SHALL preserve those body bytes and normal deterministic checks SHALL ignore them as authority
 - **AND** no migration or body-to-frontmatter inference SHALL be required for completion
 
-### Requirement: Seed topic registry SHALL keep identity authority over cards and direction
-
-For the Wave0 `wave0_evidence` card specifically, its
-`<work_id>/<positive ordinal>` notation SHALL define the positive ordinal as
-the exact global ordinal owned by that work unit's submitted source contribution
-in the current validated `artifacts/wave0/<topic>/source.yaml` array. It SHALL
-state that a later legal append gets its own contribution identity and SHALL not
-describe `result_hash` as a source-byte snapshot. A multi-element source
-intake is backfilled with one entry or exact identity-bound deferred disposition
-per contribution-owned candidate, potentially in one packet. The card SHALL NOT
-embed packet JSON, lifecycle authorization, source parsing mechanics, or a
-second source-authority claim.
-
-`rb_plan.md#/topic_registry` remains Topic identity/intent authority;
-frontmatter remains the structured enrichment surface; submitted work-unit and
-finding facts remain projection authority. The template, renderer, and initial
-seed phase SHALL not create a new evidence, identity, gate, or receipt authority.
-Empty later-Wave slots remain legal for `seed-topics-ready`; no semantic quality
-judgment is introduced. Legacy seeds remain readable: their body prose is not
-retroactively migrated or inferred into frontmatter, but a newly rendered seed
-must never contain duplicate initialization skeletons.
-#### Scenario: Wave0 card makes ordinal fillable without owning protocol
-
-- **WHEN** a Phase Agent reads a newly rendered Wave0 card before closeout
-- **THEN** the card SHALL explain that `<work_id>/N` uses the current source
-  array ordinal owned by that submitted contribution
-- **AND** it SHALL direct the Agent to the existing command playbook for packet
-  formation and apply/repair mechanics
-#### Scenario: Phase Agent executes seed-topics via queue-driven loop
-
-- **WHEN** the Phase Agent loads `phase-seed-topics.md`
-- **THEN** Section 3 SHALL direct fill, body edit plus structured enrichment apply, queue completion, and finalize-plus-gate
-- **AND** the body SHALL NOT regress to free-form Allowed Actions or raw canonical YAML authoring
-- **AND** the loaded required context SHALL include the shared seed-topic authoring contract
-
-#### Scenario: Seed topic file is a search-relevant decision document
-
-- **WHEN** the Phase Agent materializes or enriches a seed topic
-- **THEN** the output SHALL contain registry-projected canonical fields, all accepted structured enrichment frontmatter fields and the non-duplicating search-relevant semantic body sections
-- **AND** SHALL preserve explicit gap values when upstream semantics are absent
-- **AND** SHALL NOT be only UID/id/slug/title plus a generic chapter-label body
-
 #### Scenario: Rerun direction is not prefilled without rationale
 
 - **WHEN** an initial seed or layout-only mutation is materialized without a sanctioned add/refine/supplement rerun rationale
 - **THEN** the skeleton SHALL NOT prefill a `## 本轮重跑方向` section or direction token
 - **AND** the shared direction fragment SHALL remain an authoring reference rather than runtime state
-
 
 ### Requirement: Seed topics ready gate rule set
 

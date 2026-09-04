@@ -289,17 +289,17 @@
 
 ### C3 `megablock-requirement-split`（R2；设计 = `spec-lean-f4-megablock-deepdive.md` 处置表）
 
-- [ ] 3.1 post-final-recovery 358 块 ×4
-- [ ] 3.2 content-delivery-phase-content 258 块 ×3
-- [ ] 3.3 cli-phase-transition 241 块 ×3
-- [ ] 3.4 research-wave-phase-content 235 块 ×3 + 12 行复述甄别
-- [ ] 3.5 semantic-fact-closure 193 块 ×3
-- [ ] 3.6 workflow-directory-contract 197 块 ×2
-- [ ] 3.7 seed-topic-materialization 196 块 ×2
-- [ ] 3.8 runtime-reentry-debuggability 193 块 ×2
-- [ ] 3.9 artifact-persistence-recovery 190 块 ×2
-- [ ] 3.10 rerun-incremental-node 191 块 ×2（深挖 §11 REVIEW 通过；K1/K2 标题措辞带出跨块依赖）
-- [ ] 3.11 验收口径（G1 已拍板）：**全库无块 >190**（R2 清单即验收对象）+ 160–190 十块观察名单登记于 §4
+- [x] 3.1 post-final-recovery 357 块 ×6(×4 因 J3 粒度超限扩拆)
+- [x] 3.2 content-delivery-phase-content 257 块 ×3(含场景-only lead)
+- [x] 3.3 cli-phase-transition 239 块 ×3
+- [x] 3.4 research-wave-phase-content 234 块 ×3 + 复述甄别零指针化(记录)
+- [x] 3.5 semantic-fact-closure 192 块 ×3
+- [x] 3.6 workflow-directory-contract 196 块 ×2
+- [x] 3.7 seed-topic-materialization 195 块 ×2
+- [x] 3.8 runtime-reentry-debuggability 191 块 ×2
+- [x] 3.9 artifact-persistence-recovery 189 块 ×2
+- [x] 3.10 rerun-incremental-node 190 块 ×2(K1/K2 冻结分组活体验证)（深挖 §11 REVIEW 通过；K1/K2 标题措辞带出跨块依赖）
+- [x] 3.11 验收:全库无块 >190(megablock-split.test.mjs 断言)（G1 已拍板）：**全库无块 >190**（R2 清单即验收对象）+ 160–190 十块观察名单登记于 §4
 - [ ] 备选：若单 change 评审过载，按域拆 2（research 系 / 其余）——默认单 change
 
 ### C4 `registry-hygiene-and-guard-extensions`（R3+R4 合并；均无行为面）
