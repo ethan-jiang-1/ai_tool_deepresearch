@@ -13,7 +13,7 @@ _done/
 ├── _fixed_bugs/           # 已修复/结案 Bug（230 个，含间隔）
 ├── _suspended_bugs/        # 悬挂 Bug（16 个：含 BUG-026, 028, 030, 099, 106, 129--131, 142, 144, 145, 147, 149, 161, 163, 175）
 ├── _done_todos/           # 已完成 TODO（16 个，DONE-001~016）+ 4 个已吸收、1 个已替代 standalone TODO
-├── _closed_plans/         # 已完成 Plan（81 个编号 + 2026-08-30 补登记若干，见 _closed_plans/README）
+├── _closed_plans/         # 已完成 Plan（85 个编号 + 2026-08-30 补登记若干，见 _closed_plans/README）
 └── _old_topics/           # 历史归档（⚠️ 勿读，除非显式要求）
 ```
 

@@ -1,6 +1,6 @@
 # Active Plans — 活跃 plan/分析文档列表
 
-> 最后更新: 2026-09-01（`spec-drift-audit-remediation-and-requirement-slimming` 完成关闭（CLS-084）：8 个 OpenSpec change 全管线归档——C1/C2 漂移清零、C3a–C3e 五批 requirement 瘦身、C4 防复发 guard；finalizer 均 19/19，全量 npm test 2967/2967 0 fail。当日无其他活跃 plan。此前 2026-08-31：新增活跃 plan `cleanup-wave2-carving-test-guards-and-ledger`——第二波打扫，四路审计回填期。同日：`drift-resync-locks-hygiene-and-work-unit-deepening` 完成关闭（CLS-082）。此前：`test-signal-and-guidance-wording-hygiene` 完成关闭（CLS-081）。此前：`control-surface-drift-density-and-module-boundaries` 已完成关闭；spec-semantic-drift-remediation 于 2026-08-31 完成关闭（CLS-079）） | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
+> 最后更新: 2026-09-04（`regression-suite-runtime-profiling-and-speedup` 完成关闭（CLS-085）：change `regression-suite-tooling-speedup` 归档，finalizer 19/19；新增活跃 plan `regression-suite-step2-heavy-chain-investment`。此前 2026-09-01：`spec-drift-audit-remediation-and-requirement-slimming` 完成关闭（CLS-084）：8 个 OpenSpec change 全管线归档——C1/C2 漂移清零、C3a–C3e 五批 requirement 瘦身、C4 防复发 guard；finalizer 均 19/19，全量 npm test 2967/2967 0 fail。当日无其他活跃 plan。此前 2026-08-31：新增活跃 plan `cleanup-wave2-carving-test-guards-and-ledger`——第二波打扫，四路审计回填期。同日：`drift-resync-locks-hygiene-and-work-unit-deepening` 完成关闭（CLS-082）。此前：`test-signal-and-guidance-wording-hygiene` 完成关闭（CLS-081）。此前：`control-surface-drift-density-and-module-boundaries` 已完成关闭；spec-semantic-drift-remediation 于 2026-08-31 完成关闭（CLS-079）） | `_backlog/plans/` — 活跃 plan 在此，完成移入 [`../_done/_closed_plans/`](../_done/_closed_plans/)。
 >
 > **plan 没有编号，文件名即标识。完成后文件名不变，位置即状态。**
 
@@ -17,8 +17,15 @@
 
 | Plan | 简述 | 状态 |
 |------|------|------|
+| [`regression-suite-step2-heavy-chain-investment`](regression-suite-step2-heavy-chain-investment.md) | 回归套件第二步投资计划：P0 e2e 全链去重（rerun-round-continuity 同链爬两遍 / post-final 同族复核）、P1 operate-work-unit 121 spawn 点 + finalizer 注入（独立 change）、P2 同族批量、P3 加权分片；tooling 已到顶（1061 CPU-s / 8 核下限 ≈133s），目标 P2 后 ~120-140s | 计划已成文；执行待用户指令 |
 | [`spec-lean-capability-split-dwu`](spec-lean-capability-split-dwu.md) | `agent/delegated-work-units` 一变四 capability 拆分（母体 assignment & briefing + submission/preflight/correction）：设计定稿，§6 四个决策点待用户复核；复核通过后 T1 测绘起跑 | 设计定稿；执行待指令 |
 | [`spec-lean-pointerization-and-registry-hygiene`](spec-lean-pointerization-and-registry-hygiene.md) | 第二轮打扫：R0 工具先行（复述扫描器+装配通用化）、R2 pointerization 减量（全部 >160 块；DWU 已剥离至独立 plan）、R3 registry 卫生（15 死前缀+61 条 DEPRECATED 核对）、R4 §-guard 扩展、R5 housekeeping | 事实与思路已成文；R1 已剥离至独立 plan；执行待用户指令 |
+
+## 最近关闭 (2026-09-04)
+
+| Plan | 关闭依据 |
+|------|----------|
+| `regression-suite-runtime-profiling-and-speedup` | CLS-085：A/F 路线经 change `regression-suite-tooling-speedup` 落地归档（finalizer 19/19，含归档自跑全量回归闸）——runner wrapper c8 + NODE_COMPILE_CACHE + 权重表；实测修正三个推断（并发非主杠杆、LPT 被探针证伪、C 路线前提已落地）；墙钟 281.8s→中位 ≈226s 全绿。D/E 投资转 `regression-suite-step2-heavy-chain-investment`。 |
 
 ## 最近关闭 (2026-09-01)
 

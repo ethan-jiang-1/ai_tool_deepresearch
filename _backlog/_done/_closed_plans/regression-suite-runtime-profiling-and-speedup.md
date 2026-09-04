@@ -1,5 +1,13 @@
 # 回归套件耗时剖析与提速路线（现状反映 + 方案底稿）
 
+> **✅ 已关闭（2026-09-04，CLS-085）**：A/F 路线由 change
+> `regression-suite-tooling-speedup` 落地并归档（`2026-09-04-regression-suite-tooling-speedup`，
+> c8 + NODE_COMPILE_CACHE runner wrapper，中位墙钟 281.8s→≈226s，全绿）；
+> B 的 arg-order LPT 被 R1 探针证伪（`node --test` 字典序排序参数），加权分片
+> 思路转入下文；C 路线前提被证伪（snapshot/restore 已普遍落地）；D/E 路线与
+> 后续投资重点已由 `_backlog/plans/regression-suite-step2-heavy-chain-investment.md`
+> 接管。本文件保留为 profiling 历史记录。
+
 > 2026-09-03 | 触发：`close-lifecycle-bypass-detection-gap` 的治理 finalizer
 > 内部跑全量 `npm test`，默认 60s 超时被杀，实际需 3~4.5 分钟。本文件把实测
 > 情况钉死，给出把墙钟压进 1~2 分钟的候选路线。**这是情况反映与方案底稿，
