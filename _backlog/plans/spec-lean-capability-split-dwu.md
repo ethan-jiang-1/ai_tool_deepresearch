@@ -1,6 +1,7 @@
 # Plan: capability-split-dwu（agent/delegated-work-units 一变四）
 
 > 创建: 2026-09-01 | 状态: **活跃（设计定稿；§6 四个决策点待用户复核；复核通过前不启动任何 propose/apply）**
+> 状态同步: 2026-09-03 复核——设计（一变四、原子迁移、reservation 机制）未被推翻，但事实基线因 BUG-252/253（commit 6bc0cf362）漂移：行数 2360→2448、requirement 37→39 块（新增 DEW-030/031，归属预判见 §2 同步注）、内联行 29→32（39 标题中 7 个无内联 ID）。§1/§2/S4/S5 涉及数字一律以 T1 实测重核。
 > 用户决策记录: 2026-09-01 拍板"一定要按 capability 拆"（推翻 CLS-084 的"requirement 级即可"）；同日追问副作用与消解（§4）。
 > 方法依据: `spec-lean-capability-split-dwu` 研究样板 + CLS-084 复盘（`_backlog/_scratch/retro-slimming-plan-pacing-and-tooling.md`）。
 
@@ -10,14 +11,14 @@
 
 | 事实 | 数值/内容 | 复现 |
 |---|---|---|
-| 体量 | spec 2360 行，全库第一（第二名 1380 的 1.7 倍）；37 个 requirement 块 | `wc -l` + 逐块 awk |
-| 注册 ID | DEW-001..029（header 全列；内联 `> req:` 行 1:1 惯例有测试锁 `delegated-queue-spec-text-locks`） | `grep -c '^> req: DEW-' spec.md` |
+| 体量 | spec 2448 行（2026-09-03 实测；plan 时点 2360），全库第一（第二名 research-wave-gate-implementation 1426 的 1.7 倍）；39 个 requirement 块（plan 时点 37 + BUG-252/253 新增 DEW-030/031） | `wc -l` + 逐块 awk |
+| 注册 ID | DEW-001..031（header 全列；内联 `> req:` 行 32 条 / 标题 39 个——7 个标题无内联 ID，1:1 惯例测试锁 `delegated-queue-spec-text-locks` 计数以 T1 实测为准） | `grep -c '^> req: DEW-' spec.md` |
 | 主题聚类（C3e 后） | 15 个主题组天然聚成 4 个互不重叠的任务问题（见 §2），engine 模块缝一一对应 | 分组表见 §2 |
-| 引用网 | 外部引用 **53 处**：catalog 约 10 行、RUN.md 委派表 2 行、3 个其他 spec、governance 1 处、tests 5 处、engine/schema `@impl` 文件 5+ | `grep -rn 'delegated-work-units' …`（排除自身与 archive） |
+| 引用网 | 外部引用 **53 处**（plan 时点）：catalog 约 10 行、RUN.md 委派表 2 行、3 个其他 spec、governance 1 处、tests 5 处、engine/schema `@impl` 文件 5+。2026-09-03 抽核：catalog 引用 DWU 的行 10 行未变；`@impl DEW-` 标签实测 31 处；53 总数由 T1.3 全量重测 | `grep -rn 'delegated-work-units' …`（排除自身与 archive） |
 | catalog 声明 Purpose | "Production delegated work path, work identity, lease, submit transaction, and provenance"——广度是声明过的；本拆分 = 正式修订该声明 | `openspec/specs/README.md` DWU 行 |
 | 首例声明 | 全库治理史上无 capability 级拆分先例（CLS-083 的 extract 是 engine 模块级） | — |
 
-拆分判据（ADR 0005 + catalog Purpose 语义）：37 块聚成 **4 个互不重叠的任务问题**，与 engine 模块缝一一对应——这是能力边界修订，不是文本搬家。
+拆分判据（ADR 0005 + catalog Purpose 语义）：39 块（含 2026-09-03 新增 DEW-030/031）聚成 **4 个互不重叠的任务问题**，与 engine 模块缝一一对应——这是能力边界修订，不是文本搬家。
 
 ---
 
@@ -31,6 +32,8 @@
 | **新 3** | `agent/work-unit-correction` | 失败与漂移如何被**纠正** | 终态转换 fail-closed、forced timeout 终态化（6b）、replace、late-submit、supersession、recover-declaration/transaction | work-unit-lifecycle / -supersession / -submit-late-retry / -transaction* |
 
 规模预期：母体 ~13 块 / submission ~10 块 / preflight ~6 块 / correction ~8 块（精确计数 = T1 首个交付物）。
+
+> **同步注（2026-09-03）**：BUG-252/253 新增两块的归属预判——DEW-030「Generated source-claim authoring guidance SHALL state exact cache/degraded-ref and source_ref value domains with an accepted-and-degraded example」（spec L2363）：generated 投影的 authoring 契约，母体（briefing/投影）与 submission（authoring/validation）双候选，T1.1 优先判定；DEW-031「Dry-submit invalid-result SHALL report duplicate accepted claim URLs and their count」（spec L2417）：dry-submit 诊断，明确归 preflight。两块均 ≤160 行，不影响粒度判据。
 
 ---
 
@@ -57,8 +60,8 @@
 | S1 | 引用网重织：53 处引用的语义指向变模糊（母体还是新家？） | T1 产出 53 处全清单逐条定新家；T2 验收断言：主 specs 内对旧 capability 路径的外部引用 = 0 |
 | S2 | 发现粒度 trade-off：跨生命周期问题从读 1 个 spec 变为跳 4 个 | 母体保留 capability map 导航段（导航指针，非行为）；catalog Keywords/Boundaries 精写使每个问题映射唯一主能力；四能力 Related entries 互相交叉链接 |
 | S3 | `@impl` 语义迁移：一个模块可能实现分属不同新能力的 requirement | T1 产出 `@impl` 全清单；T2 逐条换新 ID；`check-code-impl-ids` 全程绿 |
-| S4 | doc-lock 双文件重写 + 一锁退休：`delegated-queue-spec-text-locks`（timeout-note 测试改读新家文件；inline/body 计数重写）；`dwu-slim-structure-locks`（15 标题断言失效→退休，注释指向各新家结构锁） | T2 同 change 更新；退休锁留后继指针 |
-| S5 | registry 导航成本：29 行 `[DEPRECATED]` + 新 ID 的 old→new 考古 | 弃用行描述统一带后继指针；old→new 对账表随迁移 change 入档 |
+| S4 | doc-lock 双文件重写 + 一锁退休：`delegated-queue-spec-text-locks`（timeout-note 测试改读新家文件；inline/body 计数重写——plan 时点 inline 29，2026-09-03 实测 32/39 标题，以实测为准）；`dwu-slim-structure-locks`（标题数断言失效→退休，注释指向各新家结构锁） | T2 同 change 更新；退休锁留后继指针 |
+| S5 | registry 导航成本：旧 DEW 行 `[DEPRECATED]`（plan 时点 29 行，以 T1 实测为准）+ 新 ID 的 old→new 考古 | 弃用行描述统一带后继指针；old→new 对账表随迁移 change 入档 |
 | S6 | 首例操作的 checker 未知反应 | `governance:check` 前置先跑（预算一轮首跑诊断）；逐个反应按首跑定性 |
 | S7 | 迁移与指针化顺序耦合 | 先迁移（整块逐字节）后指针化（在缩小的真实基线上）；搬运脚本 + 逐字节回验兜底 |
 
@@ -68,7 +71,7 @@
 
 ### T1 测绘（工具产出 + 人审定稿；不触碰任何 accepted 文件）
 
-- [ ] 1.1 37 块逐一判定新家（母体/submission/preflight/correction），产出映射表（块标题 → 新家 → 新 ID）
+- [ ] 1.1 39 块（37 基线 + DEW-030/031）逐一判定新家（母体/submission/preflight/correction），产出映射表（块标题 → 新家 → 新 ID）
 - [ ] 1.2 新前缀 WSU/WUP/WUC 可用性确认（req-registry prefixes 全查 + `check-project-reqs` 预检）
 - [ ] 1.3 53 处引用清单逐条定新家与改写方式
 - [ ] 1.4 `@impl DEW-*` 清单（engine + schema）

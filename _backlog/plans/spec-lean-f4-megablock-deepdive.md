@@ -2,11 +2,12 @@
 
 > 日期: 2026-09-01 | 性质: 参照资料（非 plan，供 `spec-lean-pointerization-and-registry-hygiene` 的 R2 批次复核与执行引用）
 > 方法: 与 C3a–C3e 同款单元解析（顶层块 + 松散列表/引用块并入前属；`#### Scenario:` 独立计数），对全库 ≥190 行 requirement 块逐块勘察。行号为勘察时点值，执行时以装配脚本实时重核为准。
+> 同步: 2026-09-03 复核——§1 十块全部原样（行号 ±1），处置设计仍可用；但全库 ≥190 行块实测为 **11 块**：初版扫描还漏计一块（同此前 hitl-ux / artifact-persistence 两处漏计同类），补记见 §11。
 > 处置图例: **分割**=按散文缝拆为多个 requirement（文本逐字节守恒）；**清理**=删除重复/漂移文本（语义不变）；**保留**=≤160 行或拆分收益不足。
 
 ---
 
-## 总览：10 块 ≥190 行（C3 后实测）
+## 总览：≥190 行块 11 块（初版勘察 10 块 + 2026-09-03 补记 1 块）
 
 | # | spec | 位置 | 规模 | 构成 | 处置 |
 |---|---|---|---|---|---|
@@ -20,6 +21,7 @@
 | 8 | engine/runtime-reentry-debuggability | L363-555 | 193 | 7 散文段 + 20 场景 | **分割 ×2** |
 | 9 | governance/semantic-fact-closure | L98-290 | 193 | 11 散文段 + 12 场景 | **分割 ×3** |
 | 10 | bundle/artifact-persistence-recovery | L122-311 | 190 | 11 散文段 + 15 场景 | **分割 ×2** |
+| 11 | workflow/rerun-incremental-node | L39-229 | 191 | 8 散文段 + 19 场景 | **分割 ×2**（2026-09-03 补记，见 §11） |
 
 拆分后预期：15+3+2+2+2+3+2+2+2+2 = 新增子块全部 ≤ ~170 行；无一需要"删除语义"式清理——但有两处**清理候选**（见 §标记）。
 
@@ -108,6 +110,17 @@
 |---|---|---|
 | A1 | P1-P4, P6-P8 | persist/publish 命令参数、canonical inventory、分配与序列化 |
 | A2 | P5, P9-P11 | 严格结果、`final/final*.md` 保留命名空间、路径分类前置 |
+
+### 11. rerun-incremental-node L39-229（191 行，8 散文段，19 场景）— 分割 ×2（2026-09-03 补记）
+
+`### Requirement: Rerun node analyzes rationale vs seed_topics and produces topic adjustment plan`（workflow/rerun-incremental-node）。该文件自 2026-08-29（terminology purge）后未再改动——属初版全库扫描漏计，非新增吸积。散段分界（勘察值）：P1@41 语义调整计划的输入与构成、P2@49 labelled focus 只作用于受影响 Topic、P3@58 恰一个 topic-state apply form、P4@67 UID-bound `## 本轮重跑方向` 段内容、P5@75 apply 先行 / blocker 修复 / rerun_count / style owner / rerun-ready gate、P6@86 机械 blocker 不上抛、P7@92 布局只用 canonical apply + 历史路径不动 + remove 需 Engine 证明、P8@100 route-bound witness 授权（normal HITL2 / post-final reentry）。
+
+| 新 requirement | 承载散文 | 场景 | 主题 |
+|---|---|---|---|
+| K1 | P1-P4, P7 | S1@113、S7@148、S8@152、S9@156、S10@163、S11@171、S17@210、S18@216、S19@225（9 个） | 调整计划与 apply 形态：focus 作用域、add/refine/direction/layout 形式、seed 方向段、历史保全、Engine 证明的 remove |
+| K2 | P5, P6, P8 | S2@121、S3@126、S4@130、S5@135、S6@143、S12@177、S13@182、S14@188、S15@194、S16@202（10 个） | 授权与执行：route-bound witness、状态窗与 rerun-ready gate、rerun_count 循环保护、style projection、机械 blocker |
+
+**初稿性质**：K1/K2 主题分界与场景归组为 2026-09-03 人工勘察初稿，执行时按执行注记 1 的同款单元解析重核（declared==actual 断言）；两子块预期均 ≤160 行（勘察初估 ~130）。注意 CTS 的 mutate_layout 授权（BUG-248，commit bb145ccab）与本块 P3/S9 语义联动——若届时 canonical-topic-state 再动 layout 契约，先对齐再拆。
 
 ---
 

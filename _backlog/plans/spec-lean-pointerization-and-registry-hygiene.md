@@ -1,6 +1,7 @@
 # Plan: spec-lean-pointerization-and-registry-hygiene
 
 > 创建: 2026-09-01 | 状态: **活跃（事实与思路定稿；主线进度见 §8；执行待用户指令）**
+> 状态同步: 2026-09-03——主线批次 R0–R5 均未启动；期间仓库完成 BUG-248..253 修复与 CLS-085 回归套件提速（每批全量 npm test 成本下降）。两处顺路变化：15 死前缀注记已存在（R3 第一项过时，见 §3）；§-guard 基线在本 plan 定稿前已落地（4a18e9fdf），R4 仅剩扩展项。事实基线数字更新见 §1 各同步注。
 > 来源: 用户指示"再打扫一遍：spec 是否啰嗦、是否与代码/Prompt 对齐、registry `[DEPRECATED]` 能清多少清多少"。
 > 承接: CLS-084（`spec-drift-audit-remediation-and-requirement-slimming`，2026-09-01 关闭——修好了 requirement 粒度，本轮做**减量、堵盲区、清账本**）。
 > 复核说明: 本文件自包含。§1 每条事实附【复现】命令；§3 每批附判定规则与边界；§2.0/§2.3 为分割触点与红线；§8 为主线进度 checkitems。
@@ -20,7 +21,7 @@
 
 ### F1. Registry 账本规模
 
-- 注册 ID 总数 **681**，`[DEPRECATED]` **61 条**，0 orphan。政策为"只增不删、废弃追加 `[DEPRECATED]`、ID 永不复用"。
+- 注册 ID 总数 **681**（2026-09-03 实测 **694**——BUG-248..253 各 change 追加），`[DEPRECATED]` **61 条**（09-03 复测未变），0 orphan。政策为"只增不删、废弃追加 `[DEPRECATED]`、ID 永不复用"。
 - 【复现】`grep -cE '^[A-Z]{3}-[0-9]{3}:' openspec/governance/req-registry.yaml` 与 `grep -cE '\[DEPRECATED\]' openspec/governance/req-registry.yaml`；orphan 由 `node openspec/governance/check-project-reqs.mjs` 报告。
 
 ### F2. prefixes 映射含 15 个死前缀
@@ -28,6 +29,7 @@
 `BUS/FOR/GAC/LFW/RPG/SEG/SRD/SUC/SUR/SUS/WDM/WMD/WFS/WLO/WML` 指向的 capability 目录均已不存在（pre-ADR-0005 时代遗留家族：bundle-start-from-here、fork-repair-converge、gate-content-dedup、lifecycle-walker、relay-provenance-gate、seg2node、subagent-relay-driver、subagent-collect、subagent-repair、subagent-slots、workflow-dynamic-md-load、workflow-md-dependencies、workflow-fsm-definition、workflow-chain-observability、workflow-manifest-loading）。
 - 【复现】用 §1.1 末尾的内联 node 脚本（existsSync 检查 `openspec/specs/<capability>`），或 `grep -E '  [A-Z]{3}: ' openspec/governance/req-registry.yaml` 后对每条 `openspec/specs/<path>` 做 existsSync。
 - 备注: 对应的 DEPRECATED ID 主要集中在 relay-provenance-gate ×13、gate-content-dedup ×9、subagent-relay-driver ×4、lifecycle-walker ×3、bundle-start-from-here ×3。
+- **同步注（2026-09-03）**：15 个死前缀现已**全部**带行内注记 `# all entries deprecated; no spec directory`（部分另带 replacement 指针，如 SRD → FRE/DEW），且在 plan 定稿 commit 时即已存在——R3 第一项的目标形态已达成（见 §3 R3 更新），仅剩注记事实准确性核对。
 
 ### F3. 退役家族在活表面的"回声"极小
 
@@ -52,10 +54,11 @@
 仓库常态：中位 26 行、p90 100 行（CLS-084 实测 657 条 requirement）。
 
 > **深挖更新（同日）**：按用户指示对 F4 逐块深挖后，≥190 行块实测为 **10 块**（原表漏计 hitl-ux 195 与 artifact-persistence-recovery 190），且各块散文/场景结构、主题分界、逐块处置（分割 ×N / 清理候选）已逐一设计完毕——完整处置表与执行约束见参照资料 [`spec-lean-f4-megablock-deepdive.md`](spec-lean-f4-megablock-deepdive.md)，并已并入 §3 R2 批次设计。
+> **再修正（2026-09-03）**：全库 ≥190 行块实测为 **11 块**——初版扫描还漏计 workflow/rerun-incremental-node 191 行块（该文件 2026-08-29 后未动，属漏计非新增），分割 ×2 初稿已补入深挖 §11，R2 清单同步。
 
 ### F5. 整 spec 体量：DWU 是第二名 1.7 倍，且含复述段
 
-- `agent/delegated-work-units/spec.md` **2360 行**（第二名 research-wave-gate-implementation 1380）。粒度已修（37 块、最大 ~160），但含"generated task / task.md / spawn / Generated guidance / Generated actor guidance / Generated work-unit task"类**复述 prompt 职责的散文**——【复现】`grep -c 'generated task\|task\.md\|spawn\|Generated guidance\|Generated actor\|Generated work-unit task' openspec/specs/agent/delegated-work-units/spec.md` ≈ 30 行命中（指针化候选锚点）。
+- `agent/delegated-work-units/spec.md` **2448 行**（2026-09-03 实测；plan 时点 2360；第二名 research-wave-gate-implementation 现 1426）。粒度已修（39 块、最大 137），但含"generated task / task.md / spawn / Generated guidance / Generated actor guidance / Generated work-unit task"类**复述 prompt 职责的散文**——【复现】`grep -c 'generated task\|task\.md\|spawn\|Generated guidance\|Generated actor\|Generated work-unit task' openspec/specs/agent/delegated-work-units/spec.md` ≈ 30 行命中（plan 时点；2026-09-03 实测 **36**——BUG-252/253 的 DEW-030 又增 generated-task 契约散文，R1c 指针化候选随之变多）。
 - 全库 main specs 总行数 30621（C3 前 30830）——C3 是重组不是减量，减量靠本轮。
 
 ### F6. 对齐现状
@@ -169,16 +172,18 @@
 
 
 
-逐块处置设计已定稿于参照资料 [`spec-lean-f4-megablock-deepdive.md`](spec-lean-f4-megablock-deepdive.md)：**10 块 → 分割为 25 个子块**（post-final-recovery ×4、content-delivery-phase-content ×3、cli-phase-transition ×3、research-wave-phase-content ×3、semantic-fact-closure ×3、workflow-directory-contract ×2、seed-topic-materialization ×2、hitl-ux ×2、runtime-reentry-debuggability ×2、artifact-persistence-recovery ×2），全部 ≤ ~170 行；含 1 处清理候选（HITL2 确认语义疑似重复，需逐字比对后定夺）与 1 处指针化候选（post-final-recovery CLI 复述段 → `command_playbook/post-final-recovery.md`）。
+逐块处置设计已定稿于参照资料 [`spec-lean-f4-megablock-deepdive.md`](spec-lean-f4-megablock-deepdive.md)：**10 块 → 分割为 25 个子块**（post-final-recovery ×4、content-delivery-phase-content ×3、cli-phase-transition ×3、research-wave-phase-content ×3、semantic-fact-closure ×3、workflow-directory-contract ×2、seed-topic-materialization ×2、hitl-ux ×2、runtime-reentry-debuggability ×2、artifact-persistence-recovery ×2），全部 ≤ ~170 行；含 1 处清理候选（HITL2 确认语义疑似重复，需逐字比对后定夺）与 1 处指针化候选（post-final-recovery CLI 复述段 → `command_playbook/post-final-recovery.md`）。2026-09-03 补记：另有 workflow/rerun-incremental-node 191 行块 ×2（处置初稿见深挖 §11）——合计 **11 块 → 27 子块**。
 **清理思路**：同 R1；其中 phase-content 系的 owner 就是各 phase 节点（指针目标天然存在）。
 
 ### R3（1 change）——registry 卫生（用户点名项）
 
-- 15 死前缀：**不删映射键**（check-project-reqs 解析与 ID 历史可追溯性优先），改为键值行内追加历史注记（如 `BUS: bundle-start-from-here  # historical, capability dir retired pre-ADR-0005`），或迁入文件内"Historical prefixes"注释分节——以 check-project-reqs 全绿为门槛择一。
+- 15 死前缀注记：**✅ 已达成（2026-09-03 核实；先于本 plan 定稿即存在）**——15 个前缀全部带行内注记 `# all entries deprecated; no spec directory`（部分带 replacement 指针）。剩余动作降级为：核对注记事实准确性（replacement 指针是否成立），不再需要立项级改动；check-project-reqs 现状全绿。
 - 61 条 DEPRECATED 描述逐条核对：仅修正**事实性错误**（旧路径名、已更名家族的拼写），描述改为可读史实（如 "content no longer exists in any accepted surface (archaeology <date>)" 的既有风格）；不改 ID、不复活、不删行。
 - 产出对账表：退役家族 × 活表面回声 = 0/刻意否定/负向锁（F3 数据入档）。
 
 ### R4（1 change）——guard 扩展（防复发闭环）
+
+> 基线状态（2026-09-03）：`check-spec-section-references.mjs` 本体已在 plan 定稿前落地（4a18e9fdf）；以下均为纯扩展项。
 
 - `check-spec-section-references.mjs` 增规则：phase 节点/playbook **内部** `§X.Y` 自引用可解析（phase-seed-topics 样本健康，扩展后全库首扫定标）。
 - 引擎导航注释幽灵符号检查泛化为 governance checker（当前只有 C1 的单文件测试 `rrm-spec-truth-sync-text-locks` 覆盖 return-map.mjs；104 文件全量 0 幽灵应成为机器断言）。
@@ -210,7 +215,7 @@
 
 ## 4. 全局验收度量（随每批提交落地 before/after）
 
-- [ ] 全库无 requirement 块 > 160 行（含 post-final-recovery 357 与 R2 长尾全部）。
+- [ ] 全库无 requirement 块 > 160 行（含 post-final-recovery 357 与 R2 长尾全部）。**⚠️ 待拍板（2026-09-03 实测）**：全库 ≥160 行块共 **21 块**——11 块 ≥190 在 R2 清单内；160–190 区间另有 10 块不在任何批次清单（reference-flat-format 187 / agent-command-surface 187 / subagent-node-contract 182 / CPT-004 179 / RWP 177 / version-management 174 / CDP-Final 173 / change-feedback-loop 171 / HITL1 163 / wave1-intake 161）。二选一：扩 R2 长尾覆盖全量 ≥160，或本条验收口径改为 ≥190。
 - [ ] `agent/delegated-work-units` 总行数 before/after 随 R1 提交报告（基线 2360；目标量级以 R0 扫描器实测为准）。
 - [ ] registry：15 死前缀全部注记/迁出；61 条 DEPRECATED 核对对账表入档；活跃 ID 与政策零变化；`check-project-reqs` 全程绿。
 - [ ] §-guard 覆盖 prompt 自引用；引擎幽灵符号泛化 checker 接入 check-all；全库首扫定标。
@@ -262,8 +267,9 @@
   - [ ] seed-topic-materialization 196 块 ×2
   - [ ] runtime-reentry-debuggability 193 块 ×2
   - [ ] artifact-persistence-recovery 190 块 ×2
-- [ ] **R3 registry 卫生**：15 死前缀注记 + 61 条 DEPRECATED 描述核对 + old→new 对账表（含 R1 迁移映射）
-- [ ] **R4 guard 扩展**：prompt 内部 `§X.Y` 自引用可解析 + 引擎导航注释幽灵符号 checker（两者接入 check-all）
+  - [ ] rerun-incremental-node 191 行块 ×2（2026-09-03 补记，处置初稿见深挖 §11）
+- [ ] **R3 registry 卫生**：~~15 死前缀注记~~（✅ 已存在，降级为注记事实核对）+ 61 条 DEPRECATED 描述核对 + old→new 对账表（含 R1 迁移映射）
+- [ ] **R4 guard 扩展**（基线 guard 已落地，纯扩展）：prompt 内部 `§X.Y` 自引用可解析 + 引擎导航注释幽灵符号 checker（两者接入 check-all）
 - [ ] **R5 housekeeping**：小修合并（M1/M4/M5 若前批未顺手处理）
 
 - [ ] **完成定义**：§8 全勾 → 按 `_backlog/plans/README.md` 四步移档关闭本 plan。
