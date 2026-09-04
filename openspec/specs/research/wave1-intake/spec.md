@@ -233,7 +233,7 @@ Current primary demand SHALL use `payload.assignment_mode: "primary"` with exact
 
 Supplementary Wave1 deepening queue items SHALL use the same work-unit path. Their `queue_item_id` MAY include a suffix such as `-v2` or `-suppl-rN`, but identity SHALL come from explicit `payload.topic_uid` plus current `payload.topic_slug`, and assignment intent SHALL come only from `payload.assignment_mode`. Queue item ID parsing SHALL NOT supply either fact for current cards.
 
-An unclaimed Wave1 card missing assignment_mode SHALL return to AGQ-013 `repair --queue-item-id --set-assignment-mode` and SHALL NOT be claimed through compatibility inference. A work-unit attempt already claimed before assignment_contract_version existed MAY retain the bounded legacy submit semantics defined by delegated-work-units; queue-card repair SHALL NOT retrofit or reinterpret that attempt.
+An unclaimed Wave1 card missing assignment_mode SHALL return to AGQ-013 `repair --queue-item-id --set-assignment-mode` and SHALL NOT be claimed through compatibility inference. A work-unit attempt already claimed before assignment_contract_version existed MAY retain the bounded legacy submit semantics defined by `agent/work-unit-submission`; queue-card repair SHALL NOT retrofit or reinterpret that attempt.
 
 Persisted historical queue/terminal items MAY remain readable without assignment_mode. Current operation admission, rather than historical storage parsing, SHALL enforce the field before new enqueue/claim success. A planned Wave1 claim batch SHALL validate every candidate's mode/receipt/Topic obligation before any member is allocated.
 

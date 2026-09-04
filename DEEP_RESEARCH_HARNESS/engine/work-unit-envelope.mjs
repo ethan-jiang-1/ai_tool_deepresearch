@@ -1,4 +1,4 @@
-// @impl DEW-002, DEW-022, DEW-024, DEW-030, SNC-008, WAI-008, WTS-010
+// @impl DEW-002, DEW-022, WUC-009, DEW-030, SNC-008, WAI-008, WTS-010
 // Work-unit envelope: file refs, result schema, task markdown, spawn prompt, envelope write.
 
 import {

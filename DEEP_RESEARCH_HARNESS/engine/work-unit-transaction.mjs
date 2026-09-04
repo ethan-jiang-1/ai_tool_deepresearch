@@ -1,4 +1,4 @@
-// @impl DEW-023, CHI-004
+// @impl WUC-002, CHI-004
 // Global work-unit mutation transaction, contention projection, and proof-bounded recovery.
 
 

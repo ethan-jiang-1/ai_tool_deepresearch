@@ -3,7 +3,7 @@
 // 1) 涉改 requirement 块内旧漂移句不再出现、新锚点句存在；
 // 2) delta 块与 main spec 对应 requirement 块逐字同步（整块替换语义）。
 // @impl CHI-004
-// @impl DEW-012
+// @impl WSU-003 (DEW-012 migrated 2026-09-04)
 // @impl AGQ-007
 // @impl AGQ-027
 import { test } from 'node:test';
@@ -16,7 +16,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const read = (p) => readFileSync(join(ROOT, p), 'utf8');
 
 const CIF = 'openspec/specs/engine/check-inspect-feedback/spec.md';
-const DEW = 'openspec/specs/agent/delegated-work-units/spec.md';
+const DEW = 'openspec/specs/agent/work-unit-submission/spec.md'; // DEW-012 migrated to WSU-003 (2026-09-04 dwu split)
 const AGQ = 'openspec/specs/agent/agentic-queue/spec.md';
 const CDP = 'openspec/specs/research/content-delivery-phase-content/spec.md';
 

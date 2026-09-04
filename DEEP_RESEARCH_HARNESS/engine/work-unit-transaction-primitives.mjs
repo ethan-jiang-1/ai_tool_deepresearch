@@ -1,7 +1,7 @@
 // work-unit-transaction-primitives.mjs
 // Layer 0: filesystem-transaction mechanics (C4 T5, move-only) — paths, hashing,
 // before-image capture/restore, undeclared-mutation diff. No projection deps.
-// @impl DEW-023, CHI-004
+// @impl WUC-002, CHI-004
 
 import {
   existsSync,

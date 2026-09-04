@@ -1,6 +1,6 @@
 // work-unit-submit-late-retry.mjs
 // Audited late-submit flow (C4 T3, move-only).
-// @impl DEW-006, DEW-015
+// @impl WUC-006, WUC-007
 
 import {
   existsSync,

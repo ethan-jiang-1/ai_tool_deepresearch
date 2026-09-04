@@ -719,8 +719,10 @@ Explicit audited `operate-work-unit late-submit` is the only terminal recovery c
 > `DEEP_RESEARCH_HARNESS/engine/queue-manager-lifecycle.mjs`). It is a
 > different deterministic fact from work-unit timeout *eligibility*, which is
 > decided by the effective idle lease (`lease_anchor_at + idle_timeout_ms`)
-> and owned by the `agent/delegated-work-units` requirement "Timeout
-> terminalization SHALL be guarded by progress-aware preflight". The two
+> and owned by the work-unit preflight requirement "Timeout preflight SHALL
+> be a progress-aware read-only recommendation" (`agent/work-unit-preflight`),
+> with terminalization owned by "Timeout terminalization SHALL run the same
+> guard with explicit audit" (`agent/work-unit-correction`). The two
 > criteria govern two different operations and SHALL NOT be read as one
 > shared expiration semantics or substituted for each other.
 

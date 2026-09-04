@@ -1,7 +1,7 @@
 // work-unit-submit-snapshot.mjs
 // Snapshot/durability mechanics shared by submit, late-submit and declaration-recovery
 // flows (C4 T2, move-only). Hosts the shared durable-state queries (base layer).
-// @impl DEW-005, DEW-007, DEW-011
+// @impl WSU-001, WSU-006, WSU-008
 
 import {
   existsSync,

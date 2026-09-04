@@ -282,10 +282,10 @@
 
 ### C2 `dwu-capability-identity-split`（R1 主力；设计 = `spec-lean-capability-split-dwu.md`）
 
-- [ ] 2.1 R1a 测绘（propose 阶段交付：39 块新家判定 + WSU/WUP/WUC ID 分配表 + 引用清单 + `@impl` 清单 + doc-lock 清单；DEW-030 归属按 REVIEW 证据定案）
-- [ ] 2.2 R1b 原子迁移（3 新 capability spec + 母体瘦身 + registry `[DEPRECATED]`/新 ID + catalog 3 新行与 Purpose 改写 + `@impl`/doc-lock 对齐；禁止半迁移态）
-- [ ] 2.3 R1c 迁移后指针化（G2 已拍板并入：迁移任务全绿后进入）
-- [ ] 2.4 before/after 度量随提交（基线 2448）
+- [x] 2.1 R1a 测绘（propose 阶段交付：39 块新家判定/ + WSU/WUP/WUC ID 分配表 + 引用清单 + `@impl` 清单 + doc-lock 清单；DEW-030 归属按 REVIEW 证据定案）
+- [x] 2.2 R1b 原子迁移（3 新 capability spec + 母体瘦身 + registry `[DEPRECATED]`/新 ID + catalog 3 新行与 Purpose 改写 + `@impl`/doc-lock 对齐；禁止半迁移态）
+- [x] 2.3 R1c 迁移后指针化（G2 已拍板并入：迁移任务全绿后进入）—— 审毕零转换，见 calibration-r1c.md
+- [x] 2.4 before/after 度量随提交（基线 2448 → 母体 963 + 三新家 8+6+9 块；change 2026-09-04-dwu-capability-identity-split 归档，finalizer 19/19）
 
 ### C3 `megablock-requirement-split`（R2；设计 = `spec-lean-f4-megablock-deepdive.md` 处置表）
 

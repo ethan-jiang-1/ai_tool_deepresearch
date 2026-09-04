@@ -1,4 +1,4 @@
-// @impl DEW-005, DEW-013, DEW-023, DEW-024, CHI-004, FRE-005, EXO-001
+// @impl WSU-001, WUP-001, WUC-002, WUC-009, CHI-004, FRE-005, EXO-001
 // Work-unit submit and dry-submit preflight: validation planning, durability, ledger row building, rejection, prepare and submit.
 
 // Navigation: public API — reasonCodeForSubmit, drySubmitWorkUnit, lateSubmitWorkUnit, recoverWorkUnitDeclaration, inspectWorkUnitDeclarationRecovery, submitWorkUnit

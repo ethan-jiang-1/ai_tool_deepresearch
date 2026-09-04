@@ -123,6 +123,9 @@ prefixes:
   WNC: workflow/workflow-node-contract
   WPG: agent/work-unit-provenance-gate
   WTS: research/wave2-synthesis
+  WSU: agent/work-unit-submission
+  WUP: agent/work-unit-preflight
+  WUC: agent/work-unit-correction
 
 # agent/agent-command-surface
 ACS-001: agent-command-surface — Agent-facing command responsibility distinguishes autonomous execution, HITL/out-of-band human direction, legal repair, permission, and Engine authority
@@ -199,32 +202,32 @@ DEW-001: delegated-work-units — Work-unit pipeline is the sole production dele
 DEW-002: delegated-work-units — Work-unit identity and Engine-owned allocation index
 DEW-003: delegated-work-units — Queue demand binding, leases, and in-flight attempt state
 DEW-004: delegated-work-units — Work-unit envelope, manifest, beacon, task, result, and receipt nonce surfaces
-DEW-005: delegated-work-units — Submit transaction is the only successful delegated completion transition
-DEW-006: delegated-work-units — Terminal attempts and timeout retry allocate replacement work IDs
-DEW-007: delegated-work-units — Submitted work-unit ledger rows are delegated gate coverage authority
-DEW-008: delegated-work-units — Non-work-unit delegated artifacts are cleanup diagnostics only
+DEW-005: delegated-work-units — Submit transaction is the only successful delegated completion transition [DEPRECATED]; migrated to WSU-001 (agent/work-unit-submission)
+DEW-006: delegated-work-units — Terminal attempts and timeout retry allocate replacement work IDs [DEPRECATED]; migrated to WUC-006 (agent/work-unit-correction)
+DEW-007: delegated-work-units — Submitted work-unit ledger rows are delegated gate coverage authority [DEPRECATED]; migrated to WSU-006 (agent/work-unit-submission)
+DEW-008: delegated-work-units — Non-work-unit delegated artifacts are cleanup diagnostics only [DEPRECATED]; migrated to WUC-005 (agent/work-unit-correction)
 DEW-009: delegated-work-units — Work-unit tasks expose bundle-root absolute paths and write-before-return verification
-DEW-010: delegated-work-units — Submitted result and ledger hashes detect post-submit drift before gate pass
-DEW-011: delegated-work-units — Successful work-unit submit verifies durable queue postconditions before reporting success
-DEW-012: delegated-work-units — Work-unit submit performs narrow canonicalization for predictable LLM-shaped result, receipt, cache, and nonce drift
-DEW-013: delegated-work-units — Work-unit dry-submit preflights submit validation without side effects
-DEW-014: delegated-work-units — Timeout terminalization is guarded by progress-aware preflight
-DEW-015: delegated-work-units — Audited late-submit recovers eligible timed-out work units without identity rewrite
+DEW-010: delegated-work-units — Submitted result and ledger hashes detect post-submit drift before gate pass [DEPRECATED]; migrated to WSU-007 (agent/work-unit-submission)
+DEW-011: delegated-work-units — Successful work-unit submit verifies durable queue postconditions before reporting success [DEPRECATED]; migrated to WSU-008 (agent/work-unit-submission)
+DEW-012: delegated-work-units — Work-unit submit performs narrow canonicalization for predictable LLM-shaped result, receipt, cache, and nonce drift [DEPRECATED]; migrated to WSU-003 (agent/work-unit-submission)
+DEW-013: delegated-work-units — Work-unit dry-submit preflights submit validation without side effects [DEPRECATED]; migrated to WUP-001 (agent/work-unit-preflight)
+DEW-014: delegated-work-units — Timeout terminalization is guarded by progress-aware preflight [DEPRECATED]; migrated to WUP-003 (agent/work-unit-preflight)
+DEW-015: delegated-work-units — Audited late-submit recovers eligible timed-out work units without identity rewrite [DEPRECATED]; migrated to WUC-007 (agent/work-unit-correction)
 DEW-016: delegated-work-units — Work-unit claim evaluates one explicit role-bound actor observation before allocation
-DEW-017: delegated-work-units — Explicit single Phase Agent fallback remains inside the work-unit submit envelope
+DEW-017: delegated-work-units — Explicit single Phase Agent fallback remains inside the work-unit submit envelope [DEPRECATED]; migrated to WUC-008 (agent/work-unit-correction)
 DEW-018: delegated-work-units — Work-unit records preserve truthful execution actor provenance with legacy compatibility
 DEW-019: delegated-work-units — Work-unit provenance inherits UID-bound queue identity without duplicate result or ledger fields
 DEW-020: delegated-work-units — Existing task_brief may carry a beacon-rooted read-only user-controls coordinate without work-unit authority expansion
 DEW-021: delegated-work-units — Delegated work contract entry is constructible from one generated projection
 DEW-022: delegated-work-units — Work-unit attempts expose logical execution guidance from existing attempt bindings
-DEW-023: delegated-work-units — Submit exposes a bounded integrity preflight and transaction disposition
-DEW-024: delegated-work-units — Submitted correction uses audited supersession and one fresh successor
-DEW-025: delegated-work-units — Current Wave0 work-unit contracts expose submitted source contributions without a competing rich-reference route
+DEW-023: delegated-work-units — Submit exposes a bounded integrity preflight and transaction disposition [DEPRECATED]; migrated to WUC-002 (agent/work-unit-correction)
+DEW-024: delegated-work-units — Submitted correction uses audited supersession and one fresh successor [DEPRECATED]; migrated to WUC-009 (agent/work-unit-correction)
+DEW-025: delegated-work-units — Current Wave0 work-unit contracts expose submitted source contributions without a competing rich-reference route [DEPRECATED]; migrated to WSU-005 (agent/work-unit-submission)
 DEW-027: delegated-work-units — Sub-agents do not own workflow authority
-DEW-028: delegated-work-units — Dry-submit cache-URL mismatch diagnostics carry the recorded leaf urls
-DEW-029: delegated-work-units — Dry-submit runtime-receipt schema diagnostics carry the raw value, all affected lines, and the expected format
+DEW-028: delegated-work-units — Dry-submit cache-URL mismatch diagnostics carry the recorded leaf urls [DEPRECATED]; migrated to WUP-004 (agent/work-unit-preflight)
+DEW-029: delegated-work-units — Dry-submit runtime-receipt schema diagnostics carry the raw value, all affected lines, and the expected format [DEPRECATED]; migrated to WUP-005 (agent/work-unit-preflight)
 DEW-030: delegated-work-units — Generated source-claim authoring guidance states cache/degraded-ref and source_ref value domains with an accepted-and-degraded example
-DEW-031: delegated-work-units — Dry-submit invalid-result reports duplicate accepted claim urls and their count
+DEW-031: delegated-work-units — Dry-submit invalid-result reports duplicate accepted claim urls and their count [DEPRECATED]; migrated to WUP-006 (agent/work-unit-preflight)
 DEW-026: delegated-work-units — Affected delegated work receives current intent through the existing task brief
 
 # agent/hitl-ux
@@ -1011,3 +1014,28 @@ WML-001: workflow-manifest-loading — Workflow-next runtime initializes without
 
 # workflow-md-dependencies — all entries deprecated; no spec directory
 WMD-001: workflow-md-dependencies — Markdown frontmatter requires dependency closure resolution [DEPRECATED]
+WSU-001: work-unit-submission — Submit remains the only successful delegated completion authority
+WSU-002: work-unit-submission — Successful submit completes queue demand and records contribution boundaries
+WSU-003: work-unit-submission — Submit canonicalization stays a narrow bounded stage
+WSU-004: work-unit-submission — Accepted submits persist canonical authority without widening the boundary
+WSU-005: work-unit-submission — Current Wave0 work-unit contracts expose submitted source contributions without a competing rich-reference route
+WSU-006: work-unit-submission — Gates read submitted work-unit ledger coverage
+WSU-007: work-unit-submission — Submitted result and ledger hashes detect post-submit drift before gate pass
+WSU-008: work-unit-submission — Successful work-unit submit verifies durable queue postconditions
+WUP-001: work-unit-preflight — Dry-submit is a read-only structured preflight mirroring submit semantics
+WUP-002: work-unit-preflight — Dry-submit keeps provenance strict through one neutral target module
+WUP-003: work-unit-preflight — Timeout preflight is a progress-aware read-only recommendation
+WUP-004: work-unit-preflight — Dry-submit cache-URL mismatch diagnostics carry the recorded leaf urls
+WUP-005: work-unit-preflight — Dry-submit runtime-receipt schema diagnostics carry the raw value, affected lines, and expected format
+WUP-006: work-unit-preflight — Dry-submit invalid-result reports duplicate accepted claim urls and their count
+WUC-001: work-unit-correction — Timeout terminalization runs the same guard with explicit audit
+WUC-002: work-unit-correction — Submit integrity shares one read-only transaction fact
+WUC-003: work-unit-correction — Journal disposition is a closed enum with declared recovery boundaries
+WUC-004: work-unit-correction — Transaction recovery settles journals without stealing locks
+WUC-005: work-unit-correction — Invalid submit remains non-terminal
+WUC-006: work-unit-correction — Terminal attempt transitions fail closed
+WUC-007: work-unit-correction — Audited late-submit recovers eligible timed-out work units
+WUC-008: work-unit-correction — Phase Agent fallback stays inside the work-unit transaction
+WUC-009: work-unit-correction — Submitted correction uses audited supersession and one fresh successor
+DEW-032: delegated-work-units — Envelope readers and generated projections stay consistent with the claim profile
+DEW-033: delegated-work-units — Task verification and generated guidance bind required outputs and role contracts

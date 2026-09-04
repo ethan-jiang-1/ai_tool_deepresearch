@@ -1,4 +1,4 @@
-// @impl DEW-002, DEW-003, DEW-004, DEW-006, DEW-014, DEW-023, DEW-024, CHI-004, EXO-001, SWE-006
+// @impl DEW-002, DEW-003, DEW-004, WUC-006, WUP-003, WUC-002, WUC-009, CHI-004, EXO-001, SWE-006
 // Work-unit lifecycle: create, parse phase, eligibility, claim, close, batch open.
 
 // Navigation: public API — createWorkUnit, parsePhase, defaultKindForWave, itemWave, isEligibleDelegatedItem, countUnclaimedDelegated, phaseInFlight, openWorkUnitBatch, claimWorkUnits, replaceWorkUnitAttempt, closeWorkUnitAttempt

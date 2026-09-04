@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// @impl RET-006, DEW-001, DEW-008, AGQ-019, FRE-005, RWG-018
+// @impl RET-006, DEW-001, WUC-005, AGQ-019, FRE-005, RWG-018
 // Static hygiene gate for the current work-unit delegated path.
 
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';

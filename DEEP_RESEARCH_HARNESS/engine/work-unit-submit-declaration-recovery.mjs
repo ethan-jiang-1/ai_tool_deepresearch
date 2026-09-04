@@ -1,7 +1,7 @@
 // work-unit-submit-declaration-recovery.mjs
 // Declaration recovery flow (C4 T4, move-only): rebuilds missing ledger rows
 // from submit evidence with zero canonicalization.
-// @impl DEW-008, CHI-004
+// @impl WUC-005, CHI-004
 
 import {
   existsSync,

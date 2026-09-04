@@ -1,4 +1,4 @@
-// @impl DEW-024, WPG-016
+// @impl WUC-009, WPG-016
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 

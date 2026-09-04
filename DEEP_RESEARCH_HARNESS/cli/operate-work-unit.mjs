@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// @impl FRE-005, DEW-002, DEW-006, DEW-013, DEW-014, DEW-023, DEW-024, CHI-004
+// @impl FRE-005, DEW-002, WUC-006, WUP-001, WUP-003, WUC-002, WUC-009, CHI-004
 // Work-unit CLI: claim/inspect/dry-submit/submit/late-submit/recovery/terminal/inspect lifecycle surface.
 // Full verb set: claim, dry-submit, submit, late-submit, recover-declaration,
 // recover-transaction, replace, supersede, fail, timeout, timeout-preflight,

@@ -1,4 +1,4 @@
-// @impl DEW-004, DEW-017, DEW-024
+// @impl DEW-004, WUC-008, WUC-009
 // One current-profile boundary for every Engine reader of an existing work unit.
 // Input: work-unit record → Output: bounded current profile (validity + shape)
 // → Consumers: submit, disposition, integrity checks.

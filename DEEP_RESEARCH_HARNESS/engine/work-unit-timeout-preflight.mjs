@@ -1,4 +1,4 @@
-// @impl DEW-014, DEW-023, CHI-004
+// @impl WUP-003, WUC-002, CHI-004
 // Read-only progress-aware timeout preflight for delegated work-unit attempts.
 
 import {

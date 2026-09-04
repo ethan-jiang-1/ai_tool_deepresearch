@@ -42,8 +42,8 @@ At decision points, read any emitted `continuation` cue immediately: gate pass/f
 | 触发/主题 | 规则 | Owner(canonical home) |
 |---|---|---|
 | Delegated 唯一路径 | Delegated sub-agent work 只走 Engine-mediated work-unit path：queue demand item -> `operate-work-unit claim` -> sub-agent task under bundle-root `_work_units/` -> verified files/cache/result/receipt under the selected current run bundle root -> `operate-work-unit submit` -> submitted ledger row -> gate | `../openspec/specs/agent/delegated-work-units/spec.md` |
-| Submit 受纳 | Normal `submit` accepts claimed attempts only；resubmitting the exact same hash 是幂等成功，只有 different-content duplicate 被拒绝 | `../openspec/specs/agent/delegated-work-units/spec.md` |
-| 终态恢复例外 | 唯一终态恢复例外是 explicit audited `operate-work-unit late-submit`，仅针对 eligible `timed_out` 且尚无替补提交的 attempts | `../openspec/specs/agent/delegated-work-units/spec.md` |
+ Submit 受纳 | Normal `submit` accepts claimed attempts only；resubmitting the exact same hash 是幂等成功，只有 different-content duplicate 被拒绝 | `../openspec/specs/agent/work-unit-submission/spec.md` |
+ 终态恢复例外 | 唯一终态恢复例外是 explicit audited `operate-work-unit late-submit`，仅针对 eligible `timed_out` 且尚无替补提交的 attempts | `../openspec/specs/agent/work-unit-correction/spec.md` |
 | 完成语义边界 | 不把 queue completion 当 delegated success；`operate-queue complete` 只用于 non-delegated queue work | `../openspec/specs/agent/agentic-queue/spec.md` |
 | Bare path 归属 | `_work_units/...`、`rb_queue.json`、`reference/`、`artifacts/`、`_cache/`、`_logs/` 等 bare runtime paths 都 resolve under 当前选定的 run bundle root，不是 repo root 或 `DEEP_RESEARCH_HARNESS/` | `../openspec/specs/workflow/workflow-directory-contract/spec.md` |
 
@@ -73,7 +73,7 @@ The test-locked decision table below is the single disposition → `recovery_act
 
 | 触发/主题 | 规则 | Owner(canonical home) |
 |---|---|---|
-| 晚交恢复 | 晚交恢复(late-submit)是唯一终态恢复：仅当 `timed_out` + 有效候选 + 该 `queue_item_id` 无替补时，audited `operate-work-unit late-submit` 接受后重跑同一 checkpoint | `../openspec/specs/agent/delegated-work-units/spec.md` |
+ 晚交恢复 | 晚交恢复(late-submit)是唯一终态恢复：仅当 `timed_out` + 有效候选 + 该 `queue_item_id` 无替补时，audited `operate-work-unit late-submit` 接受后重跑同一 checkpoint | `../openspec/specs/agent/work-unit-correction/spec.md` |
 | 只读预检 | `timeout-preflight` 是只读预检，其 `recommended_action` 为 submit / repair / wait / timeout / inspect / block(`--force` 例外) | `../openspec/specs/engine/check-inspect-feedback/spec.md` |
 | 表派生与锁定 | 本表的行集从 `engine/work-unit-repair-vocabulary.mjs` 的 `WORK_UNIT_RECOVERY_ACTIONS` 导出派生，并由 `../tests/engine/work-unit-recovery-decision-table.test.mjs` 锁定：engine 可发出的每个 attempt-owned recovery `recovery_action` 都必须有表行与匹配 CLI 动词（或显式等待/作者/停止边界），四个发射模块不得出现裸 `repair_kind` 字符串字面量 | `../openspec/specs/engine/check-inspect-feedback/spec.md` |
 

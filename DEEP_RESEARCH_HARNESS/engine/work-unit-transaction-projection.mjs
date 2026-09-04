@@ -1,7 +1,7 @@
 // work-unit-transaction-projection.mjs
 // Layer 1: inspect/projection of transaction journals and orphan recovery
 // ordering (C4 T5, move-only). Depends only on primitives.
-// @impl DEW-023, CHI-004
+// @impl WUC-002, CHI-004
 
 import {
   existsSync,

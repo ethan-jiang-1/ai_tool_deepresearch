@@ -1,4 +1,4 @@
-// @impl DEW-022, DEW-023, DEW-024, WPG-016, CHI-004, EXO-001, FIO-001
+// @impl DEW-022, WUC-002, WUC-009, WPG-016, CHI-004, EXO-001, FIO-001
 // Work-unit inspect: list dirs, transaction/receipt/beacon/ledger issues, inspect entry point.
 
 import {

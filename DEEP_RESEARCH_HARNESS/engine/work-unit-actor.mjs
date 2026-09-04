@@ -1,4 +1,4 @@
-// @impl DEW-016, DEW-017
+// @impl DEW-016, WUC-008
 // Pure actor observation normalization and claim decision evaluation.
 
 import {

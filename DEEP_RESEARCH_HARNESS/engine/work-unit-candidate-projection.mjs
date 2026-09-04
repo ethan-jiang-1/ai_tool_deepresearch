@@ -1,4 +1,4 @@
-// @impl DEW-014, DEW-015
+// @impl WUP-003, WUC-007
 // Candidate projection: shape of a claimed work-unit candidate before submit.
 // Input: candidate record → Output: bounded candidate projection → Consumers:
 // dry-submit/submit preflight and disposition surfaces.

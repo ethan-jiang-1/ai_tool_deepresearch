@@ -1,0 +1,38 @@
+schema_version: requirement-reservation/v1
+change: dwu-capability-identity-split
+reservations:
+  - capability_path: agent/work-unit-submission
+    prefix: WSU
+    requirements:
+      - WSU-001
+      - WSU-002
+      - WSU-003
+      - WSU-004
+      - WSU-005
+      - WSU-006
+      - WSU-007
+      - WSU-008
+  - capability_path: agent/work-unit-preflight
+    prefix: WUP
+    requirements:
+      - WUP-001
+      - WUP-002
+      - WUP-003
+      - WUP-004
+      - WUP-005
+      - WUP-006
+  - capability_path: agent/work-unit-correction
+    prefix: WUC
+    requirements:
+      - WUC-001
+      - WUC-002
+      - WUC-003
+      - WUC-004
+      - WUC-005
+      - WUC-006
+      - WUC-007
+      - WUC-008
+      - WUC-009
+# DEW-032/DEW-033(母体两块无内联 ID 的保留块)不在本文件:DEW 是 live 前缀,
+# 追加注册按"只增不删"于 apply 时直接写入 req-registry(BUG-252/253 增补
+# DEW-030/031 同款先例),不经 reservation 生命周期。

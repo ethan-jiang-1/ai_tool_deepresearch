@@ -1,5 +1,5 @@
 // gate-helpers-readers.mjs — Bundle file readers: plan, profile, frontmatter, declarations, validators, file listing
-// @impl GSK-001, FRE-003, DEW-024, WPG-016
+// @impl GSK-001, FRE-003, WUC-009, WPG-016
 // Canonical location: DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-readers.mjs
 //
 // Re-exported by gate-helpers.mjs for backward compatibility.

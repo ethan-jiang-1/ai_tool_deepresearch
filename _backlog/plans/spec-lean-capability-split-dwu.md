@@ -1,6 +1,6 @@
 # Plan: capability-split-dwu（agent/delegated-work-units 一变四）
 
-> 创建: 2026-09-01 | 状态: **活跃（设计定稿；§6 四个决策点待用户复核；复核通过前不启动任何 propose/apply）**
+> 创建: 2026-09-01 | 状态: **已执行归档（2026-09-04：主 plan C2 `dwu-capability-identity-split` 完成 T1–T3 并归档，finalizer 19/19；本 plan 作为设计依据封存）**
 > 状态同步: 2026-09-03 复核——设计（一变四、原子迁移、reservation 机制）未被推翻，但事实基线因 BUG-252/253（commit 6bc0cf362）漂移：行数 2360→2448、requirement 37→39 块（新增 DEW-030/031，归属预判见 §2 同步注）、内联行 29→32（39 标题中 7 个无内联 ID）。§1/§2/S4/S5 涉及数字一律以 T1 实测重核。
 > 用户决策记录: 2026-09-01 拍板"一定要按 capability 拆"（推翻 CLS-084 的"requirement 级即可"）；同日追问副作用与消解（§4）。
 > 方法依据: `spec-lean-capability-split-dwu` 研究样板 + CLS-084 复盘（`_backlog/_scratch/retro-slimming-plan-pacing-and-tooling.md`）。
@@ -74,11 +74,11 @@
 
 ### T1 测绘（工具产出 + 人审定稿；不触碰任何 accepted 文件）
 
-- [ ] 1.1 39 块（37 基线 + DEW-030/031）逐一判定新家（母体/submission/preflight/correction），产出映射表（块标题 → 新家 → 新 ID）
-- [ ] 1.2 新前缀 WSU/WUP/WUC 可用性确认（req-registry prefixes 全查 + `check-project-reqs` 预检）
-- [ ] 1.3 53 处引用清单逐条定新家与改写方式
-- [ ] 1.4 `@impl DEW-*` 清单（engine + schema）
-- [ ] 1.5 doc-lock 清单（`list-doc-locks` 于 DWU spec + 相关测试）
+- [x] 1.1 39 块（37 基线 + DEW-030/031）逐一判定新家（母体/submission/preflight/correction），产出映射表（块标题 → 新家 → 新 ID）
+- [x] 1.2 新前缀 WSU/WUP/WUC 可用性确认（req-registry prefixes 全查 + `check-project-reqs` 预检）
+- [x] 1.3 53 处引用清单逐条定新家与改写方式
+- [x] 1.4 `@impl DEW-*` 清单（engine + schema）
+- [x] 1.5 doc-lock 清单（`list-doc-locks` 于 DWU spec + 相关测试）
 - 完成判据：映射表经用户复核确认。
 
 ### T2 迁移 change（原子；全管线 propose→polish→apply→verify→archive→commit）

@@ -1,0 +1,72 @@
+schema_version: verification-routing/v1
+change: dwu-capability-identity-split
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      doc-lock 更新版（delegated-queue-spec-text-locks）的计数/1:1 断言按四新家文件与
+      母体 16 块实数重写，属 engine 级锁测试（tests/engine/，unit 边界）。
+  integration:
+    status: selected
+    rationale: >-
+      迁移为跨文件文本/注册表搬移：逐字节守恒与 no-half-migration（旧路径外部引用=0、
+      新 ID 全 live、后继指针齐全）以活体 main specs 为输入断言，属 integration 边界
+      （tests/integration/migration/，runtime none——直接读 repo 文件，无 bundle）。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      迁移断言读活体 accepted specs、无 temporary bundle，不满足 deterministic_e2e 的
+      runtime: temporary_bundle 路由元组；全部证明项归 unit/integration。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: 不涉及 experiments_playbook/ 用例与真实 Agent 执行。
+claims:
+  - id: migration-byte-conservation
+    statement: >-
+      23 个迁移块在四 spec 间的搬移满足内容多重集合守恒：除新内联 `> req:` 行替换与
+      requirement 标题位置变化外，无任何行级增删改（以 C1 冻结快照为 fixture 对照）。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/migration/dwu-identity-migration.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: inline-1to1-restored
+    statement: >-
+      母体 spec 每保留块恰一条内联 `> req: DEW-xxx`（16 条，含 DEW-032/033）；三新 spec
+      每 requirement 恰一条内联新 ID 行（WSU 8 / WUP 6 / WUC 9）；doc-lock 更新版断言通过。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/delegated-queue-spec-text-locks.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: no-half-migration-state
+    statement: >-
+      governance 全套在迁移后全绿：registry 无 orphan/duplicate/unregistered/reusedRetired；
+      主 specs 与 catalog 内对旧 capability 路径 `agent/delegated-work-units` 的语义外部
+      引用重织完成；catalog Purpose 修订落地；`check-code-impl-ids` 对迁移文件全部新 ID 命中。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/migration/dwu-identity-migration.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

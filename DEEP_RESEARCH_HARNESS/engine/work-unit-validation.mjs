@@ -1,4 +1,4 @@
-// @impl DEW-004, DEW-022, DEW-024, DEW-031, SNC-005, REF-006
+// @impl DEW-004, DEW-022, WUC-009, WUP-006, SNC-005, REF-006
 // Work-unit validation: manifest/beacon/result reading, runtime receipt validation,
 // output file validation, cache trail validation, source claim validation, queue binding validation.
 
@@ -732,7 +732,7 @@ export function validateSourceClaims(bundleDir, result, outputContract, {
   const cacheTrails = new Set(result.cache_trails || []);
   const acceptedClaimUrls = new Set();
 
-  // @impl DEW-031: when the result is already being rejected for an accepted
+  // @impl WUP-006: when the result is already being rejected for an accepted
   // claim/accepted-URL/cache root and several accepted claims share one
   // normalized url, enrich that rejection with the duplicate claim counts so
   // the Agent can collapse them in one deterministic edit. This is diagnostic

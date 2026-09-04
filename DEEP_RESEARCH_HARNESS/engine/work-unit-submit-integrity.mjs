@@ -1,4 +1,4 @@
-// @impl DEW-023, CHI-004
+// @impl WUC-002, CHI-004
 // Shared read-only submit-owned integrity preflight. It intentionally contains no Phase Gate rules.
 
 import path from 'node:path';
