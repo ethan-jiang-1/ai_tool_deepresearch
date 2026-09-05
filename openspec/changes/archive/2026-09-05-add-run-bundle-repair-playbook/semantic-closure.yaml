@@ -1,0 +1,4 @@
+schema_version: semantic-closure/v1
+change: add-run-bundle-repair-playbook
+status: not_applicable
+reason: 本 change 只落地 Agent-facing 入口契约与文档：MODIFIED ACS-005（continue-run-bundle.md Entry Selection (canonical) 扩 maintenance/repair intent 族，同 preflight、同停边界，不新增 stop 名）+ ADDED ACS-007/008（command_playbook/repair-run-bundle.md 契约、COMMANDS.md repair 路由 aid）+ 根 AGENTS.md 入口行。全部是 Agent-facing 导航/文档契约，不改任何 Engine schema/verdict/transition/checker 行为，不产生或消费新的确定性 semantic fact family；不存在需要 closed 的 fact family 变更。

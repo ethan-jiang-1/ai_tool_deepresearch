@@ -9,6 +9,7 @@ Coding-agent notes for this repo. Keep this file short; detailed rules live in O
 | 这一轮是 | 打开 | 完成 | 此刻不要 |
 |---|---|---|---|
 | 研究 / 续跑 / 报告 | 用户给了可达 bundle（目录或其中的文件）→ `DEEP_RESEARCH_HARNESS/command_playbook/continue-run-bundle.md` 的 **Entry Selection (canonical)**。没给 → `DEEP_RESEARCH_HARNESS/RUN.md` | 该文件已在上下文 | 搜、`research` / `deep-research`、WebFetch、手工综合 evidence |
+| 修 bundle / 数据修复 / gate 修复 / 残留清理 | 用户给了可达 bundle 且意图是"修"（修好/恢复/卡住/残留/为什么不过等）→ `DEEP_RESEARCH_HARNESS/command_playbook/repair-run-bundle.md` 的 **§0 修理 Agent 工作流**（entry 分流见 continue-run-bundle.md Entry Selection (canonical) 的 maintenance/repair intent 族） | 该手册已在上下文 | 按研究/续跑流程走、手改 authority、新建 bundle |
 | 改行为 / 新契约 / 动框架 | `openspec/constitution/project-charter.md`，再打开该能力的 owner spec | change 已在，或 spec 已打开 | apply 前改 `DEEP_RESEARCH_HARNESS/` |
 | 已有 phase / `tasks.md` / CLI `next` | 反馈指名的那一页 | 执行了那一个下一步 | 回头重读章程 |
 
@@ -17,7 +18,7 @@ Coding-agent notes for this repo. Keep this file short; detailed rules live in O
 
 ## Deep Research Routing
 
-For selected Deep Research Harness research, entry selection has exactly one canonical statement: the "Entry Selection (canonical)" section of `DEEP_RESEARCH_HARNESS/command_playbook/continue-run-bundle.md`. This block is a pointer, not a restatement. The stop named `unsupported_current_entry_contract` is defined only in that section.
+For selected Deep Research Harness research, entry selection has exactly one canonical statement: the "Entry Selection (canonical)" section of `DEEP_RESEARCH_HARNESS/command_playbook/continue-run-bundle.md`. This block is a pointer, not a restatement. The stop named `unsupported_current_entry_contract` is defined only in that section. The same section also names the maintenance/repair intent family, which routes to `DEEP_RESEARCH_HARNESS/command_playbook/repair-run-bundle.md` after the identical same-root preflight.
 
 ## Repository Reading Scope
 

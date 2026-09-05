@@ -12,12 +12,21 @@ README, RUN, COMMANDS, start-research) carry a short pointer to this section
 instead of restating the rule.
 
 An explicitly supplied reachable existing bundle candidate (a directory or a
-file within it) with continuation or inspection intent first passes the
-same-root `BUNDLE_ENTRY.md` + `BUNDLE_MAP.md` preflight, then follows the
-Reload Procedure below. A supplied candidate missing either file is
-`unsupported_current_entry_contract`: stop without reading it as an
-operational entry, falling back to `RUN.md`, creating a bundle, selecting
-another bundle, migration, upgrade, or a human-only Harness command.
+file within it) with continuation, inspection, or maintenance/repair intent
+first passes the same-root `BUNDLE_ENTRY.md` + `BUNDLE_MAP.md` preflight.
+Continuation and inspection intent then follow the Reload Procedure below.
+Maintenance/repair intent (修 bundle / 数据修复 / gate 修复 / 残留清理 / 为什么卡住) is
+a defined entry intent family: it applies the SAME same-root preflight and stops
+at the SAME boundary as continuation (no new stop name), then routes to
+`command_playbook/repair-run-bundle.md` instead of the continuation or research
+flow. It introduces no second continuation route, no third HITL, no permission
+token, and no arbitrary mutation authority. Intent-family wording is navigation
+guidance only: the Agent owns semantic classification, and mixed or ambiguous
+intent asks the smallest clarification before routing.
+A supplied candidate missing either file is `unsupported_current_entry_contract`:
+stop without reading it as an operational entry, falling back to `RUN.md`,
+creating a bundle, selecting another bundle, migration, upgrade, or a
+human-only Harness command.
 (注：bundle 创建同意的契约由 `cmd-bundle-instantiation` CMI-010 拥有，
 不在本 canonical 节重复；创建行为始终经 CLI sibling 预检与用户显式同意放行。)
 
@@ -37,8 +46,8 @@ historical Markdown remains outside this operational contract.
 
 - The user explicitly supplied/opened a reachable existing bundle candidate
   (a directory or a file within it) in
-  the selected Deep Research Harness workspace and requested continuation or
-  inspection.
+  the selected Deep Research Harness workspace and requested continuation,
+  inspection, or maintenance/repair.
 - The bundle's creation-time Harness coordinate is navigation text only. Use
   it only when it resolves inside the selected source context.
 

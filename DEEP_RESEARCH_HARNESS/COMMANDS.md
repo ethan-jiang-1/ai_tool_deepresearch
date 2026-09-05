@@ -191,6 +191,21 @@ Logical `actor_execution` plus exact `work_id` and `receipt_nonce` guides which 
 
 本映射是导航文本：不改变上方受众声明与责任边界，不创设第二条路由、checkpoint 或权限；映射内不复制命令行（可执行命令以各工具行与 playbook 为准）。
 
+## Run-Bundle Repair
+
+| 工具 | 文件 | 说明 |
+|------|------|------|
+| repair-run-bundle | command_playbook/repair-run-bundle.md | maintenance/repair intent 的入口 playbook（entry 分流见 continue-run-bundle.md Entry Selection (canonical) 的 maintenance/repair intent 族）：定位 → 基线三命令 → 引擎 structured verdicts → 合法修复（supersede / recover-* / apply / persist）→ 重跑同一 checkpoint；诊断结论"没坏"落回 continuation；`missing_contract` 停边界 |
+
+### Repair 意图路由（navigation only）
+
+用户在既有 bundle 上表达修理诉求时，先按措辞族找到既有路由再执行。示例词只是导航线索，不是分类 enum：语义分类由 Agent 判定；混合或含混请求先问最小澄清，不做自动选路。
+
+- **repair 族**（示例：修好 / 恢复 / 卡住了 / 残留 / 为什么 gate 不过 / 清掉堵路的）→ `command_playbook/repair-run-bundle.md`（诊断优先；无合法引擎路径报 `missing_contract` 停边界，不手写 authority，不新建 bundle）。
+- **research / continuation 族**（示例：继续 / 深挖 / 补研究 / 更新 final）→ 既有研究/续跑入口（`command_playbook/continue-run-bundle.md` 或 `RUN.md`），不因本 aid 改变路由。
+
+本映射是导航文本：不改变上方受众声明与责任边界，不创设第二条路由、checkpoint、权限或 Engine 判定；映射内不复制命令行（可执行命令以各工具行与 playbook 为准）。
+
 ## Artifact Persistence
 
 | 工具 | 文件 | 说明 |

@@ -1,0 +1,30 @@
+schema_version: verification-routing/v1
+change: add-run-bundle-repair-playbook
+test_classes:
+  unit:
+    status: selected
+    rationale: 命令面静态回归（tests/engine/command-contract-docs.test.mjs）确定性扫描本 change 触及的全部 Agent-facing 文档 surface（新增 repair-run-bundle.md、COMMANDS.md Run-Bundle Repair 节、continue-run-bundle.md Entry Selection 扩展、根 AGENTS.md），锁定 audience/HITL 措辞、PHRASE_CLASSES 与稳定 marker；纯确定性 contract 验证，无需 bundle 或 agent 行为。
+  integration:
+    status: not_applicable
+    rationale: 本 change 是 Agent-facing 入口契约与文档路由变更，不涉及 schema/CLI/engine 运行时集成行为，无 bundle 级集成面可验证。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: 本 change 不创建或修改任何 deterministic e2e 行为（无 gate/checker/schema 变更）；temporary-bundle e2e 不适用。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: 修理入口是导航/文档契约，路由行为由静态回归与文档级确定性验证覆盖；真实 agent 在 disposable bundle 上的 e2e 不适用于纯文档变更。
+claims:
+  - id: command-contract-regression
+    statement: 新增 command_playbook/repair-run-bundle.md、COMMANDS.md Run-Bundle Repair 节与 continue-run-bundle.md Entry Selection 的 maintenance/repair intent 扩展通过命令面静态回归（无 PHRASE_CLASSES 违规、audience 稳定 marker 完好）。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/command-contract-docs.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

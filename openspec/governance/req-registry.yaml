@@ -135,6 +135,8 @@ ACS-003: agent-command-surface — Existing static documentation regression lock
 ACS-004: agent-command-surface — Phase-boundary terminology is discoverable and aligned with guidance terminology canon
 ACS-005: agent-command-surface — Existing bundle continuation has one Agent-owned playbook
 ACS-006: agent-command-surface — Command index maps post-final iteration intent families to their existing legal routes as navigation only
+ACS-007: agent-command-surface — Maintenance and repair intent on a supplied bundle is a defined entry intent family routing to the repair playbook through the canonical entry selection
+ACS-008: agent-command-surface — Command index routes repair intents to the repair playbook as navigation only
 
 # agent/agent-context-routing
 ACR-001: agent-context-routing — Root CONTEXT.md preserves canonical terminology boundaries without becoming behavior, executable, or runtime authority
