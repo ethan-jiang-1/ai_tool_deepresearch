@@ -1023,6 +1023,8 @@ For each relevant source identity, the convergence result SHALL distinguish: val
 
 When a materializable candidate exists, the evaluator SHALL select it by cross-topic balance: the exposed candidate SHALL come from the Topic with the fewest already-projected Phase-owned source identities among Topics that still have an unprojected materializable candidate, breaking ties by lexicographic `topic_slug`, and SHALL take that Topic's lowest retained unprojected source ordinal. The selection SHALL NOT use global lexicographic candidate order across Topics and SHALL NOT rank sources by research relevance. Deferral-eligible identities remain excluded before the balance count. Inspect and Gate SHALL expose that one balanced candidate before a dependent floor result from the same convergence branch. An independent malformed reference, provenance, queue, receipt, cache, or navigation root SHALL remain independently visible. A true floor deficit may be reported only after materializable coverage cannot satisfy the applicable floor and relevant direct authority prerequisites have been evaluated. The wave Gate's native completion SHALL bind this convergence-derived floor verdict through the accepted root-trace prefix without a second trace sink.
 
+When evaluating ledger-ordered retained source-contribution prefixes at one canonical topic + target, a contribution whose declared length equals the immediately previous contribution's declared length AND whose declared digest is identical to that previous contribution's digest SHALL be admitted as a zero-append no-op interval: it SHALL own no source ordinal range, SHALL expose no source identity, and SHALL NOT fail the strictly-increasing prefix evaluation. The admitted no-op row SHALL NOT retroactively change any prior contribution's ownership. Any later contribution that is not strictly longer than the running retained length — including equal length with a differing digest, or a shorter length — SHALL remain a non-monotonic boundary failure with the existing missing-contract repair boundary. Zero-append admission SHALL NOT authorize any direct mutation of the ledger, source array, or any other authority surface.
+
 #### Scenario: materializable submitted backing precedes a Wave0 floor deficit
 
 - **WHEN** Wave0 has an authenticated submitted source identity without a countable shared reference and its exact backing can materialize a legal Phase-owned projection
@@ -1047,6 +1049,19 @@ When a materializable candidate exists, the evaluator SHALL select it by cross-t
 - **WHEN** one accepted prior contribution owns a retained source prefix and a current rerun accepts a strictly longer source array at the same canonical target
 - **THEN** inspect and Gate SHALL retain the prior contribution's identities and expose the later work unit only for its appended interval
 - **AND** they SHALL not invalidate a correctly backed prior Phase-owned reference solely because that work unit is not current-round demand coverage
+
+#### Scenario: honest zero-append rerun intake is admitted without poisoning the boundary
+
+- **WHEN** one accepted prior contribution owns a retained source prefix at a canonical topic + target
+- **AND** a later rerun contribution at the same target declares a length equal to that prefix and a digest identical to it (the honest no-new-source outcome of a supplementary intake)
+- **THEN** inspect and Gate SHALL admit that contribution as a zero-append no-op interval that owns no ordinal range and exposes no identity
+- **AND** the prior contribution's identities, every other Topic's backing resolution, and the Wave0 convergence result SHALL remain unaffected by the no-op row
+
+#### Scenario: equal length with differing digest remains a boundary failure
+
+- **WHEN** a later contribution at a canonical topic + target declares a length equal to the previous contribution's length but a different digest
+- **THEN** inspect and Gate SHALL keep failing that group with the existing non-monotonic boundary root and missing-contract repair boundary
+- **AND** no zero-append admission SHALL apply
 
 #### Scenario: materialization selection is cross-topic balanced
 

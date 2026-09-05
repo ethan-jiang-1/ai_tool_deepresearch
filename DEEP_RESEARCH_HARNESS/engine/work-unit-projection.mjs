@@ -369,27 +369,41 @@ function evaluateDeclaredContributionGroup(bundleDir, group, directByTarget) {
   if (current.finding) return { finding: current.finding, candidates: [] };
 
   let previousLength = null;
+  let previousDigest = null;
   const intervals = [];
   for (const fact of contributionFacts) {
     const contribution = fact.source_contribution;
     if (previousLength !== null && contribution.validated_length <= previousLength) {
-      return {
-        finding: sourceContributionRoot(bundleDir, group, {
-          code: 'submitted_source_contribution_non_monotonic',
-          expected: 'Ledger-ordered source contribution lengths strictly increase for one canonical topic and direct source target.',
-          observed: {
-            work_id: fact.row.work_id,
-            previous_validated_length: previousLength,
-            validated_length: contribution.validated_length,
-          },
-          missingFact: `${fact.row.work_id} declares source length ${contribution.validated_length} after length ${previousLength} for ${group.target}.`,
-          repairKind: 'missing_contract',
-          writeTo: 'Engine-owned submitted Wave0 source contribution boundary',
-          repair: 'No legal reader-side recovery can infer overlapping historical ownership. Do not hand-edit the ledger or source array.',
-          surface: path.resolve(bundleDir, 'rb_output_declarations.jsonl'),
-        }),
-        candidates: [],
-      };
+      const isZeroAppendNoOp = (
+        contribution.validated_length === previousLength
+        && previousDigest !== null
+        && contribution.semantic_digest === previousDigest
+      );
+      if (!isZeroAppendNoOp) {
+        return {
+          finding: sourceContributionRoot(bundleDir, group, {
+            code: 'submitted_source_contribution_non_monotonic',
+            expected: 'Ledger-ordered source contribution lengths strictly increase for one canonical topic and direct source target.',
+            observed: {
+              work_id: fact.row.work_id,
+              previous_validated_length: previousLength,
+              validated_length: contribution.validated_length,
+            },
+            missingFact: `${fact.row.work_id} declares source length ${contribution.validated_length} after length ${previousLength} for ${group.target}.`,
+            repairKind: 'missing_contract',
+            writeTo: 'Engine-owned submitted Wave0 source contribution boundary',
+            repair: 'No legal reader-side recovery can infer overlapping historical ownership. Do not hand-edit the ledger or source array.',
+            surface: path.resolve(bundleDir, 'rb_output_declarations.jsonl'),
+          }),
+          candidates: [],
+        };
+      }
+      // Zero-append no-op contribution: the row declares the same retained
+      // prefix (equal length, identical digest), owns no ordinal range, and
+      // exposes no source identity. Prefix-drift/shortening checks above still
+      // bind the retained prefix to the current array, so this admission never
+      // masks content drift.
+      continue;
     }
     if (contribution.validated_length > current.value.length) {
       return {
@@ -431,6 +445,7 @@ function evaluateDeclaredContributionGroup(bundleDir, group, directByTarget) {
     }
     intervals.push({ fact, start: (previousLength ?? 0) + 1, end: contribution.validated_length });
     previousLength = contribution.validated_length;
+    previousDigest = contribution.semantic_digest;
   }
 
   if (current.value.length > previousLength) {
