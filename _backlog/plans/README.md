@@ -19,6 +19,12 @@
 |------|------|------|
 | [`regression-suite-step2-heavy-chain-investment`](regression-suite-step2-heavy-chain-investment.md) | 回归套件第二步投资计划：P0 e2e 全链去重（rerun-round-continuity 同链爬两遍 / post-final 同族复核）、P1 operate-work-unit 121 spawn 点 + finalizer 注入（独立 change）、P2 同族批量、P3 加权分片；tooling 已到顶（1061 CPU-s / 8 核下限 ≈133s），目标 P2 后 ~120-140s | 计划已成文；执行待用户指令 |
 
+## 最近关闭 (2026-09-05)
+
+| Plan | 关闭依据 |
+|------|----------|
+| `run-bundle-repair-experience-playbook` | CLS-086：入口/路由 change `2026-09-05-add-run-bundle-repair-playbook` 归档（finalizer 19/19）——Entry Selection (canonical) 扩 maintenance/repair intent 族（同 preflight、同 `unsupported_current_entry_contract` 停边界），可执行知识已泛化落地 `DEEP_RESEARCH_HARNESS/command_playbook/repair-run-bundle.md`（诊断优先、场景映射键 = 引擎 structured verdicts、导航自包含）；引擎操作化候补（seed prune / reference locator / binding 投影）留手册 §6.5 排队。全量 `npm test` 3127/3127 0 fail；随行修复既有回归 `work-unit-projection` non-monotonic fixture（zero-append no-op 语义对齐）。手册移入 [`_done/_closed_plans/`](../_done/_closed_plans/)。 |
+
 ## 最近关闭 (2026-09-04)
 
 | Plan | 关闭依据 |
