@@ -49,6 +49,7 @@ todo 完成后从 `_backlog/todos/` 通过 `git mv` 移入本目录：
 | DONE-014 | 2026-06-27 | DONE-hitl-ux.md | HITL 环机制：3 浮出水面点 + 静默契约 + prompt 模板 |
 | DONE-015 | 2026-07-09 | todo-evidence-extraction.md | Evidence extraction 核心：ledger + `countReferences`/`isCountable` + CCC/cache；CandidateCard 路径废弃；语义层并入 evidence-quality |
 | DONE-016 | 2026-07-22 | todo-phase-recover.md | BUNDLE_MAP/status/trace reload、`check-reentry` root findings 与 narrow recovery owners 已提供 Agent-facing bundle-truth recovery |
+| DONE-017 | 2026-09-05 | todo-code-impl-ids-hidden-dir-skip.md | RET-011 checker 跳过隐藏目录（`tests/.test-tmp` 残留不再入扫），三面扫描计数稳定；全量 npm test 3127/3127 绿 |
 
 ## 已吸收的 Standalone TODO（非已实现）
 
@@ -64,5 +65,6 @@ todo 完成后从 `_backlog/todos/` 通过 `git mv` 移入本目录：
 | Date | File | Closure basis | Restart condition |
 |------|------|---------------|-------------------|
 | 2026-08-11 | todo-helper-not-tool.md | HITL conversational UX, per-run user controls, silent autonomous execution, Final Chinese preference, and helper-oriented responsibility are now covered by accepted contracts. | Reopen only when a real run demonstrates a user value that current HITL/recovery guidance cannot express; cross-run memory then needs a fresh, separately scoped OpenSpec exploration. |
+| 2026-09-05 | todo-bounded-wave0-e2e-smoke-lane.md | The short real-Agent regression lane design was absorbed by the accepted `agent_flow_e2e` verification class (verification-routing: `experiments_playbook/case-*.md` + real disposable bundle + real agent + `trace_jsonl` verdict) and the Agent Experiment Autorun stack (`host_tools/run-agent-experiment.mjs` + supervisor + finalizer); a bounded short case is now an ordinary `agent_flow_e2e` case, with no new runner, verdict, or lifecycle state needed. | Reopen only when a real short-lane run exposes a boundary the `agent_flow_e2e`/Autorun contracts cannot express (short budget, bounded tool allowance, single-turn cap); explore that single gap through a fresh, separately scoped OpenSpec change. |
 
-**Next available DONE ID: DONE-017**
+**Next available DONE ID: DONE-018**

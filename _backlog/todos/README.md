@@ -30,6 +30,7 @@
 | 3 | `todo-hooks-deferral.md` | **延后 / parked** | workflow boundary hooks | 仅在现有 Gate/inspect/reentry 有真实直接缺口时重启 |
 | 4 | `todo-context-reground.md` | **parked** | head re-ground | recovery 已 DONE；仅在现有 reload 不足的真实 case 下重启 |
 | 5 | `todo-code-impl-ids-hidden-dir-skip.md` | **低** | RET-011 checker 跳过隐藏目录（`tests/.test-tmp` 残留噪音） | 归档 `2026-08-31-add-code-impl-registry-guard` 后观察所得；最小工具修正，无需 delta |
+| _（2026-09-05 全部 5 项已移出，处置见下）_ | — | — | — | — |
 
 ### 本轮已移出活跃
 
@@ -44,6 +45,11 @@
 | `todo-helper-not-tool.md` | → **archived as superseded/retired input**（非已实现）— HITL 对话、per-run controls、静默自主、Final 中文交付与 helper-oriented responsibility 已有 accepted owner；跨 run memory 仅在真实 run 证明直接缺口后重新独立 explore。 |
 | BUG-069（外部） | ✅ **已修复** — 移入 `_done/_fixed_bugs/`；P2 降级，5/6 failure point 已修；gate hints + contract lineage 系统性解决契约漂移 |
 | `todo-coding-agent-setup-ux` | ✅ **已关闭** — 移入 `_done/_closed_plans/ux-coding-agent-permissions-setup.md` |
+| `todo-code-impl-ids-hidden-dir-skip.md` | ✅ **DONE-017** — RET-011 checker 已跳过隐藏目录（`tests/.test-tmp` 残留不再入扫），三面扫描计数稳定；全量 npm test 3127/3127 绿 |
+| `todo-bounded-wave0-e2e-smoke-lane.md` | → **archived as superseded/retired input**（非已实现）— 设计被 `agent_flow_e2e` 验证类（verification-routing：`experiments_playbook/case-*.md` + real disposable bundle + real agent + `trace_jsonl` verdict）与 Agent Experiment Autorun（`host_tools/run-agent-experiment.mjs` + supervisor + finalizer）吸收；bounded 短回归现在即一条普通 `agent_flow_e2e` case，无需新 runner / verdict / lifecycle state |
+| `todo-context-reground.md` | → **suspended**（移入 `_done/_suspended_plans/`）— parked 条件触发从未发生；BUNDLE_MAP / status / trace reload 与 `check-reentry` 已覆盖恢复 |
+| `todo-final-output-eval.md` | → **suspended**（移入 `_done/_suspended_plans/`）— 待重述且概念依赖 plan 已关闭（CLS-034）；run 级交付诊断无真实缺口观察 |
+| `todo-hooks-deferral.md` | → **suspended**（移入 `_done/_suspended_plans/`）— 延后条件从未触发；现有 Gate / inspect / reentry 无直接缺口，新增 hooks 只会制造第二套 checkpoint |
 
 ---
 
