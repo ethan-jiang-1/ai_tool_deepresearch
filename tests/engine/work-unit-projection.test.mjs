@@ -380,8 +380,17 @@ describe('eligible work-unit projection', () => {
 
   it('rejects non-monotonic declared contribution lengths without assigning candidates', () => {
     const dir = bundle();
-    submitWave0(dir, { queueItemId: 'queue-wave0-first', sourceContent: sourceArray(2) });
-    submitWave0(dir, { queueItemId: 'queue-wave0-second', sourceContent: sourceArray(2) });
+    const baseContent = sourceArray(2);
+    const driftContent = sourceArray(2).replace('source-1', 'x-source-1');
+    submitWave0(dir, { queueItemId: 'queue-wave0-first', sourceContent: baseContent });
+    // Equal-length identical-digest follow-ups are admitted as zero-append
+    // no-op intervals (see wave0-zero-append-contribution.test.mjs). An
+    // equal-length contribution with a differing digest is still non-monotonic
+    // and must not assign candidates.
+    submitWave0(dir, { queueItemId: 'queue-wave0-second', sourceContent: driftContent });
+    // Retain the base prefix on disk so the only boundary fact is the second
+    // contribution's declared prefix differing from the retained one.
+    writeFileSync(path.join(dir, 'artifacts/wave0/current-topic/source.yaml'), baseContent);
 
     assertContributionRoot(
       collectWave0Candidates(dir),
