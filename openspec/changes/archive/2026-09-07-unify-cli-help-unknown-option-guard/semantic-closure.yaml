@@ -1,0 +1,41 @@
+schema_version: semantic-closure/v1
+change: unify-cli-help-unknown-option-guard
+status: affected
+catalog_additions: []
+affected:
+  - family: cli.exit-code-convention
+    fact: >-
+      For each guarded parseArgs utility CLI (reconcile-plan-progress,
+      audit-phase-status, check-reentry, log-event,
+      validate-work-unit-hygiene, apply-research-style), a standalone
+      --help/-h token prints a usage line and exits 0 without bundle side
+      effects, and an undeclared option or unparseable invocation prints an
+      invocation error reason plus the usage line and exits 2 before any
+      domain evaluation; log-event's always-0 exception applies only to
+      post-invocation diagnostic and logging outcomes.
+    authority:
+      resolver: openspec/specs/engine/cli-exit-code-conventions/spec.md
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/cli-args.mjs
+      - DEEP_RESEARCH_HARNESS/cli/reconcile-plan-progress.mjs
+      - DEEP_RESEARCH_HARNESS/cli/audit-phase-status.mjs
+      - DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs
+      - DEEP_RESEARCH_HARNESS/cli/log-event.mjs
+      - DEEP_RESEARCH_HARNESS/cli/validate-work-unit-hygiene.mjs
+      - DEEP_RESEARCH_HARNESS/cli/apply-research-style.mjs
+    consumers:
+      - DEEP_RESEARCH_HARNESS/command_playbook/repair-run-bundle.md
+    overlap:
+      - coordinate: DEEP_RESEARCH_HARNESS/COMMANDS.md
+        relation: derived
+        detail: >-
+          Presents the resolved exit-code convention and exception inventory
+          for Agent callers; display only, never an exit-code verdict owner.
+      - coordinate: DEEP_RESEARCH_HARNESS/cli/README.md
+        relation: derived
+        detail: >-
+          CLI implementer guide mirroring the top-level convention; display
+          only, must not contradict the accepted spec.
+    verification:
+      truth_table: tests/engine/helpers/cli-args.test.mjs
+      cross_surface: tests/integration/cli/exit-code-convention.test.mjs

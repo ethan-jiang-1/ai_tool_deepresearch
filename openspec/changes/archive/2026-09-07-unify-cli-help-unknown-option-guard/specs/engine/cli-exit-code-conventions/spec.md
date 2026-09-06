@@ -1,11 +1,9 @@
-# CLI Exit Code Conventions
+# Delta — engine/cli-exit-code-conventions
 
-> req: CLE-001, CLE-002, CLE-003, CLE-004
+> req: CLE-001, CLE-003, CLE-004
 
-## Purpose
+## MODIFIED Requirements
 
-Define the discoverable framework CLI exit-code convention. Exit codes are coarse control-flow signals for shell/runner branching, while actionable detail is carried by structured stdout. This capability establishes the canonical tri-state interpretation, prohibits morale/continuation encoding in exit codes, documents known exceptions, and requires regression coverage.
-## Requirements
 ### Requirement: Framework CLI exit-code contract is discoverable
 
 The framework SHALL document a discoverable CLI exit-code convention in a top-level Agent-facing command location and in the CLI implementer guide.
@@ -119,24 +117,6 @@ grammar so an Agent caller does not need to read parser source.
 - **WHEN** a well-formed `log-event.mjs` invocation fails to write its log or
   trace record
 - **THEN** it SHALL still exit `0` so diagnostics never block Agent flow
-### Requirement: Exit codes do not encode morale or continuation encouragement
-
-Framework CLI exit codes SHALL remain deterministic control-flow signals. They SHALL NOT encode morale, encouragement, user-waiting pressure, perceived progress, fatigue level, or whether the Agent should feel confident continuing.
-
-Continuation guidance, repair strategy, reassurance after high gate friction, and autonomous-continuation reminders SHALL be expressed through structured output such as `advice[]`, Agent-readable Markdown guidance, diagnostic fields, or accepted trace/log diagnostics. These signals SHALL NOT change the numeric exit code if the underlying pass/fail/config condition is unchanged.
-
-#### Scenario: High-friction pass keeps normal pass code
-
-- **WHEN** a gate passes after multiple Engine-visible attempts
-- **THEN** the gate MAY include autonomous-continuation advice in `advice[]`
-- **AND** the process exit code SHALL remain the normal pass code `0`
-- **AND** the exit code SHALL NOT encode fatigue or reassurance
-
-#### Scenario: Repair guidance belongs in advice
-
-- **WHEN** a gate fails with actionable repair instructions
-- **THEN** the repair direction SHALL appear in `inspect[]` or `advice[]`
-- **AND** the exit code SHALL remain the normal failure code for the command class
 
 ### Requirement: Known exit-code exceptions are documented without behavior changes
 
@@ -186,6 +166,7 @@ Help and invocation reconciliation for the guarded parseArgs utility batch is ac
 - **WHEN** the Agent reads the exit-code convention for `validate-workflow-package.mjs`
 - **THEN** the docs SHALL state its current tri-state behavior including `2` for invocation/configuration errors
 - **AND** they SHALL NOT present it as a pending drift or future reconciliation item
+
 ### Requirement: Exit-code convention has regression coverage
 
 The project SHALL include regression coverage for the documented exit-code convention and exception inventory.

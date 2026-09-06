@@ -8,14 +8,21 @@
 //   1 — drift/violation diagnosed
 //   2 — invocation error
 
-import { parseArgs } from 'node:util';
+import { parseGuardedArgs } from '../engine/helpers/cli-args.mjs';
 import { auditPhaseStatus } from '../engine/helpers/phase-status-audit.mjs';
 
-const { values } = parseArgs({
-  options: {
-    bundle: { type: 'string' },
-  },
-});
+const USAGE = 'Usage: node DEEP_RESEARCH_HARNESS/cli/audit-phase-status.mjs --bundle <path>';
+
+const parsed = parseGuardedArgs({ args: process.argv.slice(2), options: { bundle: { type: 'string' } }, usage: USAGE });
+if (parsed.kind === 'help') {
+  console.log(USAGE);
+  process.exit(0);
+}
+if (parsed.kind === 'invalid') {
+  console.error(`invocation error: ${parsed.reason}\n${USAGE}`);
+  process.exit(2);
+}
+const { values } = parsed;
 
 if (!values.bundle) {
   console.log(JSON.stringify({

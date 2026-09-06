@@ -15,15 +15,25 @@
 // Usage (surfacing intent mode — write framework-initiated would-have-surfaced diagnostic):
 //   node DEEP_RESEARCH_HARNESS/cli/log-event.mjs --bundle <path> --surfacing-intent --node <node_ref> --intent-type <ask_user|progress_report|partial_delivery|user_choice|wait_for_input|other> --reason "<text>"
 //
-// Always exits 0 — diagnostics must not block agent flow.
-// On failure (missing args, unwritable file), silently exits 0.
+// Exit codes: --help/-h prints usage and exits 0; unknown options / unparseable
+// invocations print `invocation error` + usage and exit 2 (invocation
+// rejection, per engine/cli-exit-code-conventions). Diagnostic/log outcomes of
+// a well-formed invocation always exit 0 — logging failure must not block
+// agent flow. On failure (missing args, unwritable file), silently exits 0.
 
-import { parseArgs } from 'node:util';
 import { writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { logToRun } from '../engine/logger.mjs';
+import { parseGuardedArgs } from '../engine/helpers/cli-args.mjs';
 
-const { values } = parseArgs({
+const USAGE = `Usage:
+  node DEEP_RESEARCH_HARNESS/cli/log-event.mjs --bundle <path> --level <LEVEL> --msg "<message>" [--detail '<json>']
+  node DEEP_RESEARCH_HARNESS/cli/log-event.mjs --bundle <path> --event <event_name> [--detail '<json>']
+  node DEEP_RESEARCH_HARNESS/cli/log-event.mjs --bundle <path> --explain-file <path> --status <authority_status> --reason "<text>"
+  node DEEP_RESEARCH_HARNESS/cli/log-event.mjs --bundle <path> --surfacing-intent --node <node_ref> --intent-type <type> --reason "<text>"`;
+
+const parsed = parseGuardedArgs({
+  args: process.argv.slice(2),
   options: {
     bundle: { type: 'string' },
     level:  { type: 'string' },
@@ -41,7 +51,17 @@ const { values } = parseArgs({
     node: { type: 'string' },
     'intent-type': { type: 'string' },
   },
+  usage: USAGE,
 });
+if (parsed.kind === 'help') {
+  console.log(USAGE);
+  process.exit(0);
+}
+if (parsed.kind === 'invalid') {
+  console.error(`invocation error: ${parsed.reason}\n${USAGE}`);
+  process.exit(2);
+}
+const { values } = parsed;
 
 // ── Surfacing-intent mode: diagnostic-only framework-initiated would-have-surfaced event ──
 // The Agent invokes this only after aborting its own prohibited surfacing path.

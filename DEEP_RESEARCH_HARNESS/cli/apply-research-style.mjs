@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 // apply-research-style.mjs — apply a research style JSON to an current run bundle
 // Usage: node apply-research-style.mjs --bundle <path> --style <name>
+// Exit codes: 0 = style applied, 1 = usage/domain failure, 2 = invocation rejection
 //
 // Reads the JSON style file, computes topic-count-dependent values,
 // and writes the complete research_style_params section to rb_profile.yaml.
 // MD/Agent never touches the JSON style files or does the math — this CLI
 // is the single computation point.
 
-import { parseArgs } from 'node:util';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -15,16 +15,30 @@ import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { parseMdFrontmatter } from '../engine/helpers/gate-helpers.mjs';
 import { computeResearchStyleParams } from '../engine/helpers/research-style-params.mjs';
 import { ProfileSchema } from '../schema/index.mjs';
+import { parseGuardedArgs } from '../engine/helpers/cli-args.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // ── CLI args ──
-const { values } = parseArgs({
+const USAGE = 'Usage: node apply-research-style.mjs --bundle <path> --style <name>';
+
+const parsed = parseGuardedArgs({
+  args: process.argv.slice(2),
   options: {
     bundle: { type: 'string' },
     style: { type: 'string' },
   },
+  usage: USAGE,
 });
+if (parsed.kind === 'help') {
+  console.log(USAGE);
+  process.exit(0);
+}
+if (parsed.kind === 'invalid') {
+  console.error(`invocation error: ${parsed.reason}\n${USAGE}`);
+  process.exit(2);
+}
+const { values } = parsed;
 
 if (!values.bundle || !values.style) {
   console.error('Usage: node apply-research-style.mjs --bundle <path> --style <name>');

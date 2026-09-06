@@ -2,6 +2,7 @@
 // reconcile-plan-progress.mjs — rebuild rb_plan.md## Progress from trace witnesses
 // @impl PHS-006, PHS-010
 // Usage: node DEEP_RESEARCH_HARNESS/cli/reconcile-plan-progress.mjs --bundle <path>
+// Exit codes: 0 = rebuilt or unchanged, 1 = rebuild failure, 2 = invocation error
 //
 // Engine-owned presentation repair (NOT a lifecycle authority):
 //   - derives every checked line and every cycle block from rb_trace.jsonl
@@ -15,9 +16,9 @@
 // For a bundle mid-lifecycle with rerun cycles but no cycle blocks, run this
 // BEFORE its next gate pass so subsequent flips land in the correct block.
 
-import { parseArgs } from 'node:util';
 import { existsSync, readFileSync, writeFileSync, renameSync, rmSync } from 'node:fs';
 import { join, basename } from 'node:path';
+import { parseGuardedArgs } from '../engine/helpers/cli-args.mjs';
 import {
   loadHandoffTopology,
   readTraceEventsWithIndex,
@@ -140,8 +141,19 @@ function rebuildProgressSection(sectionContent, witnesses) {
   };
 }
 
+const USAGE = 'Usage: node DEEP_RESEARCH_HARNESS/cli/reconcile-plan-progress.mjs --bundle <path>';
+
 function main() {
-  const { values } = parseArgs({ options: { bundle: { type: 'string' } } });
+  const parsed = parseGuardedArgs({ args: process.argv.slice(2), options: { bundle: { type: 'string' } }, usage: USAGE });
+  if (parsed.kind === 'help') {
+    console.log(USAGE);
+    process.exit(0);
+  }
+  if (parsed.kind === 'invalid') {
+    console.error(`invocation error: ${parsed.reason}\n${USAGE}`);
+    process.exit(2);
+  }
+  const { values } = parsed;
   if (!values.bundle) {
     console.log(JSON.stringify({ outcome: 'failed', reason: 'missing_bundle_arg' }, null, 2));
     process.exit(2);

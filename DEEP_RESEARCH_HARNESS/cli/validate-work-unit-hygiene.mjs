@@ -1,10 +1,13 @@
 #!/usr/bin/env node
 // @impl RET-006, DEW-001, WUC-005, AGQ-019, FRE-005, RWG-018
 // Static hygiene gate for the current work-unit delegated path.
+// Usage: node DEEP_RESEARCH_HARNESS/cli/validate-work-unit-hygiene.mjs [--root <path>] [--json]
+// Exit codes: 0 = passed, 1 = hygiene issues found, 2 = invocation rejection
 
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
-import { parseArgs } from 'node:util';
+
+import { parseGuardedArgs } from '../engine/helpers/cli-args.mjs';
 
 import {
   QueueDemandItemSchema,
@@ -14,12 +17,25 @@ import {
 } from '../engine/queue-manager-core.mjs';
 import { readGateDefinitionSnapshot } from '../schema/contracts/gate-definition.mjs';
 
-const { values } = parseArgs({
+const USAGE = 'Usage: node DEEP_RESEARCH_HARNESS/cli/validate-work-unit-hygiene.mjs [--root <path>] [--json]';
+
+const parsed = parseGuardedArgs({
+  args: process.argv.slice(2),
   options: {
     root: { type: 'string', default: process.cwd() },
     json: { type: 'boolean', default: false },
   },
+  usage: USAGE,
 });
+if (parsed.kind === 'help') {
+  console.log(USAGE);
+  process.exit(0);
+}
+if (parsed.kind === 'invalid') {
+  console.error(`invocation error: ${parsed.reason}\n${USAGE}`);
+  process.exit(2);
+}
+const { values } = parsed;
 
 const repoRoot = values.root;
 

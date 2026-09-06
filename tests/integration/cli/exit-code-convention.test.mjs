@@ -19,16 +19,16 @@ const CLI_CONVENTION_INVENTORY = {
     coverage: ['tests/integration/cli/advance-status.test.mjs', 'this file: missing args exits 2'],
   },
   'audit-phase-status.mjs': {
-    class: 'non-gate diagnostic structured utility with code 2 caller/config errors',
-    coverage: ['tests/integration/cli/audit-phase-status.test.mjs', 'this file: missing bundle exits 2'],
+    class: 'guarded parseArgs utility: shared arg guard with help exit 0 and code 2 invocation rejections',
+    coverage: ['tests/integration/cli/audit-phase-status.test.mjs', 'this file: missing bundle exits 2', 'this file: --help exits 0, unknown option exits 2'],
   },
   'apply-research-style.mjs': {
-    class: 'non-gate binary utility',
-    coverage: ['tests/integration/cli/apply-research-style.test.mjs', 'this file: missing args exits 1'],
+    class: 'guarded parseArgs utility: help exits 0, invocation rejection exits 2, binary domain outcome 0/1',
+    coverage: ['tests/integration/cli/apply-research-style.test.mjs', 'this file: missing args exits 1', 'this file: --help exits 0, unknown option exits 2'],
   },
   'check-reentry.mjs': {
-    class: 'non-gate structured utility with code 2 caller/config errors',
-    coverage: ['tests/integration/cli/check-reentry.test.mjs', 'this file: missing args exits 2'],
+    class: 'guarded parseArgs utility: shared arg guard with help exit 0 and code 2 caller/config errors',
+    coverage: ['tests/integration/cli/check-reentry.test.mjs', 'this file: missing args exits 2', 'this file: --help exits 0, unknown option exits 2'],
   },
   'operate-artifact-persistence.mjs': {
     class: 'non-gate mechanical persistence utility with code 2 caller/config errors',
@@ -71,8 +71,8 @@ const CLI_CONVENTION_INVENTORY = {
     coverage: ['tests/integration/cli/instantiate-run-bundle.test.mjs', 'this file: missing name exits 1'],
   },
   'log-event.mjs': {
-    class: 'always-0 diagnostic/logging exception',
-    coverage: ['tests/integration/cli/log-event.test.mjs', 'this file: missing bundle exits 0'],
+    class: 'guarded diagnostic/logging utility with narrowed always-0 exception: help 0, invocation rejection 2, log/trace outcomes 0',
+    coverage: ['tests/integration/cli/log-event.test.mjs', 'this file: missing bundle exits 0', 'this file: --help exits 0, unknown option exits 2'],
   },
   'operate-queue.mjs': {
     class: 'non-gate queue utility',
@@ -87,8 +87,8 @@ const CLI_CONVENTION_INVENTORY = {
     coverage: ['tests/integration/cli/user-research-controls-contract.test.mjs', 'this file: missing subcommand exits 2'],
   },
   'reconcile-plan-progress.mjs': {
-    class: 'non-gate diagnostic structured utility with code 2 caller/config errors',
-    coverage: ['tests/integration/cli/reconcile-plan-progress.test.mjs', 'this file: missing bundle exits 2'],
+    class: 'guarded parseArgs utility: shared arg guard with help exit 0 and code 2 caller/config errors',
+    coverage: ['tests/integration/cli/reconcile-plan-progress.test.mjs', 'this file: missing bundle exits 2', 'this file: --help exits 0, unknown option exits 2'],
   },
   'sync-reference-index.mjs': {
     class: 'non-gate reference-index synchronization utility with code 2 missing-bundle error',
@@ -107,8 +107,8 @@ const CLI_CONVENTION_INVENTORY = {
     coverage: ['tests/integration/cli/validate-playbook.test.mjs', 'this file: missing target exits 2'],
   },
   'validate-work-unit-hygiene.mjs': {
-    class: 'non-gate binary validator',
-    coverage: ['tests/integration/cli/validate-work-unit-hygiene.test.mjs', 'this file: shipped framework exits 0'],
+    class: 'guarded parseArgs utility: help exits 0, invocation rejection exits 2, binary validator outcome 0/1',
+    coverage: ['tests/integration/cli/validate-work-unit-hygiene.test.mjs', 'this file: shipped framework exits 0', 'this file: --help exits 0, unknown option exits 2'],
   },
   'validate-workflow-package.mjs': {
     class: 'non-gate tri-state validator with code 2 invocation errors',
@@ -116,8 +116,16 @@ const CLI_CONVENTION_INVENTORY = {
   },
 };
 
-const SAFE_INVOCATION_SAMPLES = [
-  { cli: 'advance-status.mjs', args: [], expectedStatus: 2 },
+const GUARDED_PARSE_ARGS_BATCH = [
+  'reconcile-plan-progress.mjs',
+  'audit-phase-status.mjs',
+  'check-reentry.mjs',
+  'log-event.mjs',
+  'validate-work-unit-hygiene.mjs',
+  'apply-research-style.mjs',
+];
+
+const SAFE_INVOCATION_SAMPLES = [  { cli: 'advance-status.mjs', args: [], expectedStatus: 2 },
   { cli: 'audit-phase-status.mjs', args: [], expectedStatus: 2 },
   { cli: 'apply-research-style.mjs', args: [], expectedStatus: 1 },
   { cli: 'check-reentry.mjs', args: [], expectedStatus: 2 },
@@ -209,7 +217,11 @@ describe('CLI exit-code convention runtime representatives', () => {
         );
       }
       if (/always-0/.test(klass)) {
-        assert.ok(literalExits.every((code) => code === 0), `${cli} must be an always-0 exception`);
+        const nonZeroLiterals = literalExits.filter((code) => code !== 0);
+        assert.ok(
+          nonZeroLiterals.every((code) => code === 2),
+          `${cli} must keep non-invocation outcomes always-0 (non-zero literals ${JSON.stringify(nonZeroLiterals)}; only code-2 invocation rejections are allowed)`,
+        );
       }
     }
   });
@@ -298,6 +310,47 @@ describe('CLI exit-code convention runtime representatives', () => {
       const output = JSON.parse(result.stdout);
       if (sample.waveEnvelope) assert.equal(output.check.passed, false);
       else assert.equal(output.error, 'invalid_invocation');
+    }
+  });
+
+  it('guarded parseArgs utility batch answers help with usage and exit 0', () => {
+    for (const cli of GUARDED_PARSE_ARGS_BATCH) {
+      const result = runNode([join(CLI_DIR, cli), '--help']);
+      assert.equal(result.status, 0, `${cli}: ${result.stderr || result.stdout}`);
+      assert.match(result.stdout, /Usage:/, cli);
+      assert.doesNotMatch(`${result.stdout}${result.stderr}`, /node:internal/, cli);
+    }
+  });
+
+  it('guarded parseArgs utility batch rejects undeclared options with code 2 before domain evaluation', () => {
+    for (const cli of GUARDED_PARSE_ARGS_BATCH) {
+      const result = runNode([join(CLI_DIR, cli), '--dsh-unknown-option-probe']);
+      assert.equal(result.status, 2, `${cli}: ${result.stderr || result.stdout}`);
+      assert.match(result.stderr, /invocation error/, cli);
+      assert.match(result.stderr, /Usage:/, cli);
+      assert.doesNotMatch(`${result.stdout}${result.stderr}`, /node:internal/, cli);
+    }
+  });
+
+  it('guarded parseArgs utility batch resolves arguments only through the shared argument-guard helper', () => {
+    for (const cli of GUARDED_PARSE_ARGS_BATCH) {
+      const source = readFileSync(join(CLI_DIR, cli), 'utf8');
+      assert.ok(
+        source.includes('engine/helpers/cli-args.mjs'),
+        `${cli} must import the shared argument-guard helper`,
+      );
+      assert.ok(
+        !/import\s*\{[^}]*\bparseArgs\b[^}]*\}\s*from\s*'node:util'/.test(source),
+        `${cli} must not import parseArgs from node:util directly`,
+      );
+    }
+  });
+
+  it('command docs inventory the guarded batch and the narrowed log-event exception', () => {
+    for (const file of ['DEEP_RESEARCH_HARNESS/COMMANDS.md', 'DEEP_RESEARCH_HARNESS/cli/README.md']) {
+      const text = readFileSync(join(REPO_ROOT, file), 'utf8');
+      assert.match(text, /guarded parseArgs utility batch/, file);
+      assert.match(text, /log-event\.mjs[^\n]*invocation rejection exits `2`/, file);
     }
   });
 

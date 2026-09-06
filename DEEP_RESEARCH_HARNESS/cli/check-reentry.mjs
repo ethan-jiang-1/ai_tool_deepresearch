@@ -13,7 +13,7 @@
 //   Phase forms: phase-wave1, wave1, phases/phase-wave1.md
 //   All forms normalize to { kind, status_gate, gate_key, node_ref, phase_key }
 
-import { parseArgs } from 'node:util';
+import { parseGuardedArgs } from '../engine/helpers/cli-args.mjs';
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import { createHash } from 'node:crypto';
@@ -56,12 +56,25 @@ const PHASE_EXPECTED_ARTIFACTS = {
 // CLI: argument parsing
 // ═══════════════════════════════════════════════════════════════════════════
 
-const { values } = parseArgs({
+const USAGE = 'Usage: node DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs --bundle <path> --at <target>';
+
+const parsed = parseGuardedArgs({
+  args: process.argv.slice(2),
   options: {
     bundle: { type: 'string' },
     at: { type: 'string' },
   },
+  usage: USAGE,
 });
+if (parsed.kind === 'help') {
+  console.log(USAGE);
+  process.exit(0);
+}
+if (parsed.kind === 'invalid') {
+  console.error(`invocation error: ${parsed.reason}\n${USAGE}`);
+  process.exit(2);
+}
+const { values } = parsed;
 
 function emitAndExit(result) {
   writeFileSync(1, `${JSON.stringify(result, null, 2)}\n`);

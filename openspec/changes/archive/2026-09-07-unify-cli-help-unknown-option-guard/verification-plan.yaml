@@ -1,0 +1,63 @@
+schema_version: verification-routing/v1
+change: unify-cli-help-unknown-option-guard
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      Guard-helper outcome classification is a deterministic node:test check
+      importing the pure helper with no fixture, runtime, or external calls.
+  integration:
+    status: selected
+    rationale: >-
+      Guarded-batch help/unknown-option probes, the batch source lock, and the
+      command-documentation inventory lock extend the accepted
+      tests/integration/cli/exit-code-convention.test.mjs regression, which
+      invokes local CLI files in child processes without network or agent
+      execution.
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      No bundle lifecycle or simulated agent flow is exercised; the contract
+      is observable at unit and integration level.
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      Pure deterministic CLI parsing and documentation contract; no agent
+      behavior is proven.
+claims:
+  - id: cli-args-guard-outcomes
+    statement: >-
+      parseGuardedArgs resolves a help token before any -- separator,
+      well-formed arguments, and an undeclared option to distinct
+      deterministic help/ok/invalid outcomes with declared-option defaults
+      passed through verbatim.
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/cli-args.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: cli-help-exit-inventory
+    statement: >-
+      The guarded parseArgs utility batch answers help with a usage line and
+      exit 0 and undeclared options with an invocation error plus usage line
+      and exit 2 through the shared helper only, and COMMANDS.md and
+      cli/README.md inventory the batch with the narrowed log-event exception.
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/exit-code-convention.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
