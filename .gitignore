@@ -80,6 +80,9 @@ _subagents/
 _backlog/_scratch/
 
 _fetch_*/
+_tmp_*.json
+_audit_*.json  
+
 
 # Node V8 compile cache (scripts/run-tests.mjs NODE_COMPILE_CACHE)
 /.cache/
