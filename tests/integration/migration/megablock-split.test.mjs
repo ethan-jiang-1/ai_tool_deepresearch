@@ -72,7 +72,14 @@ test('scenarios preserved 1:1 and headers + registry untouched', () => {
   for (const cap of SPECS) {
     const frozen = read(FIX + cap.replaceAll('/', '_') + '.spec.md');
     const current = read(`openspec/specs/${cap}/spec.md`);
-    assert.equal(scenarioCount(current), scenarioCount(frozen), `${cap}: scenario count changed`);
+    // The split must never LOSE scenarios. Additions through later accepted
+    // OpenSpec changes are legal: harness-review-defect-sync added one
+    // scenario to bundle/artifact-persistence-recovery ("Blocked retirement
+    // implies zero mutation", 41 -> 42), so the pin is a floor, not equality.
+    assert.ok(
+      scenarioCount(current) >= scenarioCount(frozen),
+      `${cap}: scenario count shrunk (${scenarioCount(frozen)} -> ${scenarioCount(current)})`,
+    );
     assert.equal(headerLine(current), headerLine(frozen), `${cap}: header enumeration changed`);
     // per-spec registry rows untouched: prefix ids identical
     const frozenIds = frozenReg.split('\n').filter((l) => /^[A-Z]{3}-\d{3}: /.test(l) && prefixOf(l) === headerLine(frozen).match(/> req: ([A-Z]{3})/)[1]);

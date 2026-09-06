@@ -3,7 +3,7 @@
 
 import { afterEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
@@ -104,11 +104,11 @@ describe('retire-final-version (human-controlled correction)', () => {
     writePrimary(bundle, 'final_v1.md', '# v1', sourcePath);
     writePrimary(bundle, 'final_v2.md', '# v2', sourcePath);
 
-    const rejected = retireFinalVersion({ bundlePath: bundle, version: 1, requestedBy: 'user' });
+    const rejected = retireFinalVersion({ bundlePath: bundle, version: 1, requestedBy: 'user', userConfirmation: 'please retire version 1' });
     assert.equal(rejected.verdict, 'blocked');
     assert.equal(rejected.reason_code, 'retire_requires_latest');
 
-    const ok = retireFinalVersion({ bundlePath: bundle, version: 2, requestedBy: 'user', reason: 'polish churn' });
+    const ok = retireFinalVersion({ bundlePath: bundle, version: 2, requestedBy: 'user', userConfirmation: 'please retire version 2', reason: 'polish churn' });
     assert.equal(ok.verdict, 'committed', ok.reason);
     assert.equal(ok.latest_target, 'final/final_v1.md');
     assert.equal(existsSync(path.join(bundle, 'final', 'final_v2.md')), false);
@@ -132,6 +132,62 @@ describe('retire-final-version (human-controlled correction)', () => {
     assert.equal(result.verdict, 'blocked');
     assert.equal(result.reason_code, 'retire_requires_user_request');
   });
+
+  it('rejects a user-flagged retire without a non-empty user confirmation', () => {
+    const { bundle, sourcePath } = createSubmittedBundle();
+    writePrimary(bundle, 'final.md', '# v0', sourcePath);
+    writePrimary(bundle, 'final_v1.md', '# v1', sourcePath);
+    for (const userConfirmation of [null, undefined, '', '   ']) {
+      const result = retireFinalVersion({ bundlePath: bundle, version: 1, requestedBy: 'user', userConfirmation });
+      assert.equal(result.verdict, 'blocked');
+      assert.equal(result.reason_code, 'retire_requires_user_request');
+      assert.equal(existsSync(path.join(bundle, 'final', 'final_v1.md')), true, 'bundle must stay untouched');
+    }
+  });
+
+  it('validates the retire request schema at the engine entry', () => {
+    const { bundle, sourcePath } = createSubmittedBundle();
+    writePrimary(bundle, 'final.md', '# v0', sourcePath);
+    writePrimary(bundle, 'final_v1.md', '# v1', sourcePath);
+    assert.throws(
+      () => retireFinalVersion({ bundlePath: bundle, version: 0, requestedBy: 'user', userConfirmation: 'retire it' }),
+      (error) => error.name === 'ZodError',
+    );
+    assert.equal(existsSync(path.join(bundle, 'final', 'final_v1.md')), true, 'bundle must stay untouched');
+  });
+
+  it('blocks an auxiliary-directory collision with zero bundle mutation', () => {
+    const { bundle, sourcePath } = createSubmittedBundle();
+    writePrimary(bundle, 'final.md', '# v0', sourcePath);
+    writePrimary(bundle, 'final_v1.md', '# v1', sourcePath);
+    writePrimary(bundle, 'final_v2.md', '# v2', sourcePath);
+    mkdirSync(path.join(bundle, 'final', 'final_v2'), { recursive: true });
+    writeFileSync(path.join(bundle, 'final', 'final_v2', '07-evidence-details.md'), 'details\n');
+    // A stale attic entry for the auxiliary directory forces the collision.
+    mkdirSync(path.join(bundle, 'final', 'attic'), { recursive: true });
+    writeFileSync(path.join(bundle, 'final', 'attic', 'final_v2'), 'stale\n');
+
+    const before = bundleSnapshot(bundle);
+    const result = retireFinalVersion({ bundlePath: bundle, version: 2, requestedBy: 'user', userConfirmation: 'retire version 2' });
+    assert.equal(result.verdict, 'blocked');
+    assert.equal(result.reason_code, 'retire_aux_collision');
+    assert.deepEqual(bundleSnapshot(bundle), before, 'a blocked retire must be zero-mutation');
+    assert.equal(existsSync(path.join(bundle, 'final', 'final_v2.md')), true, 'primary stays in place');
+  });
+
+  function bundleSnapshot(bundle) {
+    const entries = {};
+    const visit = (absolute, relative) => {
+      for (const entry of readdirSync(absolute, { withFileTypes: true })) {
+        const childAbsolute = path.join(absolute, entry.name);
+        const childRelative = relative ? `${relative}/${entry.name}` : entry.name;
+        if (entry.isDirectory()) visit(childAbsolute, childRelative);
+        else entries[childRelative] = readFileSync(childAbsolute).toString('base64');
+      }
+    };
+    visit(bundle, '');
+    return entries;
+  }
 });
 
 describe('self-contained evidence-details URL admission', () => {

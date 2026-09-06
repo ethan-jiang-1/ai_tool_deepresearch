@@ -11,6 +11,7 @@ import {
 } from './handoff-helpers.mjs';
 import { readFinalReportSeries } from './final-report-series.mjs';
 import { canonicalSectionContent } from './plan-hostfile-sections.mjs';
+import { parseProgressBlocks, zuluTimestampMs } from './plan-progress-blocks.mjs';
 
 // @impl CPT-006, CPT-009, RWG-023, CDP-009, PHS-010
 export const PHASE_STATUS_AUDIT_OUTCOMES = [
@@ -216,40 +217,9 @@ export function evaluatePrematureFinalPresence(bundlePath) {
 // is advisory presentation staleness (non-blocking). Presentation only; never
 // substitutes for trace truth.
 
-// Engine-owned cycle block header: `### Rerun cycle <N> (spawned <ISO ts>)`.
-const PROGRESS_CYCLE_HEADER = /^### Rerun cycle (\d+) \(spawned (.+)\)$/;
-const PROGRESS_CYCLE_HEADER_LOOKS_LIKE = /^### Rerun cycle/i;
-
-function parseProgressBlocks(sectionContent) {
-  const blocks = [];
-  let current = { header: null, ordinal: null, spawnTs: null, unparseable: false, lines: [] };
-  blocks.push(current);
-  for (const rawLine of sectionContent.split('\n')) {
-    const line = rawLine.trim();
-    const match = line.match(PROGRESS_CYCLE_HEADER);
-    if (match) {
-      while (current.lines.length > 0 && current.lines[current.lines.length - 1].trim() === '') {
-        current.lines.pop();
-      }
-      current = { header: line, ordinal: Number(match[1]), spawnTs: match[2], unparseable: false, lines: [] };
-      blocks.push(current);
-      continue;
-    }
-    if (PROGRESS_CYCLE_HEADER_LOOKS_LIKE.test(line)) {
-      // Cycle-looking header the Engine never writes — manual interference.
-      // Fail closed: checked lines in this block have no verifiable witness
-      // window and are tamper evidence.
-      while (current.lines.length > 0 && current.lines[current.lines.length - 1].trim() === '') {
-        current.lines.pop();
-      }
-      current = { header: line, ordinal: null, spawnTs: null, unparseable: true, lines: [] };
-      blocks.push(current);
-      continue;
-    }
-    current.lines.push(rawLine);
-  }
-  return blocks;
-}
+// Engine-owned cycle block header parsing and spawn-timestamp semantics live
+// in the single shared parse (plan-progress-blocks.mjs); the writer and this
+// auditor consume the same block-membership authority.
 
 function checkedGateEntries(block) {
   const entries = [];
@@ -301,10 +271,13 @@ function blockCurrentAt(ts, gate, blocks, witnessIndex) {
   }
   let candidate = blocks[0];
   if (ts == null) return candidate;
+  const tsMs = zuluTimestampMs(ts);
+  if (tsMs == null) return candidate;
   for (let i = 1; i < blocks.length; i++) {
     const block = blocks[i];
-    if (block.spawnTs == null) continue;
-    if (!(block.spawnTs <= ts)) break;
+    const blockMs = zuluTimestampMs(block.spawnTs);
+    if (blockMs == null) continue;
+    if (blockMs > tsMs) break;
     candidate = block;
   }
   return candidate;
@@ -357,8 +330,15 @@ export function evaluatePlanProgressTamper(bundlePath, traceEvents, topology) {
         // block's own spawner) witnesses this line.
         witnessed = rerunSpawners.length > block.ordinal;
       } else {
-        witnessed = (witnessTsByGate.get(entry.gateKey) || [])
-          .some((ts) => ts != null && ts >= block.spawnTs);
+        // Witness window on parsed timestamps: correctness never depends on
+        // lexical Zulu ordering, and a shape-valid but impossible spawn date
+        // (zuluTimestampMs -> null) admits no witness at all.
+        const spawnMs = zuluTimestampMs(block.spawnTs);
+        witnessed = spawnMs != null && (witnessTsByGate.get(entry.gateKey) || [])
+          .some((ts) => {
+            const witnessMs = zuluTimestampMs(ts);
+            return witnessMs != null && witnessMs >= spawnMs;
+          });
       }
       if (!witnessed) {
         tampered.push({ gateKey: entry.gateKey, label: entry.label, block: label });

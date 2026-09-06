@@ -1,0 +1,170 @@
+schema_version: verification-routing/v1
+change: harness-review-defect-sync
+test_classes:
+  unit:
+    status: selected
+    rationale: 引擎 helper 级契约（共享 parser、retire helper 语义、backing 断言、rwg 文本锁、vocabulary gate）可直接以 node:test 单测证明。
+  integration:
+    status: selected
+    rationale: CLI 层行为（retire 参数面与零突变 blocked、audit tamper、exit code 约定、playbook doc-lock、wave1 gate 回归）需要真实 CLI 进程与临时 bundle。
+  deterministic_e2e:
+    status: selected
+    rationale: writer/auditor 共享解析器需经 gate CLI 链路在临时 bundle 上端到端验证一次。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: 本 change 全部为确定性引擎/文档缺陷修复，无 agent 行为面需要真实 agent runtime 证据。
+claims:
+  - id: plan-progress-blocks-shared-parser-unit
+    statement: 共享 Progress block 解析模块的 block 归属、严格 header、Zulu 时间戳与 unparseable 判定契约（writer 与 auditor 唯一实现）。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/plan-progress-blocks.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: final-delivery-backing-assertions-unit
+    statement: final-delivery-backing 断言收窄后 missing 与 non-aux-existing 各自精确错误码，aux grammar 共享常量与既有 admission 行为等价。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/final-delivery-backing.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: retire-helper-contract-unit
+    statement: retireFinalVersion 引擎级——全部 pre-check 先于首次 rename、blocked 零突变、userConfirmation/request schema 校验拒绝非确认调用。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/artifact-persistence-recovery.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: vocabulary-gate-regression-unit
+    statement: CONTEXT.md 词条与反馈词汇表增删后 feedback-vocabulary-gate 检查与测试保持一致。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/governance/feedback-vocabulary-gate.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: rwg-text-locks-regression-unit
+    statement: research-wave-gate-implementation 措辞修复后既有结构/文本锁全部通过。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/rwg-slim-structure-locks.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: retire-cli-contract-integration
+    statement: retire-final-version CLI——缺失 --user-confirmation 为 invocation error（exit 2）；blocked 时 bundle 文件系统零突变；确认后行为与既有契约一致。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/artifact-persistence.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: audit-phase-status-tamper-integration
+    statement: 手写/伪造 malformed spawnTs 的 cycle block 由 audit 按 plan_progress_tamper_suspected fail-closed 报告。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/audit-phase-status.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: exit-code-convention-regression-integration
+    statement: retire-final-version 新失败路径的 exit 语义与 cli-exit-code-conventions 保持对齐。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/exit-code-convention.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: continue-run-bundle-doc-lock-integration
+    statement: continue-run-bundle.md Reload 步骤 6 增补 reconcile 指针后既有 doc-lock 契约保持通过。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/continue-run-bundle-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: wave1-gate-regression-integration
+    statement: wave1 gate 收敛判定在措辞修复与代码去重后行为不变（回归）。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-wave1-complete.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: plan-progress-rerun-cycles-e2e
+    statement: 经 gate CLI 链路的 Progress 写入与 audit 读取共享同一 block 归属判定，rerun cycle 增长行为不变。
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/plan-progress-rerun-cycles.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

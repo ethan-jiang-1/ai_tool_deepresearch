@@ -29,6 +29,7 @@ import {
   FinalDeliveryBackingCheckSchema,
   FinalDeliveryBackingEvaluationSchema,
   FinalDeliveryBackingInspectSchema,
+  FINAL_AUXILIARY_FILE_PATTERN,
   isFinalMarkdownTarget,
 } from './final-delivery-backing.mjs';
 import {
@@ -198,6 +199,9 @@ const RetireFinalVersionRequestSchema = z.object({
   feature: FinalReportFeatureSchema.nullable().optional(),
   reason: z.string().nullable().optional(),
   requestedBy: z.literal('user').optional(),
+  // The user's verbatim retirement request; the mechanical carrier of the
+  // human-controlled boundary. Required and non-empty.
+  userConfirmation: z.string().min(1),
 }).strict();
 
 export const RetireFinalVersionResultSchema = z.object({
@@ -785,7 +789,7 @@ function finalReportPersistResult({ admission, target, persistence = null, selfC
  * pass trivially (their backing admission already governs).
  */
 export function evaluateSelfContainedEvidenceDetails({ bundlePath, target, markdown } = {}) {
-  const auxMatch = target.match(/^final\/final(?:_[a-z0-9]+(?:_[a-z0-9]+)*)?_v[1-9][0-9]*\/([^/]+)\.md$/);
+  const auxMatch = target.match(FINAL_AUXILIARY_FILE_PATTERN);
   if (!auxMatch) {
     return { check: { passed: true }, inspect: [], advice: [] };
   }
@@ -1459,22 +1463,31 @@ function appendRevisionsRow({ bundleReal, target, priorDigest, newDigest, operat
  * Human-controlled correction: move the selected primary revision to
  * final/attic/ with a retired marker and recompute latest from the remaining
  * non-retired revisions. Only an explicit user request may invoke this
- * operation; the Agent SHALL NOT auto-retire. Retired bytes are archived, not
+ * operation: the caller must pass `requestedBy: 'user'` plus a non-empty
+ * `userConfirmation` (the user's verbatim request); the CLI rejects a missing
+ * confirmation as an invocation error before the Engine is invoked, and this
+ * Engine entry validates the full request schema before any work. All
+ * pre-checks (inventory, latest-only, attic safety, target and auxiliary
+ * collisions) complete before the first filesystem mutation, so a `blocked`
+ * verdict always implies zero mutation. Retired bytes are archived, not
  * deleted or rewritten, and the retired version number is never reused.
  */
-export function retireFinalVersion({ bundlePath, version, feature = null, reason = null, requestedBy = null } = {}) {
+export function retireFinalVersion({ bundlePath, version, feature = null, reason = null, requestedBy = null, userConfirmation = null } = {}) {
   const bundleReal = resolveBundle(bundlePath);
   const parsedFeature = feature === null ? null : FinalReportFeatureSchema.parse(feature);
-  if (requestedBy !== 'user') {
+  if (requestedBy !== 'user' || typeof userConfirmation !== 'string' || userConfirmation.trim() === '') {
     return retireResult({
       bundleReal,
       version,
       parsedFeature,
       verdict: 'blocked',
       reasonCode: 'retire_requires_user_request',
-      reason: 'retire-final-version is human-controlled; an explicit user request is required. The Agent SHALL NOT auto-retire any version.',
+      reason: 'retire-final-version is human-controlled; an explicit user request carried by --user-confirmation is required. The Agent SHALL NOT auto-retire any version.',
     });
   }
+  // Full request-shape validation at the Engine entry (defense in depth after
+  // the CLI invocation guard; the CLI rejects missing confirmation first).
+  RetireFinalVersionRequestSchema.parse({ bundlePath, version, feature, reason, requestedBy, userConfirmation });
   const series = readFinalReportSeries(bundleReal);
   if (!series.valid) {
     const first = series.blockers[0];
@@ -1489,35 +1502,47 @@ export function retireFinalVersion({ bundlePath, version, feature = null, reason
   }
   const { targetPath, parentPath } = resolveTarget(bundleReal, match.target);
   const atticDir = path.join(bundleReal, 'final', 'attic');
-  if (!existsSync(atticDir)) {
-    mkdirSync(atticDir, { recursive: false });
-    fsyncPath(path.join(bundleReal, 'final'));
-  }
-  const atticInfo = lstatSync(atticDir);
-  if (atticInfo.isSymbolicLink() || !atticInfo.isDirectory()) {
-    throw new ArtifactPersistenceConfigError('final/attic is not a real directory', 'attic_unsafe');
-  }
   const retiredName = match.target.split('/').pop();
   const retiredPath = path.join(atticDir, retiredName);
-  if (existsSync(retiredPath)) {
-    return retireResult({ bundleReal, version, parsedFeature, verdict: 'blocked', reasonCode: 'retire_target_collision', reason: `final/attic/${retiredName} already exists; resolve the collision and rerun.` });
+  // --- Pre-check phase: zero filesystem mutation below this line. ---
+  // Every blocked verdict and config fault must be reachable before the first
+  // rename so a blocked result always implies a byte-identical bundle.
+  const atticExists = existsSync(atticDir);
+  if (atticExists) {
+    const atticInfo = lstatSync(atticDir);
+    if (atticInfo.isSymbolicLink() || !atticInfo.isDirectory()) {
+      throw new ArtifactPersistenceConfigError('final/attic is not a real directory', 'attic_unsafe');
+    }
+    if (existsSync(retiredPath)) {
+      return retireResult({ bundleReal, version, parsedFeature, verdict: 'blocked', reasonCode: 'retire_target_collision', reason: `final/attic/${retiredName} already exists; resolve the collision and rerun.` });
+    }
   }
-  renameSync(targetPath, retiredPath);
-  fsyncPath(atticDir);
-  fsyncPath(parentPath);
-  // Move the version-bound auxiliary directory (if any) alongside the retired primary to avoid an orphan_auxiliary_directory blocker.
+  // Auxiliary-directory pre-checks: unsafe auxiliary or an attic collision
+  // blocks the retirement before the primary revision is touched.
   const auxDirName = retiredName.replace(/\.md$/, '');
   const auxDirPath = path.join(bundleReal, 'final', auxDirName);
-  if (existsSync(auxDirPath)) {
+  const auxExists = existsSync(auxDirPath);
+  if (auxExists) {
     const auxInfo = lstatSync(auxDirPath);
     if (auxInfo.isSymbolicLink() || !auxInfo.isDirectory()) {
       throw new ArtifactPersistenceConfigError('auxiliary directory is unsafe', 'auxiliary_unsafe');
     }
-    const auxRetiredPath = path.join(atticDir, auxDirName);
-    if (existsSync(auxRetiredPath)) {
+    if (atticExists && existsSync(path.join(atticDir, auxDirName))) {
       return retireResult({ bundleReal, version, parsedFeature, verdict: 'blocked', reasonCode: 'retire_aux_collision', reason: `final/attic/${auxDirName} already exists; resolve the collision and rerun.` });
     }
-    renameSync(auxDirPath, auxRetiredPath);
+  }
+  // --- Mutation phase: all pre-checks passed. ---
+  if (!atticExists) {
+    // A freshly created attic is empty, so neither collision can apply.
+    mkdirSync(atticDir, { recursive: false });
+    fsyncPath(path.join(bundleReal, 'final'));
+  }
+  // Move the version-bound auxiliary directory (if any) alongside the retired primary to avoid an orphan_auxiliary_directory blocker.
+  renameSync(targetPath, retiredPath);
+  fsyncPath(atticDir);
+  fsyncPath(parentPath);
+  if (auxExists) {
+    renameSync(auxDirPath, path.join(atticDir, auxDirName));
     fsyncPath(atticDir);
     fsyncPath(path.join(bundleReal, 'final'));
   }

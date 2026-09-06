@@ -260,9 +260,14 @@ conclusion, or research-profile change; those SHALL use the existing audited
 post-final rerun path and a new global version.
 
 `retire-final-version` SHALL be a human-controlled correction operation on the
-same persistence surface. It SHALL accept the selected bundle, one `--version`
-and optional `--feature`, and SHALL retire **only the current latest primary
-revision** (retiring an intermediate or non-latest version SHALL be rejected,
+same persistence surface. It SHALL accept the selected bundle, one `--version`,
+an optional `--feature`, and one non-empty `--user-confirmation` carrying the
+user's verbatim retirement request. Every pre-check — latest-only selection,
+target collision, auxiliary-directory collision, and auxiliary-directory
+safety — SHALL complete before the first filesystem mutation, so a `blocked`
+verdict SHALL always imply zero mutation of the bundle. Only after all
+pre-checks pass SHALL it retire **only the current latest primary revision**
+(retiring an intermediate or non-latest version SHALL be rejected,
 preserving the contiguous `1..latest` primary sequence invariant): it SHALL
 move the selected primary revision file to the existing `final/attic/` area
 (retaining the original filename or a uniform retired suffix), SHALL write a
@@ -271,8 +276,10 @@ and SHALL recompute `latest` as the previous revision. It SHALL NOT delete or
 rewrite the moved bytes (immutability of history is preserved; retirement only
 changes membership of the current authoritative series), SHALL NOT reuse the
 retired version number (the sequence never reuses a number), and SHALL be
-invocable only by an explicit user request — the Agent SHALL NOT auto-retire any
-version.
+invocable only by an explicit user request — the CLI SHALL reject a missing or
+empty `--user-confirmation` as an invocation/configuration error before the
+Engine is invoked, the Engine SHALL validate the retire request schema at
+entry, and the Agent SHALL NOT auto-retire any version.
 
 The Engine SHALL derive the canonical primary inventory and classify it before
 any publication or retirement, applying the existing safe-target and immutable
@@ -336,7 +343,7 @@ supplementary and SHALL not enter version allocation.
 
 #### Scenario: Human retires the latest spuriously created version
 
-- **WHEN** an explicit user request retires the current latest version N via `retire-final-version --version N`
+- **WHEN** an explicit user request retires the current latest version N via `retire-final-version --version N --user-confirmation "<verbatim user request>"`
 - **THEN** the Engine SHALL move `final/final_v<N>.md` (or the labelled equivalent) to `final/attic/`, write the retired marker, and recompute `latest` as the previous revision
 - **AND** SHALL NOT delete or rewrite the moved bytes
 - **AND** SHALL NOT reuse version number N in any later allocation
@@ -349,9 +356,15 @@ supplementary and SHALL not enter version allocation.
 
 #### Scenario: Agent cannot auto-retire
 
-- **WHEN** an Agent attempts to retire a version without an explicit user request
-- **THEN** the operation SHALL reject the request before any target mutation
-- **AND** SHALL return a structured error naming the human-owned boundary
+- **WHEN** an Agent attempts to retire a version without `--user-confirmation` (missing, empty, or not carrying a user request)
+- **THEN** the CLI SHALL reject the invocation as an invocation/configuration error before the Engine is invoked
+- **AND** the bundle SHALL remain byte-identical
+
+#### Scenario: Blocked retirement implies zero mutation
+
+- **WHEN** a retire request passes the confirmation guard but a pre-check fails (for example an auxiliary-directory collision in `final/attic/`)
+- **THEN** the Engine SHALL return a `blocked` verdict naming the collision
+- **AND** no bundle path — primary revision, auxiliary directory, or `final/attic/` — SHALL have been created, moved, or rewritten by that invocation
 
 
 ### Requirement: Final auxiliary directories SHALL bind to their primary version

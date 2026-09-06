@@ -95,6 +95,7 @@ stand (e.g. polish-only churn), the user may retire the current latest version:
 node DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs retire-final-version \
   --bundle <bundle> \
   --version <N> \
+  --user-confirmation "<verbatim user request>" \
   [--reason <text>]
 ```
 
@@ -102,9 +103,12 @@ Only the current latest revision may be retired (retiring an intermediate
 version would break the contiguous primary sequence); the selected primary and
 its bound auxiliary directory move to `final/attic/` with a retired marker,
 `latest` recomputes to the previous revision, and the retired version number is
-never reused. This operation requires an explicit user request — the Agent
-SHALL NOT auto-retire any version; an Agent-initiated call is rejected before
-any target mutation.
+never reused. This operation requires an explicit user request carried by the
+non-empty `--user-confirmation` (the user's verbatim request text) — the Agent
+SHALL NOT auto-retire any version; a missing or empty `--user-confirmation` is
+rejected as an invocation error (exit `2`) before the Engine is invoked, and
+every pre-check completes before the first filesystem mutation, so a `blocked`
+verdict always implies a byte-identical bundle.
 
 For a safe **non-primary** Markdown target under `final/` (not the canonical
 primary series), use `persist-final-report`, which admits the Evidence Map

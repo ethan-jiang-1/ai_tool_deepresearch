@@ -17,10 +17,10 @@
 4. **停止授权以代码枚举为唯一真相**：`DEEP_RESEARCH_HARNESS/engine/queue-manager-core.mjs` 的 `StopAuthorizationState` 枚举 4 值；`syncQueueHealth` 实际写入 `empty_queue_after_refill`（drain 后停止）与 `unauthorized_continue_required`（继续）；`final_delivery` / `decision_blocker` 是保留值、当前无代码写入。
    → 真相源：`DEEP_RESEARCH_HARNESS/engine/queue-manager-core.mjs#StopAuthorizationState`。
 5. **submit 语义**：正常 `submit` 只接受 claimed attempts；同 hash 重复 = 幂等成功，仅不同内容重复才拒绝；delegated 完成只看 submitted ledger 行，不看文件系统存在。
-   → 真相源：`openspec/specs/agent/delegated-work-units/spec.md` + `DEEP_RESEARCH_HARNESS/RUN.md`。
+   → 真相源：`openspec/specs/agent/work-unit-submission/spec.md` + `DEEP_RESEARCH_HARNESS/RUN.md`。
 6. **恢复边界**：work-unit 恢复遵守"同一 checkpoint 重跑"或"显式 terminalize + 新路径"；绝不手改 ledger / index / status / queue / lock / journal / hash。
    → 真相源：`DEEP_RESEARCH_HARNESS/RUN.md`（work-unit recovery 段）。
-7. **反馈第一动作读 closed enum**：门禁面 `hints[].resolution_owner` 标明责任主体（Agent/Engine/User）；工作单元面发出 `attempt_disposition` + `next.recovery_action`，其取值全集为 `DEEP_RESEARCH_HARNESS/engine/work-unit-repair-vocabulary.mjs` 的 `WORK_UNIT_RECOVERY_ACTIONS`（10 值，含 CLI 动词拼写与显式等待/作者/停止边界）；恢复结果携带 `next` 重跑坐标，不是死胡同；disposition → `recovery_action` → CLI 动词的映射由 `RUN.md` 决策表 + 锁定测试固化。
+7. **反馈第一动作读 closed enum**：门禁面 `hints[]` 的 `repair_kind`（finding `repair.kind`，`GATE_REPAIR_KINDS`）标明责任主体（Agent/Engine/User）；工作单元面发出 `attempt_disposition` + `next.recovery_action`，其取值全集为 `DEEP_RESEARCH_HARNESS/engine/work-unit-repair-vocabulary.mjs` 的 `WORK_UNIT_RECOVERY_ACTIONS`（10 值，含 CLI 动词拼写与显式等待/作者/停止边界）；恢复结果携带 `next` 重跑坐标，不是死胡同；disposition → `recovery_action` → CLI 动词的映射由 `RUN.md` 决策表 + 锁定测试固化。
    → 真相源：`DEEP_RESEARCH_HARNESS/engine/work-unit-repair-vocabulary.mjs`（`WORK_UNIT_RECOVERY_ACTIONS`）、`DEEP_RESEARCH_HARNESS/engine/work-unit-attempt-disposition.mjs`、`DEEP_RESEARCH_HARNESS/RUN.md`（决策表）、`tests/engine/work-unit-recovery-decision-table.test.mjs`。
 8. **交互点只有 HITL1/HITL2**：Final 是 terminal lifecycle delivery，deliver-first、接受 presentation feedback，但不是第三个 checkpoint。
    → 真相源：`openspec/specs/bundle/run-entry/spec.md` requirement「Entry trigger hands control to Agent-run Harness execution」（registry: RUE-005）。

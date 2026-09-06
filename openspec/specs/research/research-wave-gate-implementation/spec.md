@@ -58,11 +58,14 @@ a set of closed candidates is materialization-exhausted.
 For each current canonical Topic, the gate SHALL obtain current reference-floor
 coverage only from `canonical_current` paths selected by the shared Wave1
 locator and convergence evaluator. The old target expression
-The old target expression `reference/*{topic}*.md` SHALL not act as a second success predicate: the gate definition still declares it as the `count_floor` target, and the convergence evaluator preempts that raw count whenever a materialization/backing root exists.
-legacy `NN-wave1-*` row/file remains readable/indexable but SHALL not count;
-nor shall an arbitrary filename containing a full slug. A current canonical
-path counts only after the existing submitted-backing, reference-format,
-parseable-URL, and numeric eligibility checks pass.
+`reference/*{topic}*.md` SHALL not act as a second success predicate: the gate
+definition still declares it as the `count_floor` target, and
+the convergence evaluator preempts that raw count whenever a
+materialization/backing root exists. A legacy `NN-wave1-*` row/file remains
+readable/indexable but SHALL not count; nor shall an arbitrary filename
+containing a full slug. A current canonical path counts only after the
+existing submitted-backing, reference-format, parseable-URL, and numeric
+eligibility checks pass.
 
 The accepted eight-column `reference/_INDEX.md` table remains required for
 consumer navigation. Its parent validation precedes per-reference row coverage.

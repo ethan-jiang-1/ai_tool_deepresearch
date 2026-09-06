@@ -404,6 +404,36 @@ describe('plan Progress cycle blocks (PHS-010)', () => {
     );
   });
 
+  it('treats a non-Zulu spawn timestamp as manual interference (fail-closed)', () => {
+    const bundle = makeBundle('integrity-cycle-non-zulu-spawn');
+    writeTrace(bundle, cycleTrace());
+    writeFileSync(join(bundle, 'rb_plan.md'), planWithCycleBlock(
+      CYCLE_GATE_LINES({ 'wave0-complete': true }),
+      '### Rerun cycle 1 (spawned 2020-01-01)',
+    ));
+    const tamper = tamperFor(bundle);
+    assert.ok(
+      tamper.tampered.some((t) => t.gateKey === 'wave0-complete' && t.block === 'unparseable'),
+      JSON.stringify(tamper.tampered),
+    );
+  });
+
+  it('admits no witness against a shape-valid but impossible spawn date', () => {
+    const bundle = makeBundle('integrity-cycle-impossible-spawn');
+    writeTrace(bundle, cycleTrace());
+    // 9999-99-99T99:99:99Z passes the canonical shape but is not a real date;
+    // the parsed window can never admit a witness, so the checked line is tamper.
+    writeFileSync(join(bundle, 'rb_plan.md'), planWithCycleBlock(
+      CYCLE_GATE_LINES({ 'wave0-complete': true }),
+      '### Rerun cycle 1 (spawned 9999-99-99T99:99:99Z)',
+    ));
+    const tamper = tamperFor(bundle);
+    assert.ok(
+      tamper.tampered.some((t) => t.gateKey === 'wave0-complete' && t.block === 'Rerun cycle 1'),
+      JSON.stringify(tamper.tampered),
+    );
+  });
+
   it('does not report tamper for a legal cycle flip backed by an in-cycle witness', () => {
     const bundle = makeBundle('integrity-cycle-legal-flip');
     writeTrace(bundle, cycleTrace());

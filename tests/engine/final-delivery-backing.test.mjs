@@ -60,18 +60,32 @@ describe('self-contained final backing (FDB-002)', () => {
     assert.equal(r.inspect[0].code, 'backing_file_missing');
   });
 
-  it('still rejects non-auxiliary final paths as backing', () => {
+  it('rejects an existing non-auxiliary final path as backing with the exact prohibition code', () => {
     const bundle = createBundle();
     writeFileSync(path.join(bundle, 'final', 'other.md'), 'x');
+    // href resolves relative to the target directory: `other.md` -> final/other.md,
+    // which exists, so the file passes existence and fails the prohibition check.
+    const r = evaluateFinalDeliveryBacking({
+      bundlePath: bundle,
+      target: 'final/final_v4.md',
+      markdown: mainReport('other.md'),
+    });
+    assert.equal(r.check.passed, false);
+    assert.equal(r.inspect[0].code, 'final_output_not_backing');
+  });
+
+  it('rejects a non-auxiliary final href that does not resolve as a missing backing file', () => {
+    const bundle = createBundle();
+    writeFileSync(path.join(bundle, 'final', 'other.md'), 'x');
+    // `final/other.md` resolves relative to the target directory to
+    // final/final/other.md, which does not exist — missing-file rejection.
     const r = evaluateFinalDeliveryBacking({
       bundlePath: bundle,
       target: 'final/final_v4.md',
       markdown: mainReport('final/other.md'),
     });
     assert.equal(r.check.passed, false);
-    // Rejected either as a missing file or as a prohibited final output;
-    // the point is a non-auxiliary final path is never accepted as backing.
-    assert.ok(['backing_file_missing', 'final_output_not_backing'].includes(r.inspect[0].code), r.inspect[0].code);
+    assert.equal(r.inspect[0].code, 'backing_file_missing');
   });
 
   it('accepts an auxiliary-target report backing within its own directory', () => {

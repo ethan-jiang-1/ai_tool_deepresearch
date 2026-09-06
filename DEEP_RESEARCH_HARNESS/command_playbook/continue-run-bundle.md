@@ -84,7 +84,11 @@ coordinate.
    `plan_progress_tamper_suspected`, `status_drift`, `manual_bypass_suspected`,
    `missing_witness`, `failed_gate_downstream_status`, post-final stages) name
    the repair; bundle prose such as checked `rb_plan.md## Progress` boxes is
-   presentation, not completion evidence.
+   presentation, not completion evidence. For presentation-only Progress drift
+   (a lagging or hand-edited Progress section), the Engine-owned rebuild is
+   `node DEEP_RESEARCH_HARNESS/cli/reconcile-plan-progress.mjs --bundle
+   <bundle>`: it recreates the frozen Progress from trace witnesses, adds no
+   gate semantics, and does not substitute for the audit.
 
 ## Authority Boundary
 

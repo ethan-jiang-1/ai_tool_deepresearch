@@ -29,7 +29,7 @@ function usage() {
     '  node DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs persist --bundle <path> --source <file> --target <bundle-relative-path> (--expect-absent | --expect-sha256 <digest>)',
     '  node DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs persist-final-report --bundle <path> --source <file> --target <final/report.md> (--expect-absent | --expect-sha256 <digest>)',
     '  node DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs publish-final-report --bundle <path> --source <retained-staging> [--feature <safe_snake_case>] [--polish]',
-    '  node DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs retire-final-version --bundle <path> --version <N> [--feature <safe_snake_case>] [--reason <text>]',
+    '  node DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs retire-final-version --bundle <path> --version <N> --user-confirmation "<verbatim user request>" [--feature <safe_snake_case>] [--reason <text>]',
     '  node DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs sweep --bundle <path>',
     '',
     'Sweep requires a quiescent bundle: do not run it concurrently with persist.',
@@ -67,6 +67,7 @@ try {
       polish: { type: 'boolean', default: false },
       version: { type: 'string' },
       reason: { type: 'string' },
+      'user-confirmation': { type: 'string' },
       'expect-absent': { type: 'boolean', default: false },
       'expect-sha256': { type: 'string' },
       help: { type: 'boolean', short: 'h', default: false },
@@ -176,8 +177,12 @@ try {
       emit(invocationError(operation, '--version <N> is required and must be a positive integer'));
       process.exit(2);
     }
+    if (!values['user-confirmation'] || values['user-confirmation'].trim() === '') {
+      emit(invocationError(operation, '--user-confirmation "<verbatim user request>" is required: retire-final-version is human-controlled, and the Agent SHALL NOT invoke it without an explicit user request'));
+      process.exit(2);
+    }
     if (values.source || values.target || values.polish || values['expect-absent'] || values['expect-sha256']) {
-      emit(invocationError(operation, 'retire-final-version accepts only --bundle, --version, --feature, and --reason'));
+      emit(invocationError(operation, 'retire-final-version accepts only --bundle, --version, --feature, --reason, and --user-confirmation'));
       process.exit(2);
     }
     const result = retireFinalVersion({
@@ -186,6 +191,7 @@ try {
       feature: values.feature || null,
       reason: values.reason || null,
       requestedBy: 'user',
+      userConfirmation: values['user-confirmation'],
     });
     logToRun(values.bundle, result.verdict === 'blocked' ? 'warn' : 'info', 'artifact_persistence_retire_final_version', result);
     emit(result);

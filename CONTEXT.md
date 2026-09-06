@@ -15,7 +15,7 @@ the task-specific authoritative source still decide the work.
 | Next guidance role | [OpenSpec Control Map](openspec/README.md) |
 | Complete execution vocabulary | [Agentic Execution Model](openspec/guidance/models/agentic-execution-model.md) |
 | Framework assets versus mutable run state | [Framework Runtime Boundary](openspec/guidance/models/framework-runtime-boundary.md) |
-| Durable architecture rationale | [ADR 0001](docs/adr/0001-keep-agent-flow-markdown-driven-and-engine-gated.md), [ADR 0002](docs/adr/0002-name-the-reusable-surface-deep-research-harness.md), and [ADR 0003](docs/adr/0003-retire-legacy-harness-source-alias.md) |
+| Durable architecture rationale | [ADR 0001](docs/adr/0001-keep-agent-flow-markdown-driven-and-engine-gated.md), [ADR 0002](docs/adr/0002-name-the-reusable-surface-deep-research-harness.md), [ADR 0003](docs/adr/0003-retire-legacy-harness-source-alias.md), [ADR 0004](docs/adr/0004-keep-capability-catalog-reuse-first-and-non-authoritative.md), and [ADR 0005](docs/adr/0005-use-two-level-capability-paths-as-canonical-identity.md) |
 | Current behavior or machine fact | the selected accepted/executable contract or selected current run bundle |
 
 `CONTEXT.md` does not itself grant authority, capability, permission, liveness,
@@ -61,7 +61,6 @@ runtime record. There is deliberately no `DEEP_RESEARCH_HARNESS/CONTEXT.md`.
 | **TopicTreeEvolution（课题大纲演进管线）** | post-final rerun 阶段既有的 mutation/gate pipeline（canonical topic mutation、style CLI、rerun_count 推进）；owner `openspec/specs/research/post-final-recovery/spec.md` |
 | **ReopenResearchPass（终态重开通行证）** | Final 之后 evidence-expanding reentry 的 accepted event/lineage，post-final recovery 所有权与资格判定的依据；owner `openspec/specs/research/post-final-recovery/spec.md` + `openspec/specs/research/content-delivery-phase-content/spec.md` |
 | **StateHealthCheck（状态健康巡检）** | 系统崩溃与文件观测自愈基础；owner `DEEP_RESEARCH_HARNESS/engine/helpers/file-observability.mjs` |
-| **WorkerFallback（智能体降级容灾）** | 委托子 Agent 遇到 API 限流/不可用时的主 Agent 接盘机制；owner `openspec/specs/agent/delegated-work-units/spec.md` |
 
 > 全仓库核心机制与代号定义按 owner spec 用法归纳，具体判定以 owner spec 为准。
 
@@ -89,12 +88,11 @@ runtime record. There is deliberately no `DEEP_RESEARCH_HARNESS/CONTEXT.md`.
 |---|---|---|---|---|
 | **HITL1** | Checkpoint / Interactive | Instantiation 与 Setup 之间 | 初始立项对齐：Agent 提供推荐，用户确认方向、profile 与探测结果 | `openspec/specs/research/pre-research-phase-content/spec.md`<br>`openspec/specs/agent/hitl-ux/spec.md` |
 | **HITL2** | Checkpoint / Interactive | Wave2 与 Readiness 之间 | 阶段产出审阅：Agent 总结研究全貌，用户决定交付或合法重跑 | `openspec/specs/research/research-wave-phase-content/spec.md` |
-| **Final** | Terminal Delivery | 最终交付阶段 | 终态报告交付：交付后在 Final 原地接受呈现反馈并追加版本；不是第三个 Checkpoint | `openspec/specs/research/content-delivery-phase-content/spec.md` |
+| **Final** | Terminal Delivery | 最终交付阶段 | 终态报告交付：交付后在 Final 原地接受呈现反馈；呈现修订以 CAS 更新当前 latest 字节、版本号不变，证据扩张走新版本；不是第三个 Checkpoint | `openspec/specs/research/content-delivery-phase-content/spec.md` |
 | **ResearchConfigLock** | Freshness Checkpoint | HITL1 与 Rerun 阶段 | 授权将用户确认的 `research_style_params` 写入 Bundle 配置 | `openspec/specs/research/research-styles/spec.md` |
 | **TopicTreeEvolution** | Mutation Pipeline | Post-Final Rerun 阶段 | Post-Final 重跑时的变更/门控管线（包含规范化主题突变、Style CLI 调优与 `rerun_count` 推进） | `openspec/specs/research/post-final-recovery/spec.md` |
 | **ReopenResearchPass** | Lineage / Reentry Event | Final 交付之后 | 证据扩张型重入的准入血统凭证，用于在 Final 之后合法重开新一轮研究 | `openspec/specs/research/post-final-recovery/spec.md`<br>`openspec/specs/research/content-delivery-phase-content/spec.md` |
 | **StateHealthCheck** | Recovery Observability | 异常/崩溃恢复阶段 | 系统异常时扫描文件树与规范化主题一致性，指导自愈 | `DEEP_RESEARCH_HARNESS/engine/helpers/file-observability.mjs` |
-| **WorkerFallback** | Actor Availability | 委托子任务执行阶段 | 子 Agent 遇到 402/超时等不可用情况时，主 Agent 自行接盘完成 | `openspec/specs/agent/delegated-work-units/spec.md` |
 
 ## Execution Distinctions
 

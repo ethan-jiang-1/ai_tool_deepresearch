@@ -20,6 +20,7 @@ import {
   projectFindingCompatibility,
 } from './wave-contract-findings.mjs';
 import { canonicalSectionContent } from './plan-hostfile-sections.mjs';
+import { parseProgressBlocks } from './plan-progress-blocks.mjs';
 
 // Gates a rerun cycle re-executes, in manifest lifecycle order. Used to
 // pre-populate a newly spawned cycle block and by reconcile to rebuild one.
@@ -32,34 +33,6 @@ export const CYCLE_PROGRESS_GATES = [
   'readiness-passed',
   'rerun-ready',
 ];
-
-// Engine-owned cycle block header format: `### Rerun cycle <N> (spawned <ISO ts>)`.
-const CYCLE_HEADER_PATTERN = /^### Rerun cycle (\d+) \(spawned (.+)\)$/;
-
-// Partition Progress section lines into blocks: a baseline block (no header)
-// followed by zero or more cycle blocks. Header lines are kept on the block so
-// the section can be rebuilt verbatim. Trailing blank lines are dropped from a
-// block when the next header starts — the rebuild re-emits exactly one blank
-// separator before each header, keeping parse(rebuild(x)) == x stable across
-// repeated gate passes.
-function parseProgressBlocks(lines) {
-  const blocks = [];
-  let current = { header: null, ordinal: 0, spawnTs: null, lines: [] };
-  blocks.push(current);
-  for (const line of lines) {
-    const match = line.match(CYCLE_HEADER_PATTERN);
-    if (match) {
-      while (current.lines.length > 0 && current.lines[current.lines.length - 1].trim() === '') {
-        current.lines.pop();
-      }
-      current = { header: line, ordinal: Number(match[1]), spawnTs: match[2], lines: [] };
-      blocks.push(current);
-      continue;
-    }
-    current.lines.push(line);
-  }
-  return blocks;
-}
 
 // Flip the first line whose trimmed text is `- [ ] <gate>` / `- [x] <gate>`
 // (with optional parenthesized timestamp) into `checkedLine`. Boundary-anchored
@@ -88,9 +61,10 @@ export function writePlanProgress(bundlePath, gateName) {
 
     const rawLines = section.content.split('\n');
     const leadingBlank = rawLines.length > 0 && rawLines[0] === '';
-    const lines = section.content.trim().split('\n');
-
-    const blocks = parseProgressBlocks(lines);
+    // Shared block-membership authority (plan-progress-blocks.mjs): the writer
+    // and the phase status auditor resolve the same section through one parse,
+    // so flips always land in the block the audit will judge them against.
+    const blocks = parseProgressBlocks(section.content.trim());
     // Current block = last cycle block, or the baseline block while no cycle
     // block exists (lifecycle is strictly sequential per cycle).
     const current = blocks[blocks.length - 1];

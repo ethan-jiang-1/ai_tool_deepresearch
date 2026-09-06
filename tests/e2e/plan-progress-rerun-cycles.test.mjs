@@ -165,4 +165,74 @@ describe('plan progress rerun-cycle growth (deterministic e2e)', () => {
     assert.ok(!audit.integrity, 'no blocking integrity outcome expected');
     assert.ok(!audit.advisory || audit.advisory.length === 0, 'no stale advisory expected');
   });
+
+  it('resolves a hand-edited indented cycle header to the same block in writer and auditor', () => {
+    const root = createTempRoot();
+    createdRoots.push(root);
+    const bundleDir = instantiateBundle(root, 'prog-e2e-shared-parse');
+
+    const emitter = traceEmitter();
+    const pass = (gate) => {
+      writePlanProgress(bundleDir, gate);
+      const [node, next] = NODE[gate];
+      emitter.pass(gate, node, next);
+    };
+    for (const gate of BASELINE_GATES) pass(gate);
+    emitter.events.push({
+      ts: '2026-01-01T00:01:00.000Z',
+      event: 'phase_transition',
+      from: 'readiness_complete',
+      to: 'rerun_ready',
+      next: 'seed_topics_ready',
+    });
+    writeFileSync(join(bundleDir, 'rb_trace.jsonl'), emitter.events.map((e) => JSON.stringify(e)).join('\n') + '\n');
+    mkdirSync(join(bundleDir, 'final'), { recursive: true });
+    writeFileSync(join(bundleDir, 'rb_status.json'), JSON.stringify({
+      bundle: bundleDir.split('/').pop(),
+      current_mode: 'execution',
+      state: 'in_progress',
+      current_gate: 'rerun_ready',
+      next_gate: 'seed_topics_ready',
+    }, null, 2));
+
+    // Hand-edited plan: an indented cycle header (never written by the Engine)
+    // plus a checked line inside it — manual interference, no verifiable window.
+    const planPath = join(bundleDir, 'rb_plan.md');
+    const plan = readFileSync(planPath, 'utf8');
+    const handEdited = plan.replace(
+      '## Decisions',
+      [
+        '  ### Rerun cycle 1 (spawned 2026-01-01T00:00:04.000Z)',
+        '- [x] wave2-complete',
+        '',
+        '## Decisions',
+      ].join('\n'),
+    );
+    assert.notEqual(handEdited, plan, 'hand edit must apply');
+    writeFileSync(planPath, handEdited);
+
+    // Writer agreement: the next Engine flip (readiness-passed, still
+    // unchecked) must land inside the block the shared parse opened at the
+    // indented header — i.e. AFTER it — not in the baseline block.
+    writePlanProgress(bundleDir, 'readiness-passed');
+    const afterFlip = readFileSync(planPath, 'utf8');
+    const headerIndex = afterFlip.indexOf('  ### Rerun cycle 1 (spawned 2026-01-01T00:00:04.000Z)');
+    const flippedIndex = afterFlip.indexOf('- [x] readiness-passed (');
+    const baselineUnchecked = afterFlip.match(/- \[ \] readiness-passed/);
+    assert.ok(headerIndex > -1, 'hand-edited header must survive');
+    assert.ok(flippedIndex > headerIndex, 'flip must land inside the hand-edited block (shared parse)');
+    assert.ok(baselineUnchecked, 'baseline readiness line must stay untouched by this flip');
+
+    // Auditor agreement: the same parse puts the hand-edited checked line and
+    // the fresh flip in the unparseable block; fail closed (blocking integrity
+    // outcome exits 1 by the audit CLI contract).
+    const audit = parseJsonOutput(runNode([AUDIT_CLI, '--bundle', bundleDir], { expectedStatus: 1 }));
+    assert.equal(audit.outcome, 'plan_progress_tamper_suspected', JSON.stringify(audit));
+    const tampered = JSON.stringify(audit.integrity ?? audit);
+    assert.match(tampered, /wave2-complete/, 'hand-checked line must be tamper evidence');
+    assert.match(tampered, /readiness-passed/, 'fresh flip inside the unparseable block must be fail-closed');
+    // The per-block label ('unparseable') is pinned at the engine surface in
+    // tests/engine/helpers/phase-status-audit-integrity.test.mjs; the CLI
+    // integrity projection reports gate-level lines only.
+  });
 });

@@ -293,6 +293,67 @@ describe('operate-artifact-persistence CLI', () => {
     assert.equal(secondRevision.version, 2);
   });
 
+  it('enforces the human-controlled retire confirmation and zero-mutation blocking', () => {
+    const { bundle, sourcePath } = createSubmittedFinalBundle();
+    const source = path.join(bundle, '_logs', 'retire-cli.md');
+    writeFileSync(source, finalReport(`[submitted source](../${sourcePath})`));
+    const published = runCli('publish-final-report', '--bundle', bundle, '--source', source);
+    assert.equal(published.status, 0, published.stderr);
+    const second = runCli('publish-final-report', '--bundle', bundle, '--source', source);
+    assert.equal(second.status, 0, second.stderr);
+    const primaryTarget = parseJson(second).target;
+    assert.match(primaryTarget, /^final\/final_v1\.md$/, parseJson(second).reason || '');
+    const version = 1;
+
+    const missing = runCli('retire-final-version', '--bundle', bundle, '--version', String(version));
+    assert.equal(missing.status, 2);
+    assert.equal(parseJson(missing).error, 'invalid_invocation');
+    const empty = runCli('retire-final-version', '--bundle', bundle, '--version', String(version), '--user-confirmation', '   ');
+    assert.equal(empty.status, 2);
+    assert.equal(parseJson(empty).error, 'invalid_invocation');
+
+    // Blocked on an attic collision: final/ stays byte-identical (the run log
+    // is an audit surface, not a retire mutation). The bundle carries a
+    // version-bound auxiliary directory, and the attic holds a stale entry
+    // under the same auxiliary name — the aux-collision pre-check blocks
+    // before the primary revision is touched.
+    mkdirSync(path.join(bundle, 'final', `final_v${version}`), { recursive: true });
+    writeFileSync(path.join(bundle, 'final', `final_v${version}`, '07-evidence-details.md'), 'details\n');
+    mkdirSync(path.join(bundle, 'final', 'attic', `final_v${version}`), { recursive: true });
+    writeFileSync(path.join(bundle, 'final', 'attic', `final_v${version}`, 'stale.md'), 'stale\n');
+    const before = finalTreeSnapshot(bundle);
+    const blocked = runCli('retire-final-version', '--bundle', bundle, '--version', String(version), '--user-confirmation', 'retire this version');
+    assert.equal(blocked.status, 1, blocked.stderr);
+    assert.equal(parseJson(blocked).reason_code, 'retire_aux_collision');
+    assert.deepEqual(finalTreeSnapshot(bundle), before, 'blocked retire must not touch final/');
+
+    // Confirmed retire commits through the production CLI.
+    rmSync(path.join(bundle, 'final', 'attic', `final_v${version}`), { recursive: true, force: true });
+    const ok = runCli('retire-final-version', '--bundle', bundle, '--version', String(version), '--user-confirmation', 'retire this version', '--reason', 'spuriously created');
+    assert.equal(ok.status, 0, ok.stderr);
+    const okJson = parseJson(ok);
+    assert.equal(okJson.verdict, 'committed');
+    assert.equal(okJson.reason_code, 'retired');
+    assert.equal(existsSync(primaryTarget), false);
+    assert.equal(existsSync(path.join(bundle, 'final', 'attic', `final_v${version}.md`)), true);
+    assert.equal(existsSync(path.join(bundle, 'final', 'attic', `final_v${version}.retired.json`)), true);
+  });
+
+  function finalTreeSnapshot(bundle) {
+    const entries = {};
+    const root = path.join(bundle, 'final');
+    const visit = (absolute, relative) => {
+      for (const entry of readdirSync(absolute, { withFileTypes: true })) {
+        const childAbsolute = path.join(absolute, entry.name);
+        const childRelative = relative ? `${relative}/${entry.name}` : entry.name;
+        if (entry.isDirectory()) visit(childAbsolute, childRelative);
+        else entries[childRelative] = readFileSync(childAbsolute).toString('base64');
+      }
+    };
+    visit(root, 'final');
+    return entries;
+  }
+
   it('rejects malformed publication bindings and blocks invalid inventory/backing before workspace creation', () => {
     const { bundle, sourcePath } = createSubmittedFinalBundle();
     const source = path.join(bundle, '_logs', 'binding-source.md');

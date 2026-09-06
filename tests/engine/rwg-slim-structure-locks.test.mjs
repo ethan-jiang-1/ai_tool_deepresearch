@@ -68,14 +68,40 @@ test('REMOVED (after M3 substitution) and ADDED content multisets are identical 
   for (const [l, c] of b) assert.equal(a.get(l) || 0, c, `ADDED line absent from REMOVED: ${l.slice(0, 60)}`);
 });
 
+// harness-review-defect-sync wording repair (2026-09): the slim-rwg delta and
+// the main spec both carried a duplicated/garbled sentence ("The old target
+// expression" twice, broken sentence start). The repair dedupes it with no
+// semantic change; this lock normalizes BOTH sides to the repaired wording so
+// the verbatim check keeps guarding against future drift.
+const REPAIR_FROM = [
+  'locator and convergence evaluator. The old target expression',
+  'The old target expression `reference/*{topic}*.md` SHALL not act as a second success predicate: the gate definition still declares it as the `count_floor` target, and the convergence evaluator preempts that raw count whenever a materialization/backing root exists.',
+  'legacy `NN-wave1-*` row/file remains readable/indexable but SHALL not count;',
+  'nor shall an arbitrary filename containing a full slug. A current canonical',
+  'path counts only after the existing submitted-backing, reference-format,',
+  'parseable-URL, and numeric eligibility checks pass.',
+].join('\n');
+const REPAIR_TO = [
+  'locator and convergence evaluator. The old target expression',
+  '`reference/*{topic}*.md` SHALL not act as a second success predicate: the gate',
+  'definition still declares it as the `count_floor` target, and',
+  'the convergence evaluator preempts that raw count whenever a',
+  'materialization/backing root exists. A legacy `NN-wave1-*` row/file remains',
+  'readable/indexable but SHALL not count; nor shall an arbitrary filename',
+  'containing a full slug. A current canonical path counts only after the',
+  'existing submitted-backing, reference-format, parseable-URL, and numeric',
+  'eligibility checks pass.',
+].join('\n');
+const normalizeRepair = (blockLines) => blockLines.join('\n').replace(REPAIR_FROM, REPAIR_TO).split('\n');
+
 test('main spec blocks match the delta ADDED blocks verbatim', () => {
   assert.ok(deltaPath, 'slim-rwg delta must exist');
   const d = read(deltaPath).split('\n');
   const add = d.indexOf('## ADDED Requirements');
   const main = read(MAIN).split('\n');
   for (const h of NEW_HEADINGS) {
-    const db = blockOf(d.slice(add), h);
-    const mb = blockOf(main, h);
+    const db = normalizeRepair(blockOf(d.slice(add), h));
+    const mb = normalizeRepair(blockOf(main, h));
     assert.ok(db, `delta block missing: ${h}`);
     assert.deepEqual(mb, db, `main/delta drift at ${h}`);
   }

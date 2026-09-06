@@ -1,0 +1,82 @@
+schema_version: semantic-closure/v1
+change: harness-review-defect-sync
+status: affected
+catalog_additions: []
+affected:
+  - family: final.primary-report-series
+    fact: >-
+      retire-final-version 的 blocked verdict 语义与 human-controlled 准入：blocked
+      SHALL 先于任何文件系统突变完成全部 pre-check；retire SHALL 仅在显式用户确认
+      （--user-confirmation 非空）下进入引擎，request schema 在引擎入口校验。
+    authority:
+      resolver: openspec/specs/bundle/artifact-persistence-recovery/spec.md
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/artifact-persistence.mjs
+    consumers:
+      - DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs
+      - DEEP_RESEARCH_HARNESS/command_playbook/persist-artifact.md
+    overlap:
+      - coordinate: openspec/specs/bundle/artifact-persistence-recovery/spec.md
+        relation: authoritative
+        detail: delta spec 修订该 spec 内 retire 条款与 "Agent cannot auto-retire" Scenario；engine/cli 任务实现该修订。
+    verification:
+      truth_table: tests/integration/cli/artifact-persistence.test.mjs
+      cross_surface: tests/engine/artifact-persistence-recovery.test.mjs
+  - family: artifact.persistence-operation-contract
+    fact: >-
+      retire-final-version 操作参数面新增必填 --user-confirmation；缺失为
+      invocation/configuration-error（exit 2），不进入引擎，不改其他操作参数面。
+    authority:
+      resolver: openspec/specs/bundle/artifact-persistence-recovery/spec.md
+    established_by:
+      - DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs
+    consumers:
+      - DEEP_RESEARCH_HARNESS/command_playbook/persist-artifact.md
+    overlap:
+      - coordinate: openspec/specs/bundle/artifact-persistence-recovery/spec.md
+        relation: authoritative
+        detail: delta spec 记录参数面变化；既有 exit-code 约定测试继续 pin exit 2 语义。
+      - coordinate: DEEP_RESEARCH_HARNESS/COMMANDS.md
+        relation: derived
+        detail: 命令索引仅展示 resolved 参数面与调用模板，非 verdict consumer。
+    verification:
+      truth_table: tests/integration/cli/artifact-persistence.test.mjs
+      cross_surface: tests/integration/cli/exit-code-convention.test.mjs
+  - family: lifecycle.plan-progress-presentation-integrity
+    fact: >-
+      cycle block 的 spawn 时间戳 SHALL 为 Engine 写出的 canonical ISO-8601 Zulu
+      格式；malformed spawnTs 与 unparseable cycle header 同样构成
+      plan_progress_tamper_suspected；witness 窗口比较基于解析后的时间戳；
+      Progress block 归属判定 SHALL 只有一个共享实现（writer 与 auditor）。
+    authority:
+      resolver: openspec/specs/research/plan-hostfile-sections/spec.md
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/phase-status-audit.mjs
+      - DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-plan-progress.mjs
+    consumers:
+      - DEEP_RESEARCH_HARNESS/cli/audit-phase-status.mjs
+      - DEEP_RESEARCH_HARNESS/cli/reconcile-plan-progress.mjs
+    overlap:
+      - coordinate: openspec/specs/research/plan-hostfile-sections/spec.md
+        relation: authoritative
+        detail: delta spec 修订 PHS-010；共享解析模块与两处调用方任务实现该修订。
+    verification:
+      truth_table: tests/integration/cli/audit-phase-status.test.mjs
+      cross_surface: tests/e2e/plan-progress-rerun-cycles.test.mjs
+  - family: wave.submitted-reference-convergence
+    fact: >-
+      Wave1 complete gate rule set 要求正文去除重复句 "The old target expression"
+      并恢复断裂句首；`reference/*{topic}*.md` 不得作为第二成功谓词的语义不变。
+    authority:
+      resolver: openspec/specs/research/research-wave-gate-implementation/spec.md
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/wave1-reference-convergence.mjs
+    consumers:
+      - DEEP_RESEARCH_HARNESS/cli/gates/check-gate-wave1-complete.mjs
+    overlap:
+      - coordinate: openspec/specs/research/research-wave-gate-implementation/spec.md
+        relation: authoritative
+        detail: delta spec 记录修复后的要求正文；纯措辞修复，收敛判定实现不变。
+    verification:
+      truth_table: tests/engine/rwg-slim-structure-locks.test.mjs
+      cross_surface: tests/integration/cli/check-gate-wave1-complete.test.mjs

@@ -64,6 +64,21 @@ const REQUIRED_COLUMNS = Object.freeze([
 ]);
 const DIRECT_BACKING_ROLES = new Set(['source_yaml', 'evidence_summary']);
 
+// --- Version-bound auxiliary grammar (single source of truth) -------------
+// A primary revision `final/final[_<feature>]_v<N>.md` binds exactly one
+// auxiliary directory `final/final[_<feature>]_v<N>/`. Every pattern composes
+// the one shared prefix with its own terminator:
+//  - FINAL_AUXILIARY_DIRECTORY_PATTERN: the path lies inside the directory.
+//  - FINAL_AUXILIARY_FILE_PATTERN: one materialized file inside the directory.
+//  - FINAL_VERSIONED_TARGET_PATTERN: the target is either the primary .md file
+//    of that version or a path inside its bound directory — the (?:\.md|/)
+//    terminator difference from the directory pattern is deliberate (a target
+//    may be the primary file itself).
+const FINAL_VERSIONED_PREFIX = 'final/final(?:_[a-z0-9]+(?:_[a-z0-9]+)*)?_v';
+export const FINAL_AUXILIARY_DIRECTORY_PATTERN = new RegExp(`^${FINAL_VERSIONED_PREFIX}([1-9][0-9]*)/`);
+export const FINAL_AUXILIARY_FILE_PATTERN = new RegExp(`^${FINAL_VERSIONED_PREFIX}([1-9][0-9]*)/([^/]+)\\.md$`);
+export const FINAL_VERSIONED_TARGET_PATTERN = new RegExp(`^${FINAL_VERSIONED_PREFIX}([1-9][0-9]*)(?:\\.md|/)`);
+
 function normalizedTarget(value) {
   return typeof value === 'string' ? value.replaceAll('\\', '/') : '';
 }
@@ -241,7 +256,7 @@ function prohibitedBackingPath(relPath) {
   // directory (e.g. final/final_v4/07-evidence-details.md) are part of the
   // same delivery unit and are permitted as backing by the auxiliary rule;
   // every other final/ path remains prohibited.
-  if (relPath.startsWith('final/') && !/^final\/final(?:_[a-z0-9]+(?:_[a-z0-9]+)*)?_v[1-9][0-9]*\//.test(relPath)) return 'final_output_not_backing';
+  if (relPath.startsWith('final/') && !FINAL_AUXILIARY_DIRECTORY_PATTERN.test(relPath)) return 'final_output_not_backing';
   if (relPath.startsWith('_cache/')) return 'cache_only_not_backing';
   if (relPath === 'reference/_INDEX.md') return 'reference_index_not_backing';
   if (/(?:^|\/)(?:finding-index\.ya?ml|cross-topic-ledger\.md)$/i.test(relPath)) return 'synthesis_index_not_backing';
@@ -448,13 +463,13 @@ export function evaluateFinalDeliveryBacking({ bundlePath, target, markdown } = 
     // reference/ projection. A detail file in another version's directory, in
     // a supplementary directory, or elsewhere under final/ is not accepted by
     // this rule.
-    const auxMatch = resolved.relPath.match(/^final\/final(?:_[a-z0-9]+(?:_[a-z0-9]+)*)?_v([1-9][0-9]*)\//);
+    const auxMatch = resolved.relPath.match(FINAL_AUXILIARY_DIRECTORY_PATTERN);
     if (auxMatch) {
       // The report's own version may come from a primary target
       // (final/final_v<N>.md) or from an auxiliary target already inside the
       // version directory (final/final_v<N>/<file>.md). Both must match the
       // backing's version directory.
-      const targetVersionMatch = target.match(/^final\/final(?:_[a-z0-9]+(?:_[a-z0-9]+)*)?_v([1-9][0-9]*)(?:\.md|\/)/);
+      const targetVersionMatch = target.match(FINAL_VERSIONED_TARGET_PATTERN);
       if (targetVersionMatch && targetVersionMatch[1] === auxMatch[1]) {
         continue; // file existence was already proven by inspectRegularBackingFile above
       }
