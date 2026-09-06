@@ -54,6 +54,7 @@ export {
 } from './gate-helpers-attempt-audit.mjs';
 export {
   writePlanProgress,
+  CYCLE_PROGRESS_GATES,
   readTraceEvents,
   readCanonicalTraceEvents,
 } from './gate-helpers-plan-progress.mjs';

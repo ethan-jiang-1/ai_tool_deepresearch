@@ -86,6 +86,10 @@ const CLI_CONVENTION_INVENTORY = {
     class: 'selected pure controls renderer with standalone help and code 2 invocation errors',
     coverage: ['tests/integration/cli/user-research-controls-contract.test.mjs', 'this file: missing subcommand exits 2'],
   },
+  'reconcile-plan-progress.mjs': {
+    class: 'non-gate diagnostic structured utility with code 2 caller/config errors',
+    coverage: ['tests/integration/cli/reconcile-plan-progress.test.mjs', 'this file: missing bundle exits 2'],
+  },
   'sync-reference-index.mjs': {
     class: 'non-gate reference-index synchronization utility with code 2 missing-bundle error',
     coverage: ['this file: missing bundle exits 2'],

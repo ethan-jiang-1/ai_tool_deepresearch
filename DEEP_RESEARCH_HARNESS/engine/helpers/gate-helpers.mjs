@@ -29,6 +29,7 @@ export {
   writeGateFailureDiagnostic,
   writeGatePassDiagnostic,
   writePlanProgress,
+  CYCLE_PROGRESS_GATES,
   readTraceEvents,
   readCanonicalTraceEvents,
 } from './gate-helpers-core.mjs';

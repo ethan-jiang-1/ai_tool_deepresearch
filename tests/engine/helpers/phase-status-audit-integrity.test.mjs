@@ -189,7 +189,7 @@ describe('lifecycle integrity projection', () => {
     ].join('\n'));
     const tamper = tamperFor(bundle);
     assert.equal(tamper.tampered.length, 0);
-    assert.deepEqual(tamper.stale, ['wave0-complete']);
+    assert.deepEqual(tamper.stale, [{ gate: 'wave0-complete', block: 'baseline' }]);
     assert.equal(evaluateLifecycleIntegrity(bundle), null);
   });
 
@@ -280,5 +280,167 @@ describe('trace completion integrity @impl TRW-008', () => {
       verdict.findings.some((f) => f.reason_code === 'trace_integrity_non_monotonic_ts'),
       JSON.stringify(verdict.findings),
     );
+  });
+});
+
+describe('plan Progress cycle blocks (PHS-010)', () => {
+  // Builds a trace with baseline gates, a baseline rerun-ready (spawns cycle 1)
+  // and a full cycle 1 ending in readiness. Every gate_attempt carries a
+  // route-bound load_complete so candidateLegalWindows admits it.
+  function cycleTrace() {
+    const events = [];
+    const pushGate = (gate, node, next, ts) => {
+      const idx = events.length;
+      events.push({
+        ts,
+        event: 'gate_attempt',
+        gate,
+        phase: node.replace('phases/phase-', '').replace('.md', ''),
+        passed: true,
+        currentNodeRef: node,
+        next,
+      });
+      events.push({
+        ts: ts.replace(/000Z$/, '001Z'),
+        event: 'load_complete',
+        entry: next,
+        handoff_source_gate: gate,
+        handoff_source_node: node,
+        handoff_target_node: next,
+        handoff_source_attempt_index: idx,
+      });
+    };
+    pushGate('instantiation-complete', 'phases/phase-instantiation.md', 'phases/phase-hitl1.md', '2026-01-01T00:00:00.000Z');
+    pushGate('hitl1-recorded', 'phases/phase-hitl1.md', 'phases/phase-setup.md', '2026-01-01T00:00:01.000Z');
+    pushGate('setup-ready', 'phases/phase-setup.md', 'phases/phase-seed-topics.md', '2026-01-01T00:00:02.000Z');
+    pushGate('seed-topics-ready', 'phases/phase-seed-topics.md', 'phases/phase-wave0.md', '2026-01-01T00:00:03.000Z');
+    pushGate('rerun-ready', 'phases/phase-rerun.md', 'phases/phase-seed-topics.md', '2026-01-01T00:00:04.000Z');
+    pushGate('seed-topics-ready', 'phases/phase-seed-topics.md', 'phases/phase-wave0.md', '2026-01-01T00:00:05.000Z');
+    pushGate('wave0-complete', 'phases/phase-wave0.md', 'phases/phase-wave1.md', '2026-01-01T00:00:06.000Z');
+    pushGate('wave1-complete', 'phases/phase-wave1.md', 'phases/phase-wave2.md', '2026-01-01T00:00:07.000Z');
+    pushGate('wave2-complete', 'phases/phase-wave2.md', 'phases/phase-hitl2.md', '2026-01-01T00:00:08.000Z');
+    pushGate('hitl2-recorded', 'phases/phase-hitl2.md', 'phases/phase-readiness.md', '2026-01-01T00:00:09.000Z');
+    pushGate('readiness-passed', 'phases/phase-readiness.md', 'phases/phase-final.md', '2026-01-01T00:00:10.000Z');
+    return events;
+  }
+
+  const CYCLE_SPAWN_TS = '2026-01-01T00:00:04.000Z';
+
+  function planWithCycleBlock(cycleLines, header = `### Rerun cycle 1 (spawned ${CYCLE_SPAWN_TS})`) {
+    return [
+      '# plan',
+      '## Progress',
+      '',
+      '- [x] instantiation-complete (2026-01-01T00:00:00.000Z)',
+      '- [x] hitl1-recorded (2026-01-01T00:00:01.000Z)',
+      '- [x] setup-ready (2026-01-01T00:00:02.000Z)',
+      '- [x] seed-topics-ready (2026-01-01T00:00:03.000Z)',
+      '- [ ] wave0-complete',
+      '- [ ] wave1-complete',
+      '- [ ] wave2-complete',
+      '- [ ] hitl2-recorded',
+      '- [ ] readiness-passed',
+      '- [x] rerun-ready (2026-01-01T00:00:04.000Z)',
+      '',
+      header,
+      ...cycleLines,
+      '',
+      '## Decisions',
+      '',
+      'x',
+    ].join('\n');
+  }
+
+  const CYCLE_GATE_LINES = (checked = {}) => [
+    `- [${checked['seed-topics-ready'] ? 'x' : ' '}] seed-topics-ready`,
+    `- [${checked['wave0-complete'] ? 'x' : ' '}] wave0-complete`,
+    `- [${checked['wave1-complete'] ? 'x' : ' '}] wave1-complete`,
+    `- [${checked['wave2-complete'] ? 'x' : ' '}] wave2-complete`,
+    `- [${checked['hitl2-recorded'] ? 'x' : ' '}] hitl2-recorded`,
+    `- [${checked['readiness-passed'] ? 'x' : ' '}] readiness-passed`,
+    `- [${checked['rerun-ready'] ? 'x' : ' '}] rerun-ready`,
+  ];
+
+  it('flags a cycle-block checked line without a witness at or after spawn as tamper', () => {
+    const bundle = makeBundle('integrity-cycle-tamper-no-witness');
+    writeTrace(bundle, cycleTrace());
+    // hitl1-recorded only ever passed in the baseline (00:00:01 < spawn 00:00:04).
+    writeFileSync(join(bundle, 'rb_plan.md'), planWithCycleBlock([
+      ...CYCLE_GATE_LINES(),
+      '- [x] hitl1-recorded',
+    ]));
+    const tamper = tamperFor(bundle);
+    assert.ok(
+      tamper.tampered.some((t) => t.gateKey === 'hitl1-recorded' && t.block === 'Rerun cycle 1'),
+      JSON.stringify(tamper.tampered),
+    );
+    assert.equal(evaluateLifecycleIntegrity(bundle)?.outcomes[0], 'plan_progress_tamper_suspected');
+  });
+
+  it('flags a cycle-block rerun-ready line with no in-cycle rerun witness as tamper', () => {
+    const bundle = makeBundle('integrity-cycle-tamper-rerun');
+    writeTrace(bundle, cycleTrace()); // cycle 1 ends in readiness, no second rerun-ready
+    writeFileSync(join(bundle, 'rb_plan.md'), planWithCycleBlock(
+      CYCLE_GATE_LINES({ 'rerun-ready': true }),
+    ));
+    const tamper = tamperFor(bundle);
+    assert.ok(
+      tamper.tampered.some((t) => t.gateKey === 'rerun-ready' && t.block === 'Rerun cycle 1'),
+      JSON.stringify(tamper.tampered),
+    );
+  });
+
+  it('treats checked lines inside an unparseable cycle header as tamper (fail-closed)', () => {
+    const bundle = makeBundle('integrity-cycle-bad-header');
+    writeTrace(bundle, cycleTrace());
+    writeFileSync(join(bundle, 'rb_plan.md'), planWithCycleBlock(
+      CYCLE_GATE_LINES({ 'wave0-complete': true }),
+      '### Rerun cycle X (spawned 2026-01-01T00:00:04.000Z)',
+    ));
+    const tamper = tamperFor(bundle);
+    assert.ok(
+      tamper.tampered.some((t) => t.gateKey === 'wave0-complete' && t.block === 'unparseable'),
+      JSON.stringify(tamper.tampered),
+    );
+  });
+
+  it('does not report tamper for a legal cycle flip backed by an in-cycle witness', () => {
+    const bundle = makeBundle('integrity-cycle-legal-flip');
+    writeTrace(bundle, cycleTrace());
+    // wave0-complete passed in cycle 1 at 00:00:06, at/after spawn 00:00:04.
+    writeFileSync(join(bundle, 'rb_plan.md'), planWithCycleBlock(
+      CYCLE_GATE_LINES({ 'wave0-complete': true, 'seed-topics-ready': true, 'wave1-complete': true, 'wave2-complete': true, 'hitl2-recorded': true, 'readiness-passed': true }),
+    ));
+    const tamper = tamperFor(bundle);
+    assert.equal(tamper.tampered.length, 0);
+  });
+
+  it('surfaces stale per attempt block: cycle-gate passed but its cycle line unchecked', () => {
+    const bundle = makeBundle('integrity-cycle-stale');
+    writeTrace(bundle, cycleTrace());
+    writeFileSync(join(bundle, 'rb_plan.md'), planWithCycleBlock(
+      CYCLE_GATE_LINES({ 'seed-topics-ready': true }), // wave0..readiness passed in cycle 1 but unchecked
+    ));
+    const tamper = tamperFor(bundle);
+    assert.equal(tamper.tampered.length, 0);
+    assert.deepEqual(
+      tamper.stale.map((s) => `${s.gate}@${s.block}`).sort(),
+      [
+        'hitl2-recorded@Rerun cycle 1',
+        'readiness-passed@Rerun cycle 1',
+        'wave0-complete@Rerun cycle 1',
+        'wave1-complete@Rerun cycle 1',
+        'wave2-complete@Rerun cycle 1',
+      ],
+    );
+  });
+
+  it('keeps stale advisory out of blocking integrity outcomes', () => {
+    const bundle = makeBundle('integrity-cycle-stale-nonblocking');
+    writeTrace(bundle, cycleTrace());
+    writeFileSync(join(bundle, 'rb_plan.md'), planWithCycleBlock(
+      CYCLE_GATE_LINES({ 'seed-topics-ready': true }),
+    ));
+    assert.equal(evaluateLifecycleIntegrity(bundle), null); // stale alone → clean integrity
   });
 });

@@ -1,0 +1,38 @@
+schema_version: semantic-closure/v1
+change: plan-progress-rerun-cycle-growth
+status: affected
+catalog_additions: []
+affected:
+  - family: lifecycle.plan-progress-presentation-integrity
+    fact: >-
+      Whether a canonical rb_plan.md## Progress checkbox line is an Engine-owned
+      projection of a trace-verified passed gate: a checked line is legal only
+      when a passed gate_attempt with route-bound consumption witness exists for
+      that gate (for a line in a `### Rerun cycle N` block, at or after that
+      block's spawn timestamp); a checked line without such witness is tamper
+      evidence, and a consumed gate whose current-block line is unchecked is
+      advisory presentation staleness. Progress remains presentation-only and
+      never becomes lifecycle authority.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/helpers/phase-status-audit.mjs#evaluatePlanProgressTamper
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-plan-progress.mjs#writePlanProgress
+      - DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-attempt-audit.mjs#writeGateAttempt
+    consumers:
+      - DEEP_RESEARCH_HARNESS/cli/audit-phase-status.mjs
+      - DEEP_RESEARCH_HARNESS/cli/reconcile-plan-progress.mjs
+    overlap:
+      - coordinate: openspec/specs/research/plan-hostfile-sections/spec.md
+        relation: derived
+        detail: >-
+          PHS-006/PHS-010 定义 Progress 的 Engine 独占写入与 tamper/staleness
+          契约；本 family 的判定（合法勾选、tamper、advisory stale）是该 spec
+          的 presentation 投影，不改变 gate/status/trace 权威。
+      - coordinate: DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-plan-progress.mjs#canonicalSectionContent
+        relation: derived
+        detail: >-
+          Progress 段定位复用 canonical host-file locator 的 opaque-region
+          排除语义（用户 snapshot 内容不参与块解析），块解析在其上扩展。
+    verification:
+      truth_table: tests/engine/helpers/plan-hostfile-sections.test.mjs
+      cross_surface: tests/engine/helpers/phase-status-audit-integrity.test.mjs

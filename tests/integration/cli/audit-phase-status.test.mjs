@@ -297,4 +297,27 @@ describe('trace completion integrity @impl TRW-008', () => {
     assert.equal(output.trace_integrity.ok, true, JSON.stringify(output.trace_integrity));
     assert.deepEqual(output.trace_integrity.findings, []);
   });
+
+  it('passes while surfacing frozen Progress as non-blocking advisory staleness', () => {
+    const bundle = makeBundle('audit-stale-advisory', { current_gate: 'wave0_complete', next_gate: 'wave1_complete' });
+    writeTrace(bundle, witnessed()); // wave0-complete passed with route-bound consumption
+    // Progress frozen: the line stays unchecked (engine write failed/lagged).
+    writeFileSync(join(bundle, 'rb_plan.md'), [
+      '# plan',
+      '## Progress',
+      '',
+      '- [ ] instantiation-complete',
+      '- [ ] wave0-complete',
+      '',
+      '## Decisions',
+      '',
+      'x',
+    ].join('\n'));
+    const { status, output } = runAudit(bundle);
+    assert.equal(status, 0, JSON.stringify(output)); // stale is non-blocking
+    assert.equal(output.outcome, 'passed');
+    assert.ok(Array.isArray(output.advisory), 'advisory field must exist');
+    assert.deepEqual(output.advisory, [{ kind: 'stale_progress', gate: 'wave0-complete', block: 'baseline' }]);
+    assert.ok(!output.integrity, 'stale alone must not create a blocking integrity outcome');
+  });
 });

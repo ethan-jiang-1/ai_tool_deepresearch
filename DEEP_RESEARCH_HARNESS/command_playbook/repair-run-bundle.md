@@ -28,6 +28,7 @@ Entry intent families are named once in `command_playbook/continue-run-bundle.md
 | 面 | 命令（全前缀） | 关键输出 |
 |---|---|---|
 | 生命周期审计 | `node DEEP_RESEARCH_HARNESS/cli/audit-phase-status.mjs --bundle <b>` | 封闭 outcome 直接指名修复坐标：`premature_final_present` / `plan_progress_tamper_suspected` / `status_drift` / `manual_bypass_suspected` / `missing_witness` / `failed_gate_downstream_status` / post-final 各 stage；诊断式、不写文件 |
+| Progress presentation 修复（可选、非 authority） | `node DEEP_RESEARCH_HARNESS/cli/reconcile-plan-progress.mjs --bundle <b>` | Engine 从 trace witnesses 重建 `rb_plan.md## Progress`（含 cycle 块）；不创造 gate 语义、不写 trace/checkpoint/status；对生命周期中段的存量 bundle 须在**下一次 gate pass 之前**执行（否则新 pass 会勾进基线块）；结果仍受 audit tamper/stale 检查约束 |
 | 重入诊断 | `node DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs --bundle <b> --at <target>` | `recovery.root_findings[]`：reachable 根至多一个 sanctioned 最近动作；`missing_contract` 是直接停边界 |
 | wave0 | `node DEEP_RESEARCH_HARNESS/cli/inspect-wave0-output.mjs --bundle <b>` | `hints[]`：prefix_drift / materialize_projection / seed_projection_token / backing 等 |
 | wave1 | `node DEEP_RESEARCH_HARNESS/cli/inspect-wave1-output.mjs --bundle <b>` | `hints[]`：materialize_projection / depth_review / return_map / ref floor |

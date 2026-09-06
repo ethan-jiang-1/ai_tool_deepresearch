@@ -13,7 +13,7 @@ import {
   renderSuppliedControls,
   stripSuppliedControlsForTemplateScan,
 } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/plan-hostfile-sections.mjs';
-import { writePlanProgress } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-core.mjs';
+import { writePlanProgress, CYCLE_PROGRESS_GATES } from '../../../DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-core.mjs';
 
 const dirs = [];
 function bundle() {
@@ -107,4 +107,86 @@ describe('plan host-file sections', () => {
     assert.equal(missing.outcome, 'failed');
     assert.equal(readFileSync(planPath, 'utf8'), beforeFailure);
   });
+
+  it('grows a cycle block on rerun-ready pass and flips in-cycle gates in that block', () => {
+    const dir = bundle();
+    const planPath = join(dir, 'rb_plan.md');
+    writeFileSync(planPath, `# Plan\n\n## Progress\n\n${TEMPLATE_BASELINE}\n\n## Decisions\n\nx\n`);
+    const baseline = ['instantiation-complete', 'hitl1-recorded', 'setup-ready', 'seed-topics-ready',
+      'wave0-complete', 'wave1-complete', 'wave2-complete', 'hitl2-recorded', 'rerun-ready'];
+    for (const gate of baseline) writePlanProgress(dir, gate);
+
+    const afterSpawn = readFileSync(planPath, 'utf8');
+    assert.match(afterSpawn, /### Rerun cycle 1 \(spawned \d{4}-\d{2}-\d{2}T/);
+    for (const gate of CYCLE_PROGRESS_GATES) {
+      assert.match(afterSpawn, new RegExp(`### Rerun cycle 1[\\s\\S]*?- \\[ \\] ${gate}`));
+    }
+    // Baseline rerun-ready got checked by the spawner pass; baseline readiness
+    // (mutually exclusive exit) stays unchecked.
+    assert.match(afterSpawn, /- \[x\] rerun-ready \(\d{4}-\d{2}-\d{2}T/);
+    assert.match(afterSpawn, /- \[ \] readiness-passed/);
+
+    // In-cycle gate passes flip inside the cycle block, not the baseline.
+    writePlanProgress(dir, 'seed-topics-ready');
+    writePlanProgress(dir, 'wave0-complete');
+    const afterCyclePasses = readFileSync(planPath, 'utf8');
+    const cycle1 = afterCyclePasses.split('### Rerun cycle 1')[1].split('## Decisions')[0];
+    assert.match(cycle1, /- \[x\] seed-topics-ready \(\d{4}-\d{2}-\d{2}T/);
+    assert.match(cycle1, /- \[x\] wave0-complete \(\d{4}-\d{2}-\d{2}T/);
+    // Exactly one cycle block; the mutual-exclusion exit stays unchecked in
+    // the baseline; separator blanks stay single (no accumulation).
+    assert.equal((afterCyclePasses.match(/### Rerun cycle /g) || []).length, 1);
+    assert.match(afterCyclePasses, /- \[ \] readiness-passed/);
+    assert.match(afterCyclePasses, /\n\n### Rerun cycle 1 /);
+  });
+
+  it('spawn guard: re-running rerun-ready against an already-checked current-block line refreshes only', () => {
+    const dir = bundle();
+    const planPath = join(dir, 'rb_plan.md');
+    // Current block (cycle 1) already has rerun-ready checked — e.g. a state
+    // rebuilt by reconcile. A re-pass must refresh the timestamp, never spawn.
+    const cycle1Lines = CYCLE_PROGRESS_GATES.map((g) => `- [ ] ${g}`).join('\n')
+      .replace('- [ ] rerun-ready', '- [x] rerun-ready (2026-07-21T00:00:01.000Z)');
+    writeFileSync(planPath, [
+      '# Plan',
+      '## Progress',
+      '',
+      ...TEMPLATE_BASELINE.split('\n'),
+      '',
+      '### Rerun cycle 1 (spawned 2026-07-21T00:00:00.000Z)',
+      ...cycle1Lines.split('\n'),
+      '',
+      '## Decisions',
+      '',
+      'x',
+    ].join('\n'));
+
+    const RealDate = Date;
+    const fixed = new RealDate('2026-07-21T00:00:01.000Z');
+    globalThis.Date = class extends RealDate {
+      constructor(...args) { return args.length ? new RealDate(...args) : new RealDate(fixed); }
+      static now() { return fixed.getTime(); }
+    };
+    try {
+      const outcome = writePlanProgress(dir, 'rerun-ready');
+      assert.equal(outcome.outcome, 'unchanged');
+    } finally {
+      globalThis.Date = RealDate;
+    }
+    const after = readFileSync(planPath, 'utf8');
+    assert.equal((after.match(/### Rerun cycle /g) || []).length, 1); // no cycle 2 spawned
+  });
 });
+
+const TEMPLATE_BASELINE = [
+  '- [ ] instantiation-complete',
+  '- [ ] hitl1-recorded',
+  '- [ ] setup-ready',
+  '- [ ] seed-topics-ready',
+  '- [ ] wave0-complete',
+  '- [ ] wave1-complete',
+  '- [ ] wave2-complete',
+  '- [ ] hitl2-recorded',
+  '- [ ] readiness-passed',
+  '- [ ] rerun-ready',
+].join('\n');

@@ -165,7 +165,8 @@ Logical `actor_execution` plus exact `work_id` and `receipt_nonce` guides which 
 | validate-phase-templates.mjs | cli/validate-phase-templates.mjs | 校验 phase MD 模板保持 controller + delegates 合约 |
 | validate-work-unit-hygiene.mjs | cli/validate-work-unit-hygiene.mjs | 静态阻止旧 delegated relay/slot authority、旧 gate check 名、queue demand `work_id`、以及 filesystem/index pass-coverage wording 回到 active production surface |
 | inspect-bundle.mjs | cli/inspect-bundle.mjs | bundle 目录结构完整性 |
-| audit-phase-status.mjs | cli/audit-phase-status.mjs | 生命周期完整性审计（诊断式、fail-closed、不写任何文件）：对照 `rb_status.json`/`rb_trace.jsonl`/`rb_plan.md## Progress`/`final/` canonical inventory 输出封闭 outcome——`passed`、`premature_final_present`、`plan_progress_tamper_suspected`、`status_drift`、`manual_bypass_suspected`、`missing_witness`、`failed_gate_downstream_status`、`bootstrap_exception` 与 post-final 各 stage；一条命令读取"研究是否真的在轨"的真相 |
+| audit-phase-status.mjs | cli/audit-phase-status.mjs | 生命周期完整性审计（诊断式、fail-closed、不写任何文件）：对照 `rb_status.json`/`rb_trace.jsonl`/`rb_plan.md## Progress`/`final/` canonical inventory 输出封闭 outcome——`passed`、`premature_final_present`、`plan_progress_tamper_suspected`、`status_drift`、`manual_bypass_suspected`、`missing_witness`、`failed_gate_downstream_status`、`bootstrap_exception` 与 post-final 各 stage；Progress 检查按块绑定 witness（基线块 / `### Rerun cycle N` 块），「gate 已通过但该块未勾」以 non-blocking `advisory`（`stale_progress`）输出，不进 blocking outcomes、不改变 exit code；一条命令读取"研究是否真的在轨"的真相 |
+| reconcile-plan-progress.mjs | cli/reconcile-plan-progress.mjs | **Engine 写的 presentation 修复**（非 authority、不写 trace/checkpoint/status、不跑 gate）：从 `rb_trace.jsonl` route-bound witnesses + 现有 Progress 基线清单重建 `rb_plan.md## Progress`（含从 rerun-ready witnesses 派生的 cycle 块），原子写，输出 `committed|unchanged|failed` + 重建摘要与 post-rebuild tamper 检查；对生命周期中段的存量 bundle，须在**下一次 gate pass 之前**执行（否则新 pass 会勾进基线块） |
 
 ## Phase Handoff
 | 工具 | 文件 | 说明 |

@@ -268,6 +268,25 @@ export function writeGateAttempt(bundlePath, result, options = {}) {
     // 2. Logger — via logToRun with unified envelope (Design D6.1)
     logToRun(bundlePath, level, 'gate_attempt', logDetail);
 
+    // 2.5 Plan Progress flip on pass (PHS-006). Presentation-only and
+    // best-effort: a failed write must not change result, exit code, trace, or
+    // checkpoint. Runs BEFORE trace/checkpoint so the checkpoint's recorded
+    // rb_plan.md hash covers the flipped bytes, matching the setup-ready
+    // staged ordering (writeSetupReadyStagedAttempt flips before its
+    // route-bound checkpoint).
+    if (check.passed) {
+      try {
+        writePlanProgress(bundlePath, check.gate);
+      } catch (error) {
+        try {
+          logToRun(bundlePath, 'warn', 'plan_progress_write_failed', {
+            gate: check.gate,
+            reason: error.message || String(error),
+          });
+        } catch { /* secondary diagnostic only */ }
+      }
+    }
+
     // 3. Trace — structured evidence with bundle, phase, diagnostic_path (TRW-001, TRW-002)
     try {
       const tracePath = join(bundlePath, 'rb_trace.jsonl');

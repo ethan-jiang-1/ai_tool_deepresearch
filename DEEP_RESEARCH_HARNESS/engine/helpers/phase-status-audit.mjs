@@ -118,7 +118,10 @@ function findRouteBoundLoad(events, {
   return null;
 }
 
-function candidateLegalWindows(events, topology) {
+// @impl CPT-006. Legal gate windows = passed gate_attempts with a route-bound
+// consumption (load_complete) witness. Exported for shared reuse by the
+// Progress reconcile CLI, which derives checked lines from the same witnesses.
+export function candidateLegalWindows(events, topology) {
   const windows = [];
   for (const item of events) {
     const event = item.event;
@@ -205,9 +208,108 @@ export function evaluatePrematureFinalPresence(bundlePath) {
 }
 
 // @impl CPT-006, PHS-010
-// Plan Progress tamper evidence: a canonical `- [x] <gate>` line whose gate
-// lacks a passed gate_attempt with a route-bound consumption witness.
-// Presentation only; never substitutes for trace truth.
+// Plan Progress tamper evidence + advisory staleness (block-aware).
+// A canonical `- [x] <gate>` line is tamper evidence when its gate lacks a
+// passed gate_attempt with a route-bound consumption witness; for a line in a
+// cycle block the witness must be recorded at or after that block's spawn.
+// A consumed gate whose line in the block current at its attempt is unchecked
+// is advisory presentation staleness (non-blocking). Presentation only; never
+// substitutes for trace truth.
+
+// Engine-owned cycle block header: `### Rerun cycle <N> (spawned <ISO ts>)`.
+const PROGRESS_CYCLE_HEADER = /^### Rerun cycle (\d+) \(spawned (.+)\)$/;
+const PROGRESS_CYCLE_HEADER_LOOKS_LIKE = /^### Rerun cycle/i;
+
+function parseProgressBlocks(sectionContent) {
+  const blocks = [];
+  let current = { header: null, ordinal: null, spawnTs: null, unparseable: false, lines: [] };
+  blocks.push(current);
+  for (const rawLine of sectionContent.split('\n')) {
+    const line = rawLine.trim();
+    const match = line.match(PROGRESS_CYCLE_HEADER);
+    if (match) {
+      while (current.lines.length > 0 && current.lines[current.lines.length - 1].trim() === '') {
+        current.lines.pop();
+      }
+      current = { header: line, ordinal: Number(match[1]), spawnTs: match[2], unparseable: false, lines: [] };
+      blocks.push(current);
+      continue;
+    }
+    if (PROGRESS_CYCLE_HEADER_LOOKS_LIKE.test(line)) {
+      // Cycle-looking header the Engine never writes — manual interference.
+      // Fail closed: checked lines in this block have no verifiable witness
+      // window and are tamper evidence.
+      while (current.lines.length > 0 && current.lines[current.lines.length - 1].trim() === '') {
+        current.lines.pop();
+      }
+      current = { header: line, ordinal: null, spawnTs: null, unparseable: true, lines: [] };
+      blocks.push(current);
+      continue;
+    }
+    current.lines.push(rawLine);
+  }
+  return blocks;
+}
+
+function checkedGateEntries(block) {
+  const entries = [];
+  for (const rawLine of block.lines) {
+    const match = rawLine.match(/^\s*-\s*\[x\]\s*([A-Za-z0-9_-]+)(?:\s*\(|\s*$)/);
+    if (match) entries.push({ gateKey: match[1], label: rawLine.trim() });
+  }
+  return entries;
+}
+
+function blockLabel(block) {
+  if (block.unparseable) return 'unparseable';
+  return block.ordinal != null ? `Rerun cycle ${block.ordinal}` : 'baseline';
+}
+
+// Consumed witnesses = passed gate_attempts with a route-bound consumption
+// (legal window) plus their trace timestamp, when present.
+function consumedWitnesses(traceEvents, topology) {
+  const witnesses = [];
+  for (const window of candidateLegalWindows(traceEvents, topology)) {
+    const item = traceEvents[window.attemptIndex];
+    witnesses.push({
+      gate: window.sourceGate,
+      ts: item && item.event && typeof item.event.ts === 'string' ? item.event.ts : null,
+    });
+  }
+  return witnesses;
+}
+
+// Rerun-ready witnesses in lifecycle order. The k-th (1-based) spawned cycle
+// block k and flipped the PREVIOUS block's `rerun-ready` line (baseline when
+// k === 1). Binding by position instead of timestamp is robust to the writer
+// stamping the flipped line and the new header within the same millisecond.
+function rerunReadySpawners(witnesses) {
+  return witnesses
+    .filter((w) => w.gate === 'rerun-ready')
+    .sort((a, b) => (a.ts == null ? 1 : b.ts == null ? -1 : a.ts < b.ts ? -1 : a.ts > b.ts ? 1 : 0));
+}
+
+// Block that was current when a gate_attempt completed. For a `rerun-ready`
+// witness the flip target is positional: the k-th (0-based) rerun-ready
+// witness flipped the baseline (k === 0) or cycle block with ordinal k.
+// All other gates map by timestamp to the last block spawned at or before
+// their attempt. Baseline has no spawn and is the initial candidate.
+function blockCurrentAt(ts, gate, blocks, witnessIndex) {
+  if (gate === 'rerun-ready' && witnessIndex != null) {
+    const target = witnessIndex === 0 ? blocks[0] : blocks.find((b) => b.ordinal === witnessIndex);
+    return target || blocks[0];
+  }
+  let candidate = blocks[0];
+  if (ts == null) return candidate;
+  for (let i = 1; i < blocks.length; i++) {
+    const block = blocks[i];
+    if (block.spawnTs == null) continue;
+    if (!(block.spawnTs <= ts)) break;
+    candidate = block;
+  }
+  return candidate;
+}
+
 export function evaluatePlanProgressTamper(bundlePath, traceEvents, topology) {
   const planPath = join(bundlePath, 'rb_plan.md');
   if (!existsSync(planPath)) {
@@ -223,21 +325,77 @@ export function evaluatePlanProgressTamper(bundlePath, traceEvents, topology) {
   if (!section) {
     return { checked: [], tampered: [], stale: [] };
   }
-  const consumedGates = new Set(
-    candidateLegalWindows(traceEvents, topology).map((window) => window.sourceGate),
-  );
-  const checked = [];
-  for (const rawLine of section.content.split('\n')) {
-    const match = rawLine.match(/^\s*-\s*\[x\]\s*([A-Za-z0-9_-]+)(?:\s*\(|\s*$)/);
-    if (!match) continue;
-    const gateKey = match[1];
-    if (!topology.gateToNode.has(gateKey)) continue;
-    checked.push({ gateKey, label: rawLine.trim() });
+
+  const witnesses = consumedWitnesses(traceEvents, topology);
+  const rerunSpawners = rerunReadySpawners(witnesses);
+  const witnessTsByGate = new Map();
+  for (const witness of witnesses) {
+    if (!witnessTsByGate.has(witness.gate)) witnessTsByGate.set(witness.gate, []);
+    witnessTsByGate.get(witness.gate).push(witness.ts);
   }
-  const checkedGates = new Set(checked.map((item) => item.gateKey));
-  const tampered = checked.filter((item) => !consumedGates.has(item.gateKey));
-  const stale = [...consumedGates].filter((gateKey) => !checkedGates.has(gateKey));
+
+  const blocks = parseProgressBlocks(section.content);
+  const checked = [];
+  const tampered = [];
+  for (const block of blocks) {
+    const label = blockLabel(block);
+    for (const entry of checkedGateEntries(block)) {
+      if (!topology.gateToNode.has(entry.gateKey)) continue;
+      checked.push({ gateKey: entry.gateKey, label: entry.label, block: label });
+      let witnessed;
+      if (block.unparseable) {
+        witnessed = false;
+      } else if (block.ordinal == null) {
+        // Baseline: any passed witness for the gate admits the line.
+        if (entry.gateKey === 'rerun-ready') {
+          witnessed = rerunSpawners.length >= 1;
+        } else {
+          witnessed = (witnessTsByGate.get(entry.gateKey) || []).length > 0;
+        }
+      } else if (entry.gateKey === 'rerun-ready') {
+        // Cycle rerun-ready: only a LATER rerun-ready pass (one beyond the
+        // block's own spawner) witnesses this line.
+        witnessed = rerunSpawners.length > block.ordinal;
+      } else {
+        witnessed = (witnessTsByGate.get(entry.gateKey) || [])
+          .some((ts) => ts != null && ts >= block.spawnTs);
+      }
+      if (!witnessed) {
+        tampered.push({ gateKey: entry.gateKey, label: entry.label, block: label });
+      }
+    }
+  }
+
+  // Advisory staleness: a consumed witness whose flip-target block's line for
+  // that gate is unchecked. Readiness and rerun are mutually exclusive per
+  // cycle — the un-passed exit has no witness and is never stale.
+  const stale = [];
+  const rerunIndexByWitness = new Map();
+  rerunSpawners.forEach((witness, index) => rerunIndexByWitness.set(witness, index));
+  for (const witness of witnesses) {
+    const target = blockCurrentAt(witness.ts, witness.gate, blocks, rerunIndexByWitness.get(witness) ?? null);
+    if (target.unparseable) continue;
+    const lineChecked = checkedGateEntries(target).some((entry) => entry.gateKey === witness.gate);
+    if (!lineChecked) {
+      stale.push({ gate: witness.gate, block: blockLabel(target) });
+    }
+  }
+
   return { checked, tampered, stale };
+}
+
+// Advisory-only surface for the audit CLI: non-blocking stale_progress entries.
+// Never changes the phase-status verdict (ok/outcome).
+export function evaluatePlanProgressStaleAdvisory(bundlePath) {
+  try {
+    const trace = readTraceEventsWithIndex(bundlePath);
+    if (!trace.ok) return [];
+    const topology = loadHandoffTopology();
+    const { stale } = evaluatePlanProgressTamper(bundlePath, trace.events, topology);
+    return stale.map((item) => ({ kind: 'stale_progress', gate: item.gate, block: item.block }));
+  } catch {
+    return [];
+  }
 }
 
 // @impl CPT-006, CPT-009
@@ -313,20 +471,26 @@ export function auditPhaseStatus(bundlePath) {
   const withCrossRef = { ...withTrace, cross_references: crossRefDiagnostic };
 
   const integrity = evaluateLifecycleIntegrity(bundlePath);
-  if (!integrity) return withCrossRef;
+  // Advisory presentation staleness (PHS-010): consumed gates whose Progress
+  // line is unchecked. Non-blocking — never changes ok/outcome or exit code.
+  const progressAdvisory = evaluatePlanProgressStaleAdvisory(bundlePath);
+  const withAdvisory = progressAdvisory.length > 0
+    ? { ...withCrossRef, advisory: progressAdvisory }
+    : withCrossRef;
+  if (!integrity) return withAdvisory;
   if (result.ok === true) {
     // Lifecycle window itself is legal, but an integrity fact hit: the
     // top-level outcome names the first integrity finding (design D1).
     return {
-      ...withCrossRef,
+      ...withAdvisory,
       ok: false,
       outcome: integrity.outcomes[0],
-      advice: [...integrity.remediation, ...(Array.isArray(withCrossRef.advice) ? withCrossRef.advice : [])],
+      advice: [...integrity.remediation, ...(Array.isArray(withAdvisory.advice) ? withAdvisory.advice : [])],
       integrity,
       diagnostic_only: true,
     };
   }
-  return { ...withCrossRef, integrity };
+  return { ...withAdvisory, integrity };
 }
 
 // @impl TRW-008: completion events (waveN_completion / final_report_complete) are legal

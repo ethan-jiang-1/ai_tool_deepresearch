@@ -17,7 +17,6 @@ import {
   checkPhaseHandoffPreflight,
   readBundlePlan,
   stripMdFrontmatter,
-  writePlanProgress,
 } from '../../engine/helpers/gate-helpers.mjs';
 import { stripSuppliedControlsForTemplateScan } from '../../engine/helpers/plan-hostfile-sections.mjs';
 import {

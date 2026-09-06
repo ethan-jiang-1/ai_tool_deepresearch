@@ -1,0 +1,100 @@
+schema_version: verification-routing/v1
+change: plan-progress-rerun-cycle-growth
+test_classes:
+  unit:
+    status: selected
+    rationale: 确定性覆盖 Progress writer 的块感知行为（基线块/cycle 块定位、幂等翻转、rerun-ready spawn 下一块）与 audit 的按块 tamper 判定——纯 deterministic contract 验证，无 CLI 边界。
+  integration:
+    status: selected
+    rationale: 真实 gate CLI pass 后 Progress 翻转的接线（writeGateAttempt 通用分支 + checkpoint hash 顺序）、audit CLI 输出 stale advisory、reconcile CLI 重建均需 bundle 级/CLI 边界验证，复用既有 check-gate-wave0-complete 与 audit-phase-status integration。
+  deterministic_e2e:
+    status: selected
+    rationale: 构造最小 bundle fixture 走完整生命周期链（基线 10 gate → 第一轮 rerun cycle → 第二轮 spawn），断言 Progress 块随 gate pass 逐块勾选——跨多 gate 的 workflow-scale 状态链，符合 deterministic_e2e 判据。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: 纯机械 presentation 契约（Engine 写、trace 派生），无 agent 语义面；不涉及 Playbook-Agent 行为判定。
+claims:
+  - id: plan-progress-writer-block-flip-and-spawn
+    statement: writePlanProgress 在当前块内幂等翻转 gate 行（时间戳刷新、不重复行），rerun-ready pass 时翻转当前块 rerun-ready 并追加下一 cycle 块（序号递增、7 行未勾）；失败不改字节。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/plan-hostfile-sections.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: audit-cycle-bound-tamper-and-stale-advisory
+    statement: audit 对 cycle 块内无（块 spawn 后）witness 的已勾行报 tamper；consumed gate 若其 pass 时所在块的行未勾报 non-blocking advisory stale（按 attempt 时间定位块），不进 blocking outcomes；互斥出口未经过的一侧无 witness、不构成 stale。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/phase-status-audit-integrity.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: gate-cli-progress-wiring
+    statement: 真实 gate CLI pass 后 rb_plan.md 当前块对应行被 Engine 翻成已勾；同次 pass 的 checkpoint manifest 的 rb_plan.md hash 覆盖翻转后字节；Progress 写失败不改变 gate verdict/exit code。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/check-gate-progress-flip.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: audit-cli-stale-advisory-surfacing
+    statement: 冻结 Progress 的 bundle（勾选落后于 trace）上 audit CLI 仍 passed，但输出 advisory stale 字段。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/audit-phase-status.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: lifecycle-full-chain-progress-growth
+    statement: 最小 bundle 上按 manifest 顺序驱动基线 → 两轮 rerun（各 spawn 一个 cycle 块）→ 最终 readiness（配套合法 trace），每个块只勾该块窗口内实际通过的 gate（互斥出口未经过的一侧保持未勾），无重复块；reconcile 归一化时间戳后结构一致且二次运行 unchanged；audit 无 tamper、无 stale advisory。
+    test_class: deterministic_e2e
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/e2e/plan-progress-rerun-cycles.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: simulated_agent_actions
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: reconcile-rebuilds-frozen-progress
+    statement: 对 Progress 冻结的 bundle（trace 已有完整 witnesses），reconcile-plan-progress 重建基线块与 cycle 块、每行 checked 都有对应 passed witness（含块 spawn ts 边界），输出 committed/unchanged/failed 三态，二次运行 unchanged（幂等）；重建后 audit 无 tamper、无 stale advisory。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/reconcile-plan-progress.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
