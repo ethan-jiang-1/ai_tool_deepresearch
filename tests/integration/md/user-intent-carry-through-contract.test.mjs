@@ -86,7 +86,7 @@ describe('user intent carry-through Markdown contract', () => {
     assert.match(final, /this handoff owns reader, use, view, foregrounding/);
     assert.match(final, /Controls, Decisions, or synthesis coverage cannot manufacture/);
     assert.match(final, /presentation\s+preferences cannot weaken research controls/);
-    assert.match(final, /presentation-only path never rewrites the controls\s+baseline or appends a Decisions revision/);
+    assert.match(final, /presentation-only path never rewrites the controls\s+baseline, appends a Decisions revision, or allocates a new global version/);
     assert.match(final, /material unfulfilled current research commitment remains visible/);
   });
 });

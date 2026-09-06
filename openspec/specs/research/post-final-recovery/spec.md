@@ -1,6 +1,7 @@
 # Post-Final Recovery
 
 > req: POF-001, POF-002, POF-003, POF-004, POF-005, POF-006
+> delta-synced: 2026-09-06-final-polish-version-control
 
 > delta-synced: strengthen-user-intent-carry-through (POF-004)
 
@@ -8,28 +9,30 @@
 
 Define the post-final recovery capability: a narrow operation that records HITL2 `rerun` semantics after legal Final delivery, creates one lineage-bound `post_final_reentry` event through explicit exact recovery, and establishes a legal handoff to the existing rerun phase without widening lifecycle authority.
 ## Requirements
-### Requirement: Post-final recovery CLI SHALL expose one direct eligibility inspection
+### Requirement: Post-final recovery SHALL expose one direct eligibility and request contract
 
-The framework SHALL expose `operate-post-final-recovery.mjs inspect|apply|recover`
-with a closed action vocabulary containing only `post_final_rerun`. This
-operation SHALL own only explicit post-Final requests that require new sources,
-Topics, evidence collection, research conclusions, research-profile changes, or
-another expansion of the verified research boundary. Reader, view, structure,
-ordering, length, wording, emphasis, existing-evidence visibility, appendix, or
-explanation changes SHALL remain Final presentation refinement. The Final Agent,
-not the Engine, SHALL classify that semantic boundary and ask the smallest
-clarification when it is material.
+The post-final recovery operation SHALL retain its existing role as the only
+audited mutation path for evidence-expanding requests (new sources, Topics,
+research conclusions, or research-profile changes). Presentation-only feedback
+(reader, structure, length, wording, emphasis, or presentation of existing
+verified evidence) SHALL stay in the Final node and SHALL NOT create, apply, or
+suggest a post-final rerun request.
 
-`inspect` SHALL remain side-effect-free and derive mechanical eligibility from
-the latest legal readiness-to-Final gate/load lineage, terminal status/current
-node, current HITL2 profile, normalized bundle identity, canonical primary Final
-inventory, current trace, queue/work-unit quiescence, accepted recovery
-workspaces, and the active rerun-count rule. Mechanical eligibility SHALL NOT by
-itself select rerun or imply that a clean Final has requested mutation. An Agent
-MAY run inspect to answer availability, but it SHALL construct and submit an
-`apply` request only after classifying an explicit user request as crossing the
-verified research boundary. Ambiguous scope SHALL be clarified before
-submission; presentation-only scope SHALL remain in Final.
+Such polish SHALL be handled by the Final Agent's bounded semantic judgment as a
+presentation revision on the current primary version (see the
+artifact-persistence-recovery presentation-revision semantics): the Evidence Map
+backing set and submitted fact set remain unchanged, a compare-and-swap
+update of the current latest primary bytes at the existing canonical target is
+performed, the version's REVISIONS.md records the change, and any earlier
+primary revision bytes remain immutable — no new global version is allocated. An evidence-expanding request SHALL use the existing audited
+post-final rerun path and SHALL result in a new global version on the resulting
+legal Final delivery. Mixed or ambiguous feedback SHALL be resolved by the
+smallest clarification before routing, and SHALL NOT be auto-routed or have a
+classification invented.
+
+The Final Agent, not the Engine, SHALL classify that semantic boundary and ask
+the smallest clarification when it is material. Mechanical eligibility SHALL NOT
+by itself select rerun or imply that a clean Final has requested mutation.
 
 #### Scenario: Clean terminal Final is eligible
 
@@ -38,13 +41,13 @@ submission; presentation-only scope SHALL remain in Final.
 > current explicit evidence-expanding intent is also required for ReopenResearchPass ownership.
 
 - **WHEN** the latest lineage is legal terminal Final with a valid primary report bound to that lineage, no active owner workspace/work, a supported available next increment, and a retained request for new evidence or research scope
-- **THEN** inspect SHALL report `eligible` and return exact request/apply preparation bindings
+- **THEN** inspect SHALL report eligible and return exact request/apply preparation bindings
 
 #### Scenario: Presentation-only feedback remains in Final
 
 - **WHEN** current feedback asks only to change reader, view, structure, length, wording, emphasis, appendix, or explanation of existing verified evidence
 - **THEN** the Final Agent SHALL not construct or submit a ReopenResearchPass apply request
-- **AND** the nearest owner SHALL be `phases/phase-final.md`
+- **AND** the nearest owner SHALL be phases/phase-final.md
 
 #### Scenario: Mechanical eligibility does not invent rerun intent
 
@@ -56,6 +59,25 @@ submission; presentation-only scope SHALL remain in Final.
 
 - **WHEN** committed ReopenResearchPass has legally entered rerun or later accepted descendant stages
 - **THEN** inspect SHALL return unchanged with the one current owner without requiring terminal Final or testing another future increment
+
+#### Scenario: Presentation polish does not allocate a version
+
+- **WHEN** a user gives presentation-only feedback on a delivered Final report (e.g. reorder sections, shorten wording, restructure)
+- **THEN** the Final Agent SHALL apply it as a presentation revision (CAS update of the current latest primary bytes)
+- **AND** the version number SHALL NOT change and no post-final rerun request SHALL be created
+
+#### Scenario: Evidence expansion still uses the audited rerun path
+
+- **WHEN** a user request needs new sources, Topics, research conclusions, or a research-profile change
+- **THEN** the existing audited post-final rerun path SHALL be used
+- **AND** the resulting legal Final delivery SHALL allocate a new global version
+
+#### Scenario: Ambiguous feedback asks first
+
+- **WHEN** feedback mixes presentation and evidence-expanding elements or is ambiguous
+- **THEN** the Final Agent SHALL ask the smallest clarification before routing
+- **AND** SHALL NOT auto-route or invent a classification
+
 
 ### Requirement: Post-final apply SHALL validate the closed action and rerun budget
 

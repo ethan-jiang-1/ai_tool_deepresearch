@@ -1,0 +1,67 @@
+schema_version: semantic-closure/v1
+change: 2026-09-06-final-polish-version-control
+status: affected
+catalog_additions: []
+affected:
+  - family: final.primary-report-series
+    fact: >-
+      Whether a final publication allocates the next global version (an
+      evidence-expanding delivery) or stays within the current version (a
+      presentation-only polish that updates the current primary revision bytes
+      at the existing canonical target, appends one REVISIONS.md row in the
+      bound auxiliary directory, and does NOT allocate a new version or change
+      latest/next_version); and whether a previously published version is
+      retired (moved to final/attic/ with a retired marker, latest recomputed
+      to the highest remaining non-retired revision, version number never
+      reused) versus still a member of the current authoritative primary
+      series. Retirement is human-controlled: an Agent attempt without an
+      explicit user request is rejected before any target mutation, and retired
+      bytes are archived, not deleted or rewritten. The presentation-vs-
+      evidence classification is the Final Agent's bounded semantic judgment;
+      the Engine enforces the mechanical distinction by allocation behavior.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/helpers/final-report-series.mjs#resolveFinalReportSeries
+    established_by:
+      - DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs
+    consumers:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/final-report-series.mjs
+      - DEEP_RESEARCH_HARNESS/cli/operate-post-final-recovery.mjs
+      - DEEP_RESEARCH_HARNESS/cli/audit-phase-status.mjs
+    overlap:
+      - coordinate: DEEP_RESEARCH_HARNESS/engine/helpers/final-report-series.mjs#classifyAuxiliaryDirectoryName
+        relation: derived
+        detail: >-
+          Auxiliary-directory classification derives version binding from
+          directory names; retirement changes authoritative-series membership
+          but does not alter the name-grammar classification.
+    verification:
+      truth_table: tests/engine/artifact-persistence-recovery.test.mjs
+      cross_surface: tests/integration/cli/artifact-persistence.test.mjs
+  - family: final.submitted-backing-admission
+    fact: >-
+      Whether a primary version's bound auxiliary directory carries a
+      self-contained evidence-details file (conclusion, key numbers, caliber
+      labels, clickable external URLs for every declared key finding) whose
+      external URLs all trace to submitted reference frontmatter source_url
+      values, so the public delivery (primary MD + bound directory) is
+      verifiable without internal artifacts/reference paths; a fabricated URL
+      is rejected before persistence. The Evidence Map backing column retains
+      its existing submitted-backing semantics for audit.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/helpers/final-delivery-backing.mjs#evaluateFinalDeliveryBacking
+    established_by:
+      - DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs
+    consumers:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/final-report-series.mjs
+      - DEEP_RESEARCH_HARNESS/cli/audit-phase-status.mjs
+    overlap:
+      - coordinate: DEEP_RESEARCH_HARNESS/engine/helpers/wave1-reference-convergence.mjs
+        relation: derived
+        detail: >-
+          Reference backing resolution supplies the submitted source_url set
+          the evidence-details URLs must trace to; the evidence-details check
+          itself is a delivery-backing admission, not a reference-convergence
+          verdict.
+    verification:
+      truth_table: tests/engine/artifact-persistence-recovery.test.mjs
+      cross_surface: tests/integration/cli/artifact-persistence.test.mjs

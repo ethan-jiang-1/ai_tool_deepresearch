@@ -168,7 +168,11 @@ test('delta blocks are verbatim-synced with main spec requirement blocks', () =>
     // DEW pair retired: 2026-09-01-slim-dwu-requirements 重构了 DEW-012 块
     // （文本守恒由 tests/engine/dwu-slim-structure-locks.test.mjs 接管）。
     [`${C}/agent/agentic-queue/spec.md`, AGQ],
-    [`${C}/research/content-delivery-phase-content/spec.md`, CDP],
+    // CDP pair re-homed to 2026-09-06-final-polish-version-control: that change
+    // modified CDP-006/008 presentation-revision semantics in main, superseding
+    // the older repair-residual-spec-drift delta (text conservation now owned by
+    // tests/engine/artifact-persistence-recovery.test.mjs + this pair).
+    [`openspec/changes/2026-09-06-final-polish-version-control/specs/research/content-delivery-phase-content/spec.md`, CDP],
   ];
   for (const [deltaPath, mainPath] of pairs) {
     for (const block of deltaBlocks(deltaPath)) {

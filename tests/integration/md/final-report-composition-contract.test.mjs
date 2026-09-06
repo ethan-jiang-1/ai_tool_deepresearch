@@ -76,7 +76,7 @@ describe('Final report composition Markdown contract', () => {
     assert.match(final, /admitted post-ReopenResearchPass return with zero canonical append/);
     assert.match(final, /current lineage's accepted HITL2 handoff\/receipt, all earlier lineage\s+history/);
     assert.match(final, /Preserve them; do not rewrite\s+them/);
-    assert.match(final, /publish exactly one immutable revision/);
+    assert.match(final, /CAS-update the current latest version \(publish-final-report --polish; version unchanged\)/);
     assert.match(final, /satisfied, finish the current interaction with no report,\s+state, profile, status, Gate, trace, counter, pointer, or event write/);
     assert.match(final, /new source, Topic, evidence, research conclusion,\s+or research-profile change/);
     assert.match(final, /Presentation feedback alone remains here/);

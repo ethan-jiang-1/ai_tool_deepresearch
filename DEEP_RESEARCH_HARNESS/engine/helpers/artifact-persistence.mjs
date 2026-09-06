@@ -187,8 +187,30 @@ const PublishFinalReportRequestSchema = z.object({
   bundlePath: z.string().min(1),
   sourcePath: z.string().min(1),
   feature: FinalReportFeatureSchema.nullable().optional(),
+  polish: z.boolean().optional().default(false),
   hooks: z.unknown().nullable().optional(),
   operationId: OperationIdSchema.optional(),
+}).strict();
+
+const RetireFinalVersionRequestSchema = z.object({
+  bundlePath: z.string().min(1),
+  version: z.number().int().positive(),
+  feature: FinalReportFeatureSchema.nullable().optional(),
+  reason: z.string().nullable().optional(),
+  requestedBy: z.literal('user').optional(),
+}).strict();
+
+export const RetireFinalVersionResultSchema = z.object({
+  schema_version: z.literal(ARTIFACT_PERSISTENCE_SCHEMA_VERSION),
+  operation: z.literal('retire-final-version'),
+  target: TargetSchema.nullable(),
+  version: z.number().int().positive(),
+  feature: FinalReportFeatureSchema.nullable(),
+  latest_target: TargetSchema.nullable(),
+  verdict: z.enum(['committed', 'blocked']),
+  reason_code: z.string().min(1),
+  reason: z.string().min(1),
+  workspace: z.string().nullable(),
 }).strict();
 
 export const ArtifactPersistResultSchema = z.object({
@@ -727,13 +749,13 @@ export function redirectFinalMarkdownPersist({ target } = {}) {
   });
 }
 
-function finalReportPersistResult({ admission, target, persistence = null }) {
+function finalReportPersistResult({ admission, target, persistence = null, selfContained = null }) {
   const durability = persistence || {
     operation_id: null,
     target,
     verdict: 'blocked',
-    reason_code: admission.inspect[0]?.code || 'final_backing_rejected',
-    reason: admission.inspect[0]?.detail || 'Final Markdown backing admission failed.',
+    reason_code: selfContained?.inspect?.[0]?.code || admission.inspect[0]?.code || 'final_backing_rejected',
+    reason: selfContained?.inspect?.[0]?.detail || admission.inspect[0]?.detail || 'Final Markdown backing admission failed.',
     workspace: null,
   };
   return FinalReportPersistResultSchema.parse({
@@ -755,6 +777,58 @@ function finalReportPersistResult({ admission, target, persistence = null }) {
  * Admit a Final Markdown report before it reaches the existing atomic writer.
  * The preflight intentionally performs no persistence-root or target mutation.
  */
+/**
+ * Self-contained evidence-details admission: when the target is an auxiliary
+ * evidence-details file (inside a version-bound auxiliary directory), every
+ * external URL in the file MUST trace to a submitted reference frontmatter
+ * source_url in the same bundle (no fabricated links). Non-auxiliary targets
+ * pass trivially (their backing admission already governs).
+ */
+export function evaluateSelfContainedEvidenceDetails({ bundlePath, target, markdown } = {}) {
+  const auxMatch = target.match(/^final\/final(?:_[a-z0-9]+(?:_[a-z0-9]+)*)?_v[1-9][0-9]*\/([^/]+)\.md$/);
+  if (!auxMatch) {
+    return { check: { passed: true }, inspect: [], advice: [] };
+  }
+  const urlPattern = /https?:\/\/[^\s)\]>]+/g;
+  const urls = [...markdown.matchAll(urlPattern)].map((match) => match[0].replace(/[),。;]+$/, ''));
+  if (urls.length === 0) {
+    return { check: { passed: true }, inspect: [], advice: [] };
+  }
+  const bundleReal = resolveBundle(bundlePath);
+  const referenceDir = path.join(bundleReal, 'reference');
+  const acceptedUrls = new Set();
+  if (existsSync(referenceDir)) {
+    const refInfo = lstatSync(referenceDir);
+    if (!refInfo.isSymbolicLink() && refInfo.isDirectory()) {
+      for (const name of readdirSync(referenceDir)) {
+        if (!name.endsWith('.md')) continue;
+        const refPath = path.join(referenceDir, name);
+        const refStat = lstatSync(refPath);
+        if (refStat.isSymbolicLink() || !refStat.isFile()) continue;
+        const text = readFileSync(refPath, 'utf8');
+        const fm = text.match(/^---\n([\s\S]*?)\n---/);
+        if (!fm) continue;
+        const urlMatch = fm[1].match(/source_url:\s*["']?([^"'\n]+)/);
+        if (urlMatch) acceptedUrls.add(urlMatch[1].trim().replace(/["']$/, ''));
+      }
+    }
+  }
+  const normalized = (value) => value.split('?')[0].split('#')[0].replace(/\/+$/, '');
+  const missing = urls.filter((url) => ![...acceptedUrls].some((accepted) => normalized(accepted) === normalized(url)));
+  if (missing.length > 0) {
+    return {
+      check: { passed: false, target },
+      inspect: [{
+        code: 'evidence_details_url_unbacked',
+        detail: `Evidence-details external URLs must trace to a submitted reference frontmatter source_url; unbacked: ${missing.slice(0, 5).join(', ')}${missing.length > 5 ? '…' : ''}`,
+        repairSurface: 'retained_staging_report',
+      }],
+      advice: [],
+    };
+  }
+  return { check: { passed: true, target }, inspect: [], advice: [] };
+}
+
 export function persistFinalReport({ bundlePath, sourcePath, target, expectedTarget } = {}) {
   const request = inspectArtifactPersistenceRequest({ bundlePath, sourcePath, target, expectedTarget });
   if (!isFinalMarkdownTarget(target)) {
@@ -769,13 +843,20 @@ export function persistFinalReport({ bundlePath, sourcePath, target, expectedTar
   });
   if (!admission.check.passed) return finalReportPersistResult({ admission, target });
 
+  const selfContained = evaluateSelfContainedEvidenceDetails({
+    bundlePath,
+    target,
+    markdown,
+  });
+  if (!selfContained.check.passed) return finalReportPersistResult({ admission, target, selfContained });
+
   const persisted = persistBundleFile({
     bundlePath: request.bundle_real,
     sourcePath: request.source_path,
     target,
     expectedTarget: request.expected_target,
   });
-  return finalReportPersistResult({ admission, target, persistence: persisted });
+  return finalReportPersistResult({ admission, target, selfContained, persistence: persisted });
 }
 
 /**
@@ -787,6 +868,7 @@ export function publishFinalReport(request = {}) {
     bundlePath,
     sourcePath,
     feature = null,
+    polish = false,
     hooks = null,
     operationId = randomUUID(),
   } = PublishFinalReportRequestSchema.parse(request);
@@ -796,6 +878,11 @@ export function publishFinalReport(request = {}) {
   ensureNoPendingArtifactWorkspace(bundleReal);
 
   const series = readFinalReportSeries(bundleReal);
+
+  if (polish) {
+    return publishPresentationRevision({ bundlePath, sourcePath, bundleReal, series, parsedFeature, hooks, parsedOperationId });
+  }
+
   const allocation = allocateFinalReportTarget(series, { feature: parsedFeature });
   if (!allocation.available) {
     const first = allocation.blockers[0];
@@ -1239,6 +1326,231 @@ function inspectSweepWorkspace({ bundleReal, bundleReaderPath, persistenceRoot, 
       recommendedAction: `Inspect ${operation.target} and ${relativeWorkspace(bundleReal, workspacePath)}, then rerun sweep.`,
     });
   }
+}
+
+/**
+ * Presentation-only polish path: CAS-update the current latest primary bytes
+ * at the existing canonical target without allocating a new global version.
+ * The staging Evidence Map backing set must equal the current latest primary's
+ * backing set (presentation-only judgment is Agent-owned; the Engine enforces
+ * the mechanical CAS/backing contract). Non-latest primary bytes remain
+ * immutable. One REVISIONS.md audit row is appended in the version's bound
+ * auxiliary directory.
+ */
+function publishPresentationRevision({ bundlePath, sourcePath, bundleReal, series, parsedFeature, hooks, parsedOperationId }) {
+  if (!series.valid || !series.latest) {
+    return presentationRevisionBlocked({
+      target: null,
+      reasonCode: 'polish_requires_latest',
+      reason: !series.valid
+        ? 'Primary inventory is invalid; resolve inventory blockers before a presentation revision.'
+        : 'No latest primary revision exists; a presentation revision requires a delivered current version.',
+    });
+  }
+
+  const latest = series.latest;
+  const target = latest.target;
+  const { targetPath, parentPath } = resolveTarget(bundleReal, target);
+  const currentDigest = readTargetDigest(targetPath);
+  if (!currentDigest.exists) {
+    return presentationRevisionBlocked({ target, reasonCode: 'polish_target_missing', reason: `The current latest primary target ${target} does not exist; nothing to polish.` });
+  }
+
+  const persistenceRoot = ensurePersistenceRoot(bundleReal);
+  const sourceReal = resolveSource(sourcePath, targetPath, persistenceRoot);
+  if (statSync(persistenceRoot).dev !== statSync(parentPath).dev) {
+    throw new ArtifactPersistenceConfigError('persistence workspace and target parent are on different filesystem devices', 'cross_device_target');
+  }
+
+  const admission = evaluateFinalDeliveryBacking({
+    bundlePath,
+    target,
+    markdown: readFileSync(sourceReal, 'utf8'),
+  });
+  if (!admission.check.passed) {
+    return presentationRevisionBlocked({
+      target,
+      reasonCode: admission.inspect[0]?.code || 'final_backing_rejected',
+      reason: admission.inspect[0]?.detail || 'Final Markdown backing admission failed for the presentation revision.',
+    });
+  }
+
+  const freshDigest = readTargetDigest(targetPath);
+  if (!freshDigest.exists || freshDigest.sha256 !== currentDigest.sha256) {
+    return presentationRevisionBlocked({ target, reasonCode: 'polish_cas_drift', reason: 'The current latest primary changed after the presentation revision was staged; rerun publish-final-report --polish against the current digest.' });
+  }
+
+  invokeHook(hooks, 'beforePrimaryTargetCommit', { targetPath, sourcePath: sourceReal });
+  try {
+    writeFileSync(targetPath, readFileSync(sourceReal));
+    fsyncPath(parentPath);
+  } catch (error) {
+    throw new ArtifactPersistenceConfigError(`polish commit failed: ${error.message}`, 'polish_commit_failed');
+  }
+  appendRevisionsRow({ bundleReal, target, priorDigest: freshDigest.sha256, newDigest: hashFile(targetPath).sha256, operationId: parsedOperationId });
+
+  return FinalReportPublishResultSchema.parse({
+    schema_version: ARTIFACT_PERSISTENCE_SCHEMA_VERSION,
+    operation: 'publish-final-report',
+    check: admission.check,
+    inspect: admission.inspect,
+    advice: admission.advice,
+    operation_id: parsedOperationId,
+    target,
+    base_classification: series.classification,
+    version: latest.version,
+    feature: latest.feature,
+    previous_target: null,
+    inventory_sha256: primaryInventorySha256(series),
+    verdict: 'committed',
+    reason_code: 'committed',
+    reason: 'Presentation revision committed as a CAS update of the current latest primary; no new global version was allocated (see REVISIONS.md).',
+    workspace: null,
+  });
+}
+
+function presentationRevisionBlocked({ target, reasonCode, reason }) {
+  return FinalReportPublishResultSchema.parse({
+    schema_version: ARTIFACT_PERSISTENCE_SCHEMA_VERSION,
+    operation: 'publish-final-report',
+    check: null,
+    inspect: [],
+    advice: [],
+    operation_id: null,
+    target: target || null,
+    base_classification: 'invalid',
+    version: null,
+    feature: null,
+    previous_target: null,
+    inventory_sha256: null,
+    verdict: 'blocked',
+    reason_code: reasonCode,
+    reason,
+    workspace: null,
+  });
+}
+
+function appendRevisionsRow({ bundleReal, target, priorDigest, newDigest, operationId }) {
+  const auxDirName = target.replace(/^final\//, '').replace(/\.md$/, '');
+  const auxDir = path.join(bundleReal, 'final', auxDirName);
+  if (!existsSync(auxDir)) {
+    mkdirSync(auxDir, { recursive: false });
+    fsyncPath(path.join(bundleReal, 'final'));
+  }
+  const auxInfo = lstatSync(auxDir);
+  if (auxInfo.isSymbolicLink() || !auxInfo.isDirectory()) {
+    throw new ArtifactPersistenceConfigError(`auxiliary directory is unsafe: ${auxDir}`, 'auxiliary_unsafe');
+  }
+  const revisionsPath = path.join(auxDir, 'REVISIONS.md');
+  const row = [
+    '',
+    `## Revision ${new Date().toISOString()}`,
+    `- operation_id: ${operationId}`,
+    `- prior_sha256: ${priorDigest}`,
+    `- new_sha256: ${newDigest}`,
+    '- scope: presentation-only polish (CAS update of the current latest primary; no new global version)',
+    '',
+  ].join('\n');
+  writeFileSync(revisionsPath, (existsSync(revisionsPath) ? readFileSync(revisionsPath, 'utf8') : `# REVISIONS — ${auxDirName}\n\n`) + row);
+  fsyncPath(auxDir);
+}
+
+/**
+ * Human-controlled correction: move the selected primary revision to
+ * final/attic/ with a retired marker and recompute latest from the remaining
+ * non-retired revisions. Only an explicit user request may invoke this
+ * operation; the Agent SHALL NOT auto-retire. Retired bytes are archived, not
+ * deleted or rewritten, and the retired version number is never reused.
+ */
+export function retireFinalVersion({ bundlePath, version, feature = null, reason = null, requestedBy = null } = {}) {
+  const bundleReal = resolveBundle(bundlePath);
+  const parsedFeature = feature === null ? null : FinalReportFeatureSchema.parse(feature);
+  if (requestedBy !== 'user') {
+    return retireResult({
+      bundleReal,
+      version,
+      parsedFeature,
+      verdict: 'blocked',
+      reasonCode: 'retire_requires_user_request',
+      reason: 'retire-final-version is human-controlled; an explicit user request is required. The Agent SHALL NOT auto-retire any version.',
+    });
+  }
+  const series = readFinalReportSeries(bundleReal);
+  if (!series.valid) {
+    const first = series.blockers[0];
+    return retireResult({ bundleReal, version, parsedFeature, verdict: 'blocked', reasonCode: `primary_inventory_${first.code}`, reason: first.detail });
+  }
+  const match = series.primary_entries.find((entry) => entry.kind === 'revision' && entry.version === version && (entry.feature ?? null) === parsedFeature);
+  if (!match) {
+    return retireResult({ bundleReal, version, parsedFeature, verdict: 'blocked', reasonCode: 'retire_version_not_found', reason: `No primary revision ${version}${parsedFeature ? ` (feature ${parsedFeature})` : ''} exists in the current series.` });
+  }
+  if (!series.latest || series.latest.target !== match.target) {
+    return retireResult({ bundleReal, version, parsedFeature, verdict: 'blocked', reasonCode: 'retire_requires_latest', reason: `retire-final-version may retire only the current latest primary revision (${series.latest ? series.latest.target : 'none'}); retiring an intermediate version would break the contiguous primary sequence.` });
+  }
+  const { targetPath, parentPath } = resolveTarget(bundleReal, match.target);
+  const atticDir = path.join(bundleReal, 'final', 'attic');
+  if (!existsSync(atticDir)) {
+    mkdirSync(atticDir, { recursive: false });
+    fsyncPath(path.join(bundleReal, 'final'));
+  }
+  const atticInfo = lstatSync(atticDir);
+  if (atticInfo.isSymbolicLink() || !atticInfo.isDirectory()) {
+    throw new ArtifactPersistenceConfigError('final/attic is not a real directory', 'attic_unsafe');
+  }
+  const retiredName = match.target.split('/').pop();
+  const retiredPath = path.join(atticDir, retiredName);
+  if (existsSync(retiredPath)) {
+    return retireResult({ bundleReal, version, parsedFeature, verdict: 'blocked', reasonCode: 'retire_target_collision', reason: `final/attic/${retiredName} already exists; resolve the collision and rerun.` });
+  }
+  renameSync(targetPath, retiredPath);
+  fsyncPath(atticDir);
+  fsyncPath(parentPath);
+  // Move the version-bound auxiliary directory (if any) alongside the retired primary to avoid an orphan_auxiliary_directory blocker.
+  const auxDirName = retiredName.replace(/\.md$/, '');
+  const auxDirPath = path.join(bundleReal, 'final', auxDirName);
+  if (existsSync(auxDirPath)) {
+    const auxInfo = lstatSync(auxDirPath);
+    if (auxInfo.isSymbolicLink() || !auxInfo.isDirectory()) {
+      throw new ArtifactPersistenceConfigError('auxiliary directory is unsafe', 'auxiliary_unsafe');
+    }
+    const auxRetiredPath = path.join(atticDir, auxDirName);
+    if (existsSync(auxRetiredPath)) {
+      return retireResult({ bundleReal, version, parsedFeature, verdict: 'blocked', reasonCode: 'retire_aux_collision', reason: `final/attic/${auxDirName} already exists; resolve the collision and rerun.` });
+    }
+    renameSync(auxDirPath, auxRetiredPath);
+    fsyncPath(atticDir);
+    fsyncPath(path.join(bundleReal, 'final'));
+  }
+  const marker = {
+    schema_version: ARTIFACT_PERSISTENCE_SCHEMA_VERSION,
+    operation: 'retire-final-version',
+    retired_at: new Date().toISOString(),
+    retired_by: 'user',
+    version,
+    feature: parsedFeature,
+    reason: reason || null,
+    original_target: match.target,
+    archived_target: `final/attic/${retiredName}`,
+  };
+  writeFileSync(path.join(atticDir, `final_v${version}${parsedFeature ? `_${parsedFeature}` : ''}.retired.json`), `${JSON.stringify(marker, null, 2)}\n`);
+  fsyncPath(atticDir);
+  const freshSeries = readFinalReportSeries(bundleReal);
+  return retireResult({ bundleReal, version, parsedFeature, verdict: 'committed', reasonCode: 'retired', reason: `Version ${version} retired to final/attic/; latest is now ${freshSeries.latest ? freshSeries.latest.target : 'none'}.`, latestTarget: freshSeries.latest ? freshSeries.latest.target : null });
+}
+
+function retireResult({ bundleReal, version, parsedFeature, verdict, reasonCode, reason, latestTarget = null }) {
+  return RetireFinalVersionResultSchema.parse({
+    schema_version: ARTIFACT_PERSISTENCE_SCHEMA_VERSION,
+    operation: 'retire-final-version',
+    target: null,
+    version,
+    feature: parsedFeature,
+    latest_target: latestTarget,
+    verdict,
+    reason_code: reasonCode,
+    reason,
+    workspace: null,
+  });
 }
 
 export function sweepPendingArtifactWrites({ bundlePath } = {}) {

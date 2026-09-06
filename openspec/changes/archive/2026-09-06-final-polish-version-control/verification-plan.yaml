@@ -1,0 +1,72 @@
+schema_version: verification-routing/v1
+change: 2026-09-06-final-polish-version-control
+test_classes:
+  unit:
+    status: selected
+    rationale: 确定性测试覆盖三处新 Engine 行为——(1) presentation revision 更新当前版本字节且 latest/next_version 不变、REVISIONS.md 追加；(2) retire-final-version 使 latest 回退、retired 字节保留、版本号不复用、Agent 无用户请求调用被拒；(3) 版本绑定 auxiliary 目录自包含证据明细（外部 URL 全部可回溯到已提交 reference frontmatter source_url、编造 URL 在 persist 前被拒）。全部为纯确定性 contract 验证，无需 bundle 或 agent 行为。
+  integration:
+    status: selected
+    rationale: 一次真实发布 → presentation revision（版本不变）→ evidence-expanding 新交付（版本递增）→ user retire 冒进版本（latest 回退）的完整链路需 bundle 级 inventory 集成面验证（final 主序列 + auxiliary 目录 + retire 后重算），属 integration 类。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: 本 change 不修改 gate/checker 确定性 e2e 行为（无 gate 定义/schema 变更）；final 发布链路由 integration 覆盖。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: 打磨 vs evidence-expanding 的语义归类由 Final Agent 判定，但本 change 只落地确定性机械契约（发布/retire/明细校验），Agent 语义判定沿用既有 post-final 路由，无需真实 agent e2e。
+claims:
+  - id: presentation-revision-keeps-version
+    statement: presentation-only 打磨 CAS 原地更新当前 latest primary 字节（expect-sha256=当前 digest）、不分配新全局版本、不改 latest/next_version，并在 REVISIONS.md 追加审计行；非 latest 历史 primary 字节不可打磨；evidence-expanding 发布仍分配 latest+1。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/artifact-persistence-recovery.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: retire-final-version-human-only
+    statement: retire-final-version 由用户显式触发，将指定版本移至 final/attic/ 并写 retired marker，latest 回退到剩余最高非 retired 版本；retired 字节不删除、版本号不复用；Agent 无用户请求调用被拒。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/artifact-persistence-recovery.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: self-contained-evidence-details
+    statement: 版本绑定 auxiliary 目录含自包含证据明细文件，外部 URL 全部可回溯到已提交 reference frontmatter source_url；编造 URL 在 persist 前被拒；对外交付（主 MD + 子目录）不依赖内部路径。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/artifact-persistence-recovery.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: publish-retire-inventory-chain
+    statement: 真实 bundle 上执行发布 → presentation revision → evidence-expanding 新交付 → user retire 的完整链路后，final 主序列与 auxiliary 目录 inventory 始终有效且符合本 change 语义。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/artifact-persistence.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

@@ -67,6 +67,45 @@ declaration/path/backing/durability facts only; it does not decide legal Final
 entry, report quality, feedback type, or user satisfaction. Generic `persist`
 intentionally rejects reserved `final/final*.md` targets.
 
+**Presentation revision (`--polish`)** — for presentation-only feedback
+(structure, length, wording, emphasis, or presentation of existing verified
+evidence; the Evidence Map backing set and submitted facts unchanged), do NOT
+publish a new version. CAS-update the current latest primary bytes:
+
+```bash
+node DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs publish-final-report \
+  --bundle <bundle> \
+  --source <completed-final-markdown-staging-file> \
+  --polish
+```
+
+The version number stays unchanged, no new primary file is allocated, the
+staging's Evidence Map backing must equal the current latest primary's backing,
+and one REVISIONS.md audit row (time, prior/new sha256, operation id) is
+appended in the version's bound auxiliary directory. Non-latest primary bytes
+remain immutable. Any new source, Topic, research conclusion, or
+research-profile change is NOT a polish: route it through the audited post-final
+rerun path, which allocates a new global version.
+
+**Retire a spuriously created version (`retire-final-version`)** — a
+human-controlled correction: when the Agent produced versions that should not
+stand (e.g. polish-only churn), the user may retire the current latest version:
+
+```bash
+node DEEP_RESEARCH_HARNESS/cli/operate-artifact-persistence.mjs retire-final-version \
+  --bundle <bundle> \
+  --version <N> \
+  [--reason <text>]
+```
+
+Only the current latest revision may be retired (retiring an intermediate
+version would break the contiguous primary sequence); the selected primary and
+its bound auxiliary directory move to `final/attic/` with a retired marker,
+`latest` recomputes to the previous revision, and the retired version number is
+never reused. This operation requires an explicit user request — the Agent
+SHALL NOT auto-retire any version; an Agent-initiated call is rejected before
+any target mutation.
+
 For a safe **non-primary** Markdown target under `final/` (not the canonical
 primary series), use `persist-final-report`, which admits the Evidence Map
 backing before the durability commit and uses the same compare-and-swap

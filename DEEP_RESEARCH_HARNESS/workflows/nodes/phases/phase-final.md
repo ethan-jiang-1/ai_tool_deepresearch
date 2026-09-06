@@ -52,7 +52,7 @@ The legal delivery order is:
 admitted Final entry -> advance-status --to readiness_passed
   -> current lineage has no bound report: publish immediately
   -> show latest report and invite feedback
-  -> clear presentation request: publish one immutable next version
+  -> clear presentation request: CAS-update the current latest version (publish-final-report --polish; version unchanged)
   -> satisfied: end this turn without a write
   -> new evidence/research: accepted ReopenResearchPass request and existing rerun path
 ```
@@ -132,14 +132,17 @@ contradictions, or backing obligations.
   `persist-final-report` path. It and every auxiliary detail Markdown carry
   their own bounded Evidence Map and never become primary delivery.
 - For clear presentation feedback about existing verified content, reground in
-  the latest report and publish exactly one immutable revision. Reader, order,
-  length, phrasing, sectioning, explanation depth, and evidence exposure may
-  change without changing research meaning, material limits, or accepted HITL2
-  handoff fields. This presentation-only path never rewrites the controls
-  baseline or appends a Decisions revision.
+  the latest report and apply exactly one presentation revision via
+  `publish-final-report --polish`: CAS-update the current latest primary bytes
+  with the version number unchanged, Evidence Map backing set unchanged, and
+  one REVISIONS.md audit row appended in the bound auxiliary directory. Reader,
+  order, length, phrasing, sectioning, explanation depth, and evidence exposure
+  may change without changing research meaning, material limits, or accepted
+  HITL2 handoff fields. This presentation-only path never rewrites the controls
+  baseline, appends a Decisions revision, or allocates a new global version.
 - For materially ambiguous presentation feedback, ask one minimum clarification
-  before publishing the next version. Do not turn a clear request into an
-  extra confirmation.
+  before applying the presentation revision. Do not turn a clear request into
+  an extra confirmation.
 - When the user is satisfied, finish the current interaction with no report,
   state, profile, status, Gate, trace, counter, pointer, or event write.
 - When the request needs a new source, Topic, evidence, research conclusion,

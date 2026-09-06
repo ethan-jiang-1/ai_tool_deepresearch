@@ -1,6 +1,7 @@
 # run-entry
 
 > req: RUE-001, RUE-002, RUE-004, RUE-005, RUE-006
+> delta-synced: 2026-09-06-final-polish-version-control
 
 ## Purpose
 
@@ -124,45 +125,15 @@ HITL1: align research goal, scope and effort
   -> non-HITL middle: Agent runs silently and autonomously
   -> HITL2: review current research and decide delivery or further work
   -> Final: publish the first report immediately
-       -> remain on Final for feedback and immutable presentation revisions
+       -> remain on Final for feedback and presentation revisions (CAS updates of the current latest version; the version number does not change)
        -> stop the interaction when the user is satisfied
-       -> use audited rerun only for evidence-expanding feedback
+       -> use audited rerun only for evidence-expanding feedback (which allocates a new global version)
 ```
 
 HITL1 and HITL2 SHALL remain the only Harness-initiated in-run lifecycle
 decision checkpoints. During the autonomous middle, the Harness SHALL NOT
 initiate progress, ordinary-error, idle, acknowledgement, or continuation
 messages. An already-current user turn SHALL be answered without creating a
-checkpoint, permission, pause, mutation/reentry authority, or a promise that
-arbitrary mid-run intent was persisted.
-
-Final SHALL remain the terminal lifecycle node but SHALL be an interactive
-delivery surface after the first committed report. Entry docs SHALL explicitly
-distinguish “terminal” from “non-interactive”: Final has no Gate, outgoing edge,
-or lifecycle verdict, yet it presents each committed report, invites bounded
-feedback, and waits for another presentation revision. Any legal Final lineage
-that lacks its bound report SHALL never wait for feedback: after Final entry
-admits an empty primary baseline, the bundle's first lineage publishes
-`final/final.md`; after a later audited rerun, the new Final load first admits
-the exact event-bound prior inventory, synchronizes the Readiness source Gate,
-and then appends global `latest + 1`. A
-satisfaction message ends the current interaction without new Engine state.
-
-For an explicitly selected existing bundle whose current node is Final, entry
-docs SHALL direct the Agent to inspect the canonical primary inventory plus
-current/retired ReopenResearchPass lineage binding and resume the same Final delivery/refinement
-owner unless the current user request explicitly expands research evidence. A
-zero-append newer Final lineage SHALL resume immediate delivery; a report already
-bound to that lineage SHALL resume latest refinement. Entry docs SHALL not infer
-satisfaction from a previously ended chat, reissue a report without a delivery-
-pending lineage or current feedback, or default every clean Final to post-final
-rerun.
-
-Entry positioning SHALL describe the Harness as iterative research and
-iterative delivery that preserve history/provenance while allowing current
-judgments and report presentations to be revised. It SHALL NOT promise
-unlimited research reruns, guarantee every rerun is purely incremental, or
-claim that all historical conclusions remain currently valid.
 
 #### Scenario: Reading RUN.md means DEEP_RESEARCH_HARNESS was selected
 
@@ -215,6 +186,19 @@ claim that all historical conclusions remain currently valid.
 - **WHEN** entry docs describe research rerun or Final refinement
 - **THEN** they SHALL preserve historical evidence, provenance, decisions, Gate lineage, and report versions
 - **AND** they SHALL allow current conclusions or presentation to be revised without promising permanent validity or unlimited research reruns
+
+#### Scenario: Presentation feedback revises the current version in place
+
+- **WHEN** a user gives presentation-only feedback on the delivered Final report
+- **THEN** the Final Agent SHALL apply a presentation revision as a CAS update of the current latest primary bytes
+- **AND** the version number SHALL NOT change and no new primary file SHALL be created
+
+#### Scenario: Evidence-expanding feedback allocates a new version
+
+- **WHEN** a user request crosses the verified research boundary
+- **THEN** the audited post-final rerun path SHALL be used
+- **AND** the resulting legal Final delivery SHALL allocate a new global version
+
 
 ### Requirement: Explicit existing bundle routes before the new-run default
 

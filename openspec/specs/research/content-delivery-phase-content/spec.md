@@ -1,6 +1,7 @@
 # Content Delivery Phase Content
 
 > req: CDP-001, CDP-002, CDP-003, CDP-004, CDP-005, CDP-006, CDP-007, CDP-008, CDP-009
+> delta-synced: 2026-09-06-final-polish-version-control
 
 > delta-synced: strengthen-user-intent-carry-through (CDP-007)
 
@@ -509,57 +510,29 @@ satisfaction event.
 
 ### Requirement: Final delivery remains terminal while iterating in place
 
-Content-delivery guidance SHALL distinguish lifecycle terminality from
-interaction placement. HITL1 and HITL2 SHALL remain the only framework-initiated
-in-run checkpoints that request a lifecycle semantic decision. Final SHALL be a
-terminal interactive delivery surface, not a third HITL: it requests feedback
-about an already delivered artifact but owns no Gate verdict, decision enum,
-outgoing transition, accepted profile decision, or lifecycle completion state.
+Final SHALL remain the unique terminal delivery node, `gate: null`, with no
+outgoing transition, while supporting iteration in place. The first legal Final
+entry SHALL deliver the primary report first, then invite and wait for user
+feedback, staying in the same Final node for every legal revision. Each revision
+SHALL be classified by the Final Agent's bounded semantic judgment:
 
-The Final interaction SHALL follow this order:
+- presentation-only polish (Evidence Map backing set and submitted fact set
+  unchanged; only structure, length, wording, emphasis, or presentation of
+  existing verified evidence differ) SHALL be applied as a presentation
+  revision — a compare-and-swap update of the current latest primary bytes at
+  the existing canonical target, no new global version is allocated, the
+  version's REVISIONS.md records the change, and any earlier primary revision
+  bytes remain immutable;
+- evidence-expanding feedback (new sources, Topics, research conclusions, or
+  research-profile changes) SHALL leave Final only through the existing audited
+  post-final rerun path and SHALL result in a new global version on the
+  resulting legal Final delivery.
 
-```text
-legal Final entry
-  -> complete the exact Readiness source-gate status synchronization
-  -> publish and present the first report immediately
-  -> invite and await feedback on that report
-  -> clear presentation feedback: publish and present one next version
-  -> invite and await feedback again
-  -> satisfied: end the current interaction without another write
-  -> evidence-expanding request: use audited post-final rerun
-```
-
-The first report SHALL NOT depend on a user response after Final entry. After
-each committed report, the Agent SHALL make the artifact directly available and
-invite natural-language feedback without forcing a menu, a formal confirmation,
-or HITL2 vocabulary. A clear revision request authorizes exactly the bounded
-semantic rewrite it describes; it does not authorize new evidence collection,
-profile mutation, state repair, overwrite, deletion, or another lifecycle path.
-Materially ambiguous feedback receives one minimum clarification before the
-next version. A user expression of satisfaction ends the current interaction
-and SHALL NOT be persisted as an Engine fact or produce an empty version.
-
-Final MAY use recommendation-first language when useful, such as briefly
-recommending a structure or explaining the impact of a requested shortening.
-That recommendation SHALL remain Agent advice about the next artifact, not a
-framework decision checkpoint or a second confirmation requirement.
-
-Each readiness-to-Final handoff and all committed primary reports SHALL remain
-historical truth. In-place refinement within one Final lineage SHALL not rewrite
-Gate attempts, entry witnesses, that lineage's profile handoff fields, evidence,
-receipts, ledger rows, or prior report bytes. When a later explicit request
-crosses the verified research boundary, the post-final operation SHALL record
-existing HITL2 `rerun` semantics and create one legal handoff to
-`phases/phase-rerun.md`; the user SHALL not have to repeat that rerun decision in
-a duplicate Final or HITL2 prompt. A later normal HITL2/Readiness pass MAY
-establish a new accepted composition handoff for the next Final lineage without
-rewriting any earlier handoff.
-
-When the user has not requested another language, Final guidance SHALL prefer
-Chinese for report narrative, delivery summaries, and feedback invitations.
-Canonical enum values, paths, field names, commands, citations, and source
-titles SHALL retain their canonical or source form. Language preference SHALL
-not alter authorization, evidence, or persistence requirements.
+Satisfaction ends the current interaction only; it does not fabricate an Engine
+verdict, profile counter, or satisfaction state. The Final Agent SHALL NOT
+silently renumber, delete, or rewrite any committed primary revision, and SHALL
+NOT auto-retire a version (retirement is a human-controlled correction
+operation owned by artifact persistence).
 
 #### Scenario: Final delivery is not a third in-run checkpoint
 
@@ -628,6 +601,19 @@ not alter authorization, evidence, or persistence requirements.
 - **WHEN** `phase-final.md` is loaded for delivery and refinement
 - **THEN** frontmatter SHALL use `gate: null`, `stop: "yes"`, and omit `next`
 - **AND** in-place interaction SHALL not create a hidden next phase or Final Gate
+
+#### Scenario: Polish stays in the same Final node and version
+
+- **WHEN** the user gives presentation-only feedback after the first delivery
+- **THEN** the Final Agent SHALL apply it as a presentation revision (CAS update of the current latest primary bytes) in the same Final node
+- **AND** the version number SHALL NOT change and the Final node SHALL NOT exit
+
+#### Scenario: Evidence expansion leaves Final through the audited path
+
+- **WHEN** the user requests new evidence or a research change
+- **THEN** the Final Agent SHALL route through the existing audited post-final rerun path
+- **AND** the resulting new legal Final delivery SHALL allocate a new global version
+
 
 ### Requirement: Final artifacts SHALL count as delivery evidence only after legal readiness-to-final handoff and final node entry
 
@@ -786,35 +772,20 @@ become current.
 
 ### Requirement: Final guidance SHALL bind auxiliary detail archives to their version and maintain the series index
 
-`phase-final.md` SHALL direct the Phase Agent to treat one delivered Final
-version as exactly one primary report plus one same-named auxiliary detail
-archive directory:
-
-- version N's primary report is `final/final_v<N>.md` (or
-  `final/final_<feature>_v<N>.md`); and
-- its auxiliary detail archive is the directory `final/final_v<N>/` (or
-  `final/final_<feature>_v<N>/`), whose name is the primary report filename with
-  its `.md` suffix removed.
-
-A version's auxiliary detail files SHALL live only under that version's own
-directory. A primary report's ordinary-prose cross-references to auxiliary
-detail SHALL target only its own auxiliary directory; they SHALL NOT use
-another version's directory as its detail archive. These prose
-cross-references are not Evidence Map backing, which SHALL continue to resolve
-only to submitted evidence.
-
-Committed history SHALL remain read-only: older versions' primary reports and
-their auxiliary directories SHALL stay byte-identical, and new detail for a
-new version SHALL be written only into that new version's files and directory.
-A version-decoupled directory name such as `chips/` or `supplement/` SHALL NOT
-be created for a version's archive.
-
-The Agent SHALL maintain `final/README.md` as the bundle's single document
-authority for the naming and independence convention and the version release
-record. On every new committed version the Agent SHALL update `final/README.md`
-through the non-primary `persist-final-report` path. `final/README.md` and every
-auxiliary detail Markdown SHALL each carry its own bounded Evidence Map and
-SHALL NOT become canonical primary delivery or version authority by existing.
+Final guidance SHALL retain the existing version-bound auxiliary-directory
+binding (`final_v<N>` / `final_<feature>_v<N>`), keep the series index current
+after every publication and retirement, and extend the archive contract: each
+primary version's bound auxiliary directory SHALL carry a self-contained
+evidence-details file (e.g. `07-evidence-details.md`) materializing every
+declared key finding's conclusion, key numbers, caliber labels, and clickable
+external source URLs. The primary report's Evidence Map SHALL direct readers to
+this file, so the public delivery (primary MD + bound auxiliary directory) is
+self-contained and verifiable without internal `artifacts/` or `reference/`
+paths. Every external URL in the evidence-details file SHALL trace to a
+submitted reference frontmatter `source_url`; fabricated links SHALL be rejected
+before persistence. Presentation revisions SHALL append to the same bound
+directory's REVISIONS.md without changing the series index or any version
+number.
 
 #### Scenario: One version pairs a primary report with a same-named archive
 
@@ -847,6 +818,19 @@ SHALL NOT become canonical primary delivery or version authority by existing.
 - **THEN** the Agent SHALL update `final/README.md` through non-primary `persist-final-report`
 - **AND** `final/README.md` SHALL describe the naming and independence convention and the version release record
 - **AND** it SHALL carry its own bounded Evidence Map and SHALL NOT count as primary delivery
+
+#### Scenario: Version directory carries self-contained evidence details
+
+- **WHEN** a primary version is published with its bound auxiliary directory
+- **THEN** the directory SHALL contain an evidence-details file for all declared key findings with external URLs traceable to submitted reference frontmatter
+- **AND** the public delivery (primary MD + directory) SHALL be verifiable without internal paths
+
+#### Scenario: Presentation revision appends REVISIONS without index change
+
+- **WHEN** a presentation revision CAS-updates the current latest primary bytes at the existing canonical target
+- **THEN** the series index SHALL remain unchanged
+- **AND** one REVISIONS.md row SHALL be appended in the bound auxiliary directory
+
 
 ### Requirement: Premature canonical Final presence SHALL be surfaced and blocked until relocated
 

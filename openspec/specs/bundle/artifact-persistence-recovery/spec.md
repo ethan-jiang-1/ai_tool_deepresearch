@@ -1,6 +1,7 @@
 # artifact-persistence-recovery Specification
 
 > req: ARP-001, ARP-002, ARP-003, ARP-004, ARP-005
+> delta-synced: 2026-09-06-final-polish-version-control
 
 ## Purpose
 
@@ -237,42 +238,52 @@ during sweep.
 
 ### Requirement: Final publication SHALL emit strict results and protect the reserved primary namespace
 
-Non-primary nested or non-reserved Final artifacts MAY remain supplementary and
-SHALL not enter version allocation. When `final/final.md` exists, other
-non-reserved Final Markdown remains supplementary/historical rather than a
-second primary base. A legacy v0 selected by the classification above SHALL be
-immutable and retained after canonical revisions begin.
+`publish-final-report` SHALL retain the existing behavior of allocating global
+`latest + 1` for every legal evidence-expanding delivery, and SHALL add one
+distinct presentation-revision path for polish-only changes. A presentation
+revision SHALL be chosen only by the Final Agent's bounded semantic judgment
+(presentation-only vs evidence-expanding, same origin as the existing post-final
+routing decision): the Evidence Map backing set and the submitted fact set SHALL
+remain unchanged and only structure, length, wording, emphasis, or presentation
+of existing verified evidence SHALL differ. A presentation revision SHALL
+compare-and-swap update the bytes of the current latest primary revision file
+(`final/final_v<N>.md` or the labelled equivalent) at its existing canonical
+target, using the current file digest as the expected prior condition, and SHALL
+NOT allocate a new global version, create a new primary revision file, or change
+`latest` or `next_version`. The presentation revision SHALL be permitted only on
+the current `latest` primary revision; any earlier (non-latest) primary revision
+bytes SHALL remain immutable and SHALL NOT be the target of a presentation
+revision. It SHALL record one REVISIONS.md row (time, summary, prior digest,
+new digest) in the version's bound auxiliary directory. A presentation
+revision SHALL NOT be used for any new source, new Topic, new research
+conclusion, or research-profile change; those SHALL use the existing audited
+post-final rerun path and a new global version.
 
-`publish-final-report` SHALL emit a strict Engine-validated result that separates
-backing `check`/`inspect`/`advice` from the mechanical publication verdict. A
-committed result SHALL expose the canonical target, base classification,
-allocated version (`0` for the first modern base, positive `N` for revisions),
-optional feature, prior latest target when any, and inventory binding. It SHALL
-not validate or establish legal Final entry, lifecycle position, handoff,
-delivery, semantic improvement, or user satisfaction. A committed primary-
-looking file without the independent accepted readiness-to-Final lineage SHALL
-remain only a mechanical persistence fact and SHALL not count as delivery.
+`retire-final-version` SHALL be a human-controlled correction operation on the
+same persistence surface. It SHALL accept the selected bundle, one `--version`
+and optional `--feature`, and SHALL retire **only the current latest primary
+revision** (retiring an intermediate or non-latest version SHALL be rejected,
+preserving the contiguous `1..latest` primary sequence invariant): it SHALL
+move the selected primary revision file to the existing `final/attic/` area
+(retaining the original filename or a uniform retired suffix), SHALL write a
+retired marker (retired_at, retired_by=user, original version/feature, reason),
+and SHALL recompute `latest` as the previous revision. It SHALL NOT delete or
+rewrite the moved bytes (immutability of history is preserved; retirement only
+changes membership of the current authoritative series), SHALL NOT reuse the
+retired version number (the sequence never reuses a number), and SHALL be
+invocable only by an explicit user request — the Agent SHALL NOT auto-retire any
+version.
 
-The direct-root reserved namespace `final/final*.md`, compared case-
-insensitively for collision safety, SHALL be writable only through
-`publish-final-report`; exact accepted canonical names remain case-sensitive.
-Generic `persist` and caller-targeted `persist-final-report` SHALL reject a
-reserved primary target before workspace creation and direct the Agent to the
-publication operation. They SHALL also reject replacement of an inventory-
-selected legacy v0. Existing safe non-primary Final Markdown and non-Final
-content persistence SHALL otherwise retain their accepted behavior.
+The Engine SHALL derive the canonical primary inventory and classify it before
+any publication or retirement, applying the existing safe-target and immutable
+rules. Non-primary nested or non-reserved Final artifacts MAY remain
+supplementary and SHALL not enter version allocation.
 
-Before any operation classifies a path, it SHALL apply the existing safe-target
-contract. An unsafe or malformed target SHALL remain configuration failure
-(exit `2`), not an admission blocker or redirect. `sweep` SHALL rerun the same
-Final-backing evaluator before completing prepared Final Markdown work and
-SHALL preserve exact allocated-target/immutability rules. It SHALL continue to
-recover other accepted workspaces under the existing contract.
 #### Scenario: Single legacy report becomes read-only v0
 
-- **WHEN** a selected historical bundle has no `final/final.md`, exactly one safe root-level report such as `final/report.md`, and no canonical revision
+- **WHEN** a selected historical bundle has no final/final.md, exactly one safe root-level report such as final/report.md, and no canonical revision
 - **THEN** inventory SHALL classify that report as legacy v0
-- **AND** the first publication SHALL append `final/final_v1.md` without renaming or rewriting the legacy file
+- **AND** the first publication SHALL append final/final_v1.md without renaming or rewriting the legacy file
 
 #### Scenario: Ambiguous legacy inventory fails closed
 
@@ -294,80 +305,117 @@ recover other accepted workspaces under the existing contract.
 
 #### Scenario: Generic persist cannot bypass Final backing admission
 
-- **WHEN** generic `persist` or caller-targeted `persist-final-report` receives a direct-root target in the reserved `final/final*.md` namespace
+- **WHEN** generic persist or caller-targeted persist-final-report receives a direct-root target in the reserved final/final*.md namespace
 - **THEN** it SHALL reject before workspace preparation or mutation
-- **AND** it SHALL direct the Agent to `publish-final-report` without accepting a caller version
+- **AND** it SHALL direct the Agent to publish-final-report without accepting a caller version
 
 #### Scenario: An unsafe Final-looking target remains invalid configuration
 
-- **WHEN** any persistence operation receives an unsafe or malformed target that resembles Markdown under `final/`
-- **THEN** it SHALL return the existing configuration failure class with exit code `2` before workspace preparation
+- **WHEN** any persistence operation receives an unsafe or malformed target that resembles Markdown under final/
+- **THEN** it SHALL return the existing configuration failure class with exit code 2 before workspace preparation
 - **AND** it SHALL not report normal backing rejection, primary allocation, or a generic-persist redirect
 
 #### Scenario: Crash recovery cannot bypass Final backing admission
 
 - **WHEN** publication crashes after a prepared payload is durable but before no-clobber target creation, or after target creation but before workspace cleanup
-- **THEN** `sweep` SHALL revalidate backing and recover or clean exactly that allocated publication
+- **THEN** sweep SHALL revalidate backing and recover or clean exactly that allocated publication
 - **AND** it SHALL not allocate another version, overwrite a conflicting target, or bypass inventory lineage
+
+#### Scenario: Polish-only change stays in the current version
+
+- **WHEN** the Final Agent judges a staging report presentation-only (Evidence Map backing set and submitted facts unchanged; only wording/structure/emphasis differ)
+- **THEN** `publish-final-report` SHALL publish a revision presentation file (e.g. `report-r<M>.md`) inside the version's bound auxiliary directory
+- **AND** SHALL NOT allocate a new global version, create a new primary revision file, or rewrite the immutable primary bytes of `final_v<N>.md`
+- **AND** SHALL append one REVISIONS.md row in the version's bound auxiliary directory
+
+#### Scenario: Evidence-expanding change allocates a new version
+
+- **WHEN** a staging report adds a new source, Topic, research conclusion, or research-profile change
+- **THEN** the audited post-final rerun path SHALL be used
+- **AND** the resulting legal Final delivery SHALL allocate global `latest + 1` as today
+
+#### Scenario: Human retires the latest spuriously created version
+
+- **WHEN** an explicit user request retires the current latest version N via `retire-final-version --version N`
+- **THEN** the Engine SHALL move `final/final_v<N>.md` (or the labelled equivalent) to `final/attic/`, write the retired marker, and recompute `latest` as the previous revision
+- **AND** SHALL NOT delete or rewrite the moved bytes
+- **AND** SHALL NOT reuse version number N in any later allocation
+
+#### Scenario: Retiring a non-latest version is rejected
+
+- **WHEN** an explicit user request attempts to retire an intermediate or non-latest version
+- **THEN** the Engine SHALL reject before any target mutation, preserving the contiguous primary sequence
+- **AND** it SHALL return a structured error naming the latest version as the only retireable target
+
+#### Scenario: Agent cannot auto-retire
+
+- **WHEN** an Agent attempts to retire a version without an explicit user request
+- **THEN** the operation SHALL reject the request before any target mutation
+- **AND** SHALL return a structured error naming the human-owned boundary
 
 
 ### Requirement: Final auxiliary directories SHALL bind to their primary version
 
-The Engine's canonical Final inventory classification SHALL recognize, for each
-safe real directory directly under `final/`, a version-bound auxiliary directory
-when the directory name equals a canonical revision filename with its `.md`
-suffix removed:
-
-- `final_v<N>` binds the unlabelled revision `final_v<N>.md`; and
-- `final_<feature>_v<N>` binds the labelled revision
-  `final_<feature>_v<N>.md`, with the same safe lowercase snake-case feature and
-  the same positive decimal `N`.
-
-A recognized auxiliary directory SHALL classify as `auxiliary` with the same
-`version` and `feature` as its bound revision, and SHALL remain non-primary: it
-SHALL NOT enter the primary version series, change `latest` or `next_version`,
-participate in the primary-series witness digest, or be allocated a version.
-
-A directory whose name matches the auxiliary grammar but has no matching primary
-revision file with the identical name plus `.md` SHALL block the series with one
-direct `orphan_auxiliary_directory` blocker naming that directory. A directory
-whose name does not match the auxiliary grammar SHALL remain `supplementary`
-with no version and SHALL NOT block. The classification SHALL read only direct
-inventory entry names and kinds; it SHALL NOT read mtime, directory order,
-report prose, chat, or lifecycle intent.
+A recognized auxiliary directory (`final_v<N>` or `final_<feature>_v<N>`) SHALL
+classify as `auxiliary` with the same version/feature as its bound revision, SHALL
+remain non-primary, and SHALL NOT enter the primary version series, change
+`latest`/`next_version`, participate in the witness digest, or be allocated a
+version — as today. In addition, each primary revision SHALL carry a bound
+auxiliary directory containing a self-contained evidence-details file (e.g.
+`07-evidence-details.md`) that materializes, for every declared key finding: the
+conclusion summary, key numbers, caliber labels, and clickable external source
+URLs. Every external URL in the evidence-details file SHALL resolve to the
+submitted-reference frontmatter `source_url` set (no fabricated links). The
+primary report's Evidence Map SHALL direct readers to the bound auxiliary
+directory's evidence-details file; readers SHALL be able to verify every
+conclusion from the public delivery (primary MD + bound auxiliary directory)
+without accessing internal `artifacts/` or `reference/` paths. The Evidence Map
+backing column SHALL retain its existing submitted-backing semantics for audit.
 
 #### Scenario: Auxiliary directory binds its unlabelled revision
 
-- **WHEN** `final/` contains `final/final_v2.md` and a real directory `final/final_v2/`
-- **THEN** the inventory SHALL classify the directory as `auxiliary` with `version` 2 and `feature` null
-- **AND** the series SHALL remain valid with `final_v2.md` as its only primary revision for that version
+- **WHEN** final/ contains final/final_v2.md and a real directory final/final_v2/
+- **THEN** the inventory SHALL classify the directory as auxiliary with version 2 and feature null
+- **AND** the series SHALL remain valid with final_v2.md as its only primary revision for that version
 
 #### Scenario: Labelled auxiliary directory binds its labelled revision
 
-- **WHEN** `final/` contains `final/final_technical_deep_dive_v2.md` and a real directory `final/final_technical_deep_dive_v2/`
-- **THEN** the inventory SHALL classify the directory as `auxiliary` with `version` 2 and `feature` `technical_deep_dive`
+- **WHEN** final/ contains final/final_technical_deep_dive_v2.md and a real directory final/final_technical_deep_dive_v2/
+- **THEN** the inventory SHALL classify the directory as auxiliary with version 2 and feature technical_deep_dive
 - **AND** the series SHALL remain valid with that labelled revision as the only primary entry for version 2
 
 #### Scenario: Auxiliary directory does not enter primary allocation
 
-- **WHEN** a valid series has base `final/final.md`, revisions through `final_v2.md`, and directories `final/final_v1/` and `final/final_v2/`
-- **THEN** `latest` SHALL be the `final_v2` primary revision and `next_version` SHALL be 3
-- **AND** neither auxiliary directory SHALL appear in `primary_entries` or change the primary-series witness digest
+- **WHEN** a valid series has base final/final.md, revisions through final_v2.md, and directories final/final_v1/ and final/final_v2/
+- **THEN** latest SHALL be the final_v2 primary revision and next_version SHALL be 3
+- **AND** neither auxiliary directory SHALL appear in primary_entries or change the primary-series witness digest
 
 #### Scenario: Orphan auxiliary directory blocks
 
-- **WHEN** `final/` contains a real directory `final/final_v3/` but no `final/final_v3.md`
-- **THEN** the series SHALL return `valid: false` with one `orphan_auxiliary_directory` blocker naming `final_v3`
+- **WHEN** final/ contains a real directory final/final_v3/ but no final/final_v3.md
+- **THEN** the series SHALL return valid: false with one orphan_auxiliary_directory blocker naming final_v3
 - **AND** it SHALL NOT repair, renumber, rename, or delete the directory or any history
 
 #### Scenario: Version grammar without an exact name match is an orphan
 
-- **WHEN** `final/` contains the labelled revision `final/final_technical_deep_dive_v2.md` and a real directory `final/final_v2/` but no `final/final_v2.md`
-- **THEN** `final/final_v2/` SHALL NOT bind the labelled revision
-- **AND** the series SHALL block with one `orphan_auxiliary_directory` blocker naming `final_v2`
+- **WHEN** final/ contains the labelled revision final/final_technical_deep_dive_v2.md and a real directory final/final_v2/ but no final/final_v2.md
+- **THEN** final/final_v2/ SHALL NOT bind the labelled revision
+- **AND** the series SHALL block with one orphan_auxiliary_directory blocker naming final_v2
 
 #### Scenario: Version-decoupled directory stays supplementary
 
-- **WHEN** `final/` contains a real directory `final/chips/` or `final/topics/`
-- **THEN** the inventory SHALL classify the directory as `supplementary` with no version and no feature
+- **WHEN** final/ contains a real directory final/chips/ or final/topics/
+- **THEN** the inventory SHALL classify the directory as supplementary with no version and no feature
 - **AND** the series SHALL NOT block on that directory
+
+#### Scenario: Evidence details are self-contained in the version directory
+
+- **WHEN** a primary revision is published with a bound auxiliary directory
+- **THEN** the directory SHALL contain an evidence-details file materializing every key finding's conclusion, numbers, caliber labels, and external source URLs
+- **AND** every external URL SHALL be traceable to a submitted reference frontmatter `source_url` (fabricated links SHALL be rejected before persistence)
+
+#### Scenario: Orphan auxiliary directory still blocks
+
+- **WHEN** `final/` contains a real directory matching the auxiliary grammar but no matching primary revision file
+- **THEN** the series SHALL return `valid: false` with one `orphan_auxiliary_directory` blocker naming that directory
+- **AND** it SHALL NOT repair, renumber, rename, or delete the directory or any history

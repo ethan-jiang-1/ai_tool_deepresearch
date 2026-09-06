@@ -23,7 +23,7 @@ describe('post-final recovery Agent-facing contract', () => {
       'operate-topic-state.mjs inspect',
     ]) assert.match(playbook, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
     assert.match(finalPhase, /remains the current node[\s>]+while a delivered report is discussed and refined/);
-    assert.match(finalPhase, /clear presentation request: publish one immutable next version/);
+    assert.match(finalPhase, /clear presentation request: CAS-update the current latest version \(publish-final-report --polish; version unchanged\)/);
     assert.match(finalPhase, /new evidence\/research: accepted ReopenResearchPass request and existing rerun path/);
     assert.match(playbook, /evidence-expanding\s+user\s+decision/);
     assert.doesNotMatch(finalPhase, /Final node 自身不处理修改、不重问同一决定/);

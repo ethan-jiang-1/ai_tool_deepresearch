@@ -3,9 +3,12 @@
 Agent-facing narrow recovery path for an explicit evidence-expanding user
 decision to rerun after legal Final delivery. Presentation-only feedback about
 reader, structure, length, wording, emphasis, or existing verified evidence
-stays in `phases/phase-final.md`: prepare retained staging and publish the next
-immutable primary version there. Do not create or apply a ReopenResearchPass request for that
-feedback.
+stays in `phases/phase-final.md`: prepare retained staging and apply a
+presentation revision — `publish-final-report --polish` CAS-updates the current
+latest primary bytes with the version number unchanged (see
+`command_playbook/persist-artifact.md`). Do not create or apply a
+ReopenResearchPass request for that feedback; only an evidence-expanding
+request uses this rerun path and a new global version.
 
 ## Boundary
 
