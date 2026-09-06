@@ -172,7 +172,7 @@ test('delta blocks are verbatim-synced with main spec requirement blocks', () =>
     // modified CDP-006/008 presentation-revision semantics in main, superseding
     // the older repair-residual-spec-drift delta (text conservation now owned by
     // tests/engine/artifact-persistence-recovery.test.mjs + this pair).
-    [`openspec/changes/2026-09-06-final-polish-version-control/specs/research/content-delivery-phase-content/spec.md`, CDP],
+    [`openspec/changes/archive/2026-09-06-final-polish-version-control/specs/research/content-delivery-phase-content/spec.md`, CDP],
   ];
   for (const [deltaPath, mainPath] of pairs) {
     for (const block of deltaBlocks(deltaPath)) {

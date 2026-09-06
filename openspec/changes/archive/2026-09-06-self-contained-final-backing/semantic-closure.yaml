@@ -1,0 +1,32 @@
+schema_version: semantic-closure/v1
+change: 2026-09-06-self-contained-final-backing
+status: affected
+catalog_additions: []
+affected:
+  - family: final.submitted-backing-admission
+    fact: >-
+      Whether a Final Evidence Map backing link is admitted: it may resolve to
+      an exact submitted source_yaml/evidence_summary output, a submitted-backed
+      reference/ projection, or — newly — a safe regular file inside the
+      version-bound auxiliary directory matching the report's own version
+      (self-contained materialized detail, e.g. final/final_v4/07-evidence-details.md
+      referenced from final/final_v4.md). A detail file in another version's
+      directory, in a supplementary directory, or elsewhere under final/ is not
+      admitted by the self-contained rule.
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/helpers/final-delivery-backing.mjs#evaluateFinalDeliveryBacking
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/final-delivery-backing.mjs
+    consumers:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/artifact-persistence.mjs
+      - DEEP_RESEARCH_HARNESS/cli/audit-phase-status.mjs
+    overlap:
+      - coordinate: DEEP_RESEARCH_HARNESS/engine/helpers/final-report-series.mjs#classifyAuxiliaryDirectoryName
+        relation: derived
+        detail: >-
+          Auxiliary-directory classification derives version binding from
+          directory names; the self-contained backing rule consumes that
+          binding to match the report's own version.
+    verification:
+      truth_table: tests/engine/final-delivery-backing.test.mjs
+      cross_surface: tests/integration/cli/artifact-persistence.test.mjs

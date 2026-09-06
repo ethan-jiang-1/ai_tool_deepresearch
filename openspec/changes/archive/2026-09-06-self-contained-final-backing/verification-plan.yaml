@@ -1,0 +1,44 @@
+schema_version: verification-routing/v1
+change: 2026-09-06-self-contained-final-backing
+test_classes:
+  unit:
+    status: selected
+    rationale: 确定性测试覆盖 self-contained backing 判定——同版本目录内文件通过、其它版本目录被拒、symlink/missing 仍拒；纯 deterministic contract 验证。
+  integration:
+    status: selected
+    rationale: 真实 final 主报告 backing 指向版本目录明细的发布链路（publish-final-report --polish 接受）需 bundle 级验证，复用既有 artifact-persistence integration。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: 无 gate/checker e2e 行为变化。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: 纯机械 backing 契约，无 agent 语义面。
+claims:
+  - id: self-contained-auxiliary-backing
+    statement: 主报告 Evidence Map backing 指向同版本 auxiliary 目录内物化明细（final/final_v4/07-evidence-details.md）时被接受；指向其它版本目录被拒。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/final-delivery-backing.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: self-contained-polish-publish
+    statement: 主报告 backing 改为版本目录内明细后，publish-final-report --polish 提交成功且版本号不变。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/cli/artifact-persistence.test.mjs
+    execution_profile:
+      fixture: fixture_backed
+      subject_execution: none
+      runtime: temporary_bundle
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

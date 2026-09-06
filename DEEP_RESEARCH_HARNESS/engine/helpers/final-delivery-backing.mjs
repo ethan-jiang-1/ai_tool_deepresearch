@@ -237,7 +237,11 @@ function submittedDirectBackingIndex(bundlePath) {
 }
 
 function prohibitedBackingPath(relPath) {
-  if (relPath.startsWith('final/')) return 'final_output_not_backing';
+  // Self-contained materialized detail files inside a version-bound auxiliary
+  // directory (e.g. final/final_v4/07-evidence-details.md) are part of the
+  // same delivery unit and are permitted as backing by the auxiliary rule;
+  // every other final/ path remains prohibited.
+  if (relPath.startsWith('final/') && !/^final\/final(?:_[a-z0-9]+(?:_[a-z0-9]+)*)?_v[1-9][0-9]*\//.test(relPath)) return 'final_output_not_backing';
   if (relPath.startsWith('_cache/')) return 'cache_only_not_backing';
   if (relPath === 'reference/_INDEX.md') return 'reference_index_not_backing';
   if (/(?:^|\/)(?:finding-index\.ya?ml|cross-topic-ledger\.md)$/i.test(relPath)) return 'synthesis_index_not_backing';
@@ -432,6 +436,36 @@ export function evaluateFinalDeliveryBacking({ bundlePath, target, markdown } = 
         href,
         resolvedPath: resolved.relPath,
         repairSurface: 'reference_or_submitted_authority',
+      }, { declaredFindingCount: declarations.size, backingLinkCount });
+    }
+
+    // Self-contained materialized detail: a backing link resolving inside the
+    // version-bound auxiliary directory matching the report's own version
+    // (e.g. final/final_v4/07-evidence-details.md referenced from
+    // final/final_v4.md) is part of the same self-contained delivery unit. It
+    // SHALL be accepted when the file exists as a safe regular file; it SHALL
+    // NOT be required to trace to a submitted work-unit declaration or a
+    // reference/ projection. A detail file in another version's directory, in
+    // a supplementary directory, or elsewhere under final/ is not accepted by
+    // this rule.
+    const auxMatch = resolved.relPath.match(/^final\/final(?:_[a-z0-9]+(?:_[a-z0-9]+)*)?_v([1-9][0-9]*)\//);
+    if (auxMatch) {
+      // The report's own version may come from a primary target
+      // (final/final_v<N>.md) or from an auxiliary target already inside the
+      // version directory (final/final_v<N>/<file>.md). Both must match the
+      // backing's version directory.
+      const targetVersionMatch = target.match(/^final\/final(?:_[a-z0-9]+(?:_[a-z0-9]+)*)?_v([1-9][0-9]*)(?:\.md|\/)/);
+      if (targetVersionMatch && targetVersionMatch[1] === auxMatch[1]) {
+        continue; // file existence was already proven by inspectRegularBackingFile above
+      }
+      return evaluationFailure(target, {
+        code: 'self_contained_backing_version_mismatch',
+        detail: `Self-contained backing must lie in the auxiliary directory matching the report's own version: ${resolved.relPath}`,
+        mapRow: row.mapRow,
+        findingId: row.findingId,
+        href,
+        resolvedPath: resolved.relPath,
+        repairSurface: 'retained_staging_report',
       }, { declaredFindingCount: declarations.size, backingLinkCount });
     }
 
