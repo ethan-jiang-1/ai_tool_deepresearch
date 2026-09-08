@@ -1,15 +1,43 @@
 ---
-id: 2026-09-08-wave1-semicolon-url-unmaterializable
+id: BUG-257
+slug: wave1-semicolon-url-unmaterializable
 title: "Wave1 reference floor deadlock: submitted claim URL containing ';' cannot be materialized and cannot be corrected"
 area: DEEP_RESEARCH_HARNESS (engine reference materialization)
 severity: medium (gate-blocking for one topic; no data corruption)
-status: open
+status: fixed
 observed: 2026-09-08 (run dpt_rb_enterprise-ai-org-reform, Wave1 gate)
+fixed: 2026-09-09 (change `fix-source-url-semicolon-deadlock`, archived as `2026-09-09-fix-source-url-semicolon-deadlock`, finalizer 19/19, commit `ce1d9895b`)
 related_rules:
   - "reference_source_url_parseable / checkReferenceSourceUrls (gate-helpers-checks.mjs) splits source_url on ';'"
   - "sourceUrlsFromMetadata (gate-helpers-checks.mjs) splits source_url on ';'"
   - "classifyReferenceAuthority -> urlsBound compares metadata URL to submitted claim URL verbatim"
 ---
+
+## Resolution (2026-09-09)
+
+Fixed by the archived OpenSpec change `2026-09-09-fix-source-url-semicolon-deadlock`
+(commit `ce1d9895b`, `npm test` 3205/3205 green, finalizer checks 19/19):
+
+1. **Delimiter contract (root cause)** — `splitSourceUrls()` in
+   `DEEP_RESEARCH_HARNESS/engine/helpers/reference-url.mjs` is now the single
+   deterministic `source_url` multi-URL split authority (REF-012 / EEX-001):
+   `;` opens a new URL only before an `http(s)://` prefix (case-insensitive);
+   a literal `;` inside a URL path stays opaque. The three ad-hoc
+   `split(';')` sites (`sourceUrlsFromMetadata`, `checkReferenceSourceUrls`,
+   `ref-count.mjs` isCountable) all route through it.
+2. **Binding identity kept verbatim** — `normalizeWave1ReferenceUrl` remains
+   hash-strip-only; the projection `source_url` must match the submitted claim
+   URL verbatim, and a percent-encoded `%3B` deliberately does not bind
+   (REF-012).
+3. **Fail-fast for the sibling defect family** — dry-submit/submit now reject
+   an accepted `source_claims[]` entry whose URL is absent from the row's
+   `accepted_source_urls[]` (WUP-007; scoped for Wave1 rows in WAI-013),
+   carrying BUG-242-style repair coordinates, instead of surfacing at gate
+   time as the unrecoverable `submitted_backing_url_unaccepted` deadlock.
+   The bug's suggested claim-level supersede/amend operation and floor
+   limitation channel were evaluated and rejected (design D-decision; see the
+   archived change's proposal/design).
+
 
 ## Summary
 

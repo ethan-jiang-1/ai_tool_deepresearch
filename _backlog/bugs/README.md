@@ -26,6 +26,7 @@
 > BUG-254 已按 2026-09-04 结案（`2026-09-04-run-scoped-tmp-inside-bundle`）并移入 [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)。
 > BUG-255 已按 2026-09-04 结案（`2026-09-04-fix-audit-completion-witness-timing`）并移入 [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)。
 > BUG-256 已按 2026-09-07 结案（`2026-09-07-unify-cli-help-unknown-option-guard`）并移入 [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)。
+> BUG-257（先以 slug 卡 `2026-09-08-wave1-semicolon-url-unmaterializable.md` 记录的观察，后按归档 change 修复）已按 2026-09-09 补编号并移入 [`../_done/_fixed_bugs/`](../_done/_fixed_bugs/)。
 
 | Bug | Severity | Phase | 简述 |
 |-----|----------|-------|------|
