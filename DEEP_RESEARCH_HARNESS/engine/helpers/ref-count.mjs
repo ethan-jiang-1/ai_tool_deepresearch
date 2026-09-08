@@ -23,6 +23,7 @@ import {
   classifyReferenceAuthority,
   readReferenceMetadata,
 } from './gate-helpers-checks.mjs';
+import { splitSourceUrls } from './reference-url.mjs';
 import {
   readSubmittedWorkUnitDeclarations,
 } from './gate-helpers-readers.mjs';
@@ -113,8 +114,10 @@ export function isCountable(refPath, bundleDir) {
   if (!sourceUrl.trim()) {
     return { countable: false, reason: 'source_url_missing' };
   }
-  // Support semicolon-delimited multi-URL — if ANY is parseable, passes.
-  const urls = sourceUrl.split(';').map(u => u.trim()).filter(Boolean);
+  // Support semicolon-delimited multi-URL through the shared split authority —
+  // if ANY is parseable, passes. A literal `;` inside a URL path stays opaque.
+  // @impl REF-012, EEX-001
+  const urls = splitSourceUrls(sourceUrl);
   if (urls.length === 0) {
     return { countable: false, reason: 'source_url_empty' };
   }

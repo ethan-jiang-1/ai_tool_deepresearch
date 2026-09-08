@@ -1,0 +1,114 @@
+schema_version: verification-routing/v1
+change: fix-source-url-semicolon-deadlock
+test_classes:
+  unit:
+    status: selected
+    rationale: >-
+      共享分隔符 helper 的切分/身份判定、sourceUrlsFromMetadata 与
+      checkReferenceSourceUrls 的可解析性、ref-count 切分、dry-submit 反向校验
+      拒绝与修复坐标均为 in-process node:test 断言，走公开导出面与纯函数。
+  integration:
+    status: not_applicable
+    rationale: >-
+      无新增 production CLI/subprocess 边界；dry-submit/convergence 断言通过
+      in-process 公开 API 对测试自有 fixture 目录完成， incidental fixture I/O
+      按 verification-routing 归 unit，不占用 integration 权面。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: >-
+      无 lifecycle/gate 链路新增行为；gate 判定改善随既有 helper 契约生效，
+      由 unit 与全量 npm test 覆盖。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: >-
+      不声称任何真实 Agent 行为变化；反馈坐标格式由 deterministic 测试断言。
+claims:
+  - id: semicolon-path-opaque-parseable
+    statement: >-
+      含裸 `;` 的 http(s) URL path 在 checkReferenceSourceUrls 与
+      sourceUrlsFromMetadata 下整体可解析，不被切分成第二段；`url1; url2` 与
+      `url1;http://…` 形式仍切分为多 URL（scheme 前缀大小写不敏感）；`;` 后
+      非 http 前缀不切分。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/gate-helpers-checks.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: shared-helper-single-source
+    statement: >-
+      ref-count 的 isCountable 经 reference-url.mjs 导出的共享切分 helper 判定：
+      含 `;` path 的 URL 保持 countable，既有 `;https://…` 紧凑多 URL fixture
+      （ref-count.test.mjs 的 rc-multi-url 用例）仍 countable=true；多 URL 形式
+      与 `;` path 不透明的统一判定由 gate-helpers-checks claim 一并锁定。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/ref-count.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: projection-binding-raw-semicolon
+    statement: >-
+      Wave1 canonical 投影 metadata source_url 与 submitted claim URL
+      逐字（去 hash 归一化）一致时绑定成立；含裸 `;` 的候选可 materialize，
+      url_valid/candidate_binding 为真。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/helpers/wave1-reference-convergence.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: dry-submit-reverse-claim-index-check
+    statement: >-
+      accepted source_claims[] 的 URL 不在同行 accepted_source_urls[] 时，
+      dry-submit 与 submit 以同一 reason 拒绝，诊断携带 claim URL、cache/degraded
+      上下文与已声明 index URL 列表（BUG-242 式坐标），不追加 ledger 行。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-submit.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit
+  - id: reverse-check-unit-table
+    statement: >-
+      反向校验的可达判定表逐格断言于 work-unit-validation 单元面：空 index +
+      accepted claim 拒绝；index 部分覆盖多 claim 时仅未覆盖 claim 拒绝并携带
+      pointer 与已声明 index；claim/index 一致（含 fragment 形式）通过；`;` path
+      URL 一致通过；degraded-capture accepted claim 同规则；非 accepted claim
+      不触发。与既有 raw index→claim 检查的先触发关系一并锁定。
+    test_class: unit
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/engine/work-unit-validation.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

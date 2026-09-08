@@ -23,7 +23,7 @@ import {
   inspectCacheLeaf,
 } from './cache-leaf-contract.mjs';
 import { makeContractFinding } from './wave-contract-findings.mjs';
-import { normalizeWave1ReferenceUrl } from './reference-url.mjs';
+import { normalizeWave1ReferenceUrl, splitSourceUrls } from './reference-url.mjs';
 import { readSubmittedWave0Backing } from '../work-unit-projection.mjs';
 import {
   extractSection,
@@ -88,8 +88,9 @@ function isSafeBundleRef(ref) {
 }
 
 function sourceUrlsFromMetadata(metadata) {
-  const raw = metadata.get('source_url') || '';
-  return raw.split(';').map((url) => url.trim()).filter(Boolean);
+  // @impl REF-012, EEX-001 — shared `source_url` multi-URL split authority;
+  // a literal `;` inside a URL path stays opaque.
+  return splitSourceUrls(metadata.get('source_url') || '');
 }
 
 function normalizeIndexRef(ref) {
@@ -717,7 +718,9 @@ export function checkReferenceSourceUrls(files, { rule = null } = {}) {
       }));
       continue;
     }
-    const urls = sourceUrl.split(';').map((u) => u.trim()).filter(Boolean);
+    // @impl REF-012, EEX-001 — shared `source_url` multi-URL split authority;
+    // a literal `;` inside a URL path stays opaque.
+    const urls = splitSourceUrls(sourceUrl);
     if (urls.length === 0) {
       const detail = `Empty metadata source_url in ${file.relPath}`;
       inspect.push(detail);

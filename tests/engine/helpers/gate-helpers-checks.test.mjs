@@ -424,6 +424,44 @@ describe('reference file gate helpers', () => {
     }
   });
 
+  it('accepts a literal semicolon inside a URL path as one parseable URL (REF-012)', () => {
+    const dir = join(__dirname, '.test-gh-ref-semicolon-path-url');
+    mkdirSync(join(dir, 'reference'), { recursive: true });
+    writeFileSync(join(dir, 'reference', 'topic-a-semi.md'), [
+      '- source_url: https://www.wealthbriefingasia.com/article.php/First_dash_Quarter-2026-Net-Profit-Rises-At-DBS;-Wealth-Arm-Helps-Results-',
+      '- acceptance_status: accepted',
+      '',
+      '## Key Facts',
+      '- Fact',
+    ].join('\n'));
+    try {
+      const files = listMatchingBundleFiles(dir, 'reference/*topic-a*.md');
+      const result = checkReferenceSourceUrls(files);
+      assert.equal(result.passed, true, result.inspect.join('; '));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('still splits semicolon-joined multi-URL metadata into parseable segments (REF-012)', () => {
+    const dir = join(__dirname, '.test-gh-ref-multi-url');
+    mkdirSync(join(dir, 'reference'), { recursive: true });
+    writeFileSync(join(dir, 'reference', 'topic-a-multi.md'), [
+      '- source_url: https://fixture.news-research.com/;https://fixture.news-research.com/research/article',
+      '- acceptance_status: accepted',
+      '',
+      '## Key Facts',
+      '- Fact',
+    ].join('\n'));
+    try {
+      const files = listMatchingBundleFiles(dir, 'reference/*topic-a*.md');
+      const result = checkReferenceSourceUrls(files);
+      assert.equal(result.passed, true, result.inspect.join('; '));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('rejects missing or invalid source URLs as metadata shape', () => {
     const dir = join(__dirname, '.test-gh-ref-invalid-url');
     mkdirSync(join(dir, 'reference'), { recursive: true });

@@ -194,3 +194,154 @@ describe('validateSourceClaims duplicate accepted-claim-url enrichment @impl DEW
     }
   });
 });
+
+describe('validateSourceClaims accepted-claim membership in accepted_source_urls @impl WUP-007', () => {
+  before(() => { mkdirSync(TMP, { recursive: true }); });
+  after(() => { rmSync(TMP, { recursive: true, force: true }); });
+
+  function claimBundle({ leafUrl = 'https://fixture.news-research.com/source-a', degraded = false } = {}) {
+    const dir = path.join(TMP, `dpt_rb_claim-index-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+    const trail = '_cache/wave1/primary/topic-a/deepening';
+    mkdirSync(path.join(dir, trail), { recursive: true });
+    writeFileSync(path.join(dir, trail, 'page.md'), degraded
+      ? '# Topic\n\nfetch failure: 403 forbidden while fetching the assigned source (explicit degraded capture)\n'
+      : '# Captured Page\n\nReal fetched body text preserving the source content for the work unit.\n');
+    writeFileSync(path.join(dir, trail, 'meta.json'), `${JSON.stringify({ url: leafUrl })}\n`);
+    return { dir, trail, leafUrl };
+  }
+
+  function claimResult(trail, leafUrl, { acceptanceStatus = 'accepted', acceptedSourceUrls = [], degraded = false } = {}) {
+    const claim = degraded
+      ? {
+        url: leafUrl,
+        source_ref: 'artifacts/wave1/topic-a/evidence-summary.md',
+        acceptance_status: acceptanceStatus,
+        is_new_vs_wave0: true,
+        degraded_capture_ref: trail,
+      }
+      : {
+        url: leafUrl,
+        source_ref: 'artifacts/wave1/topic-a/evidence-summary.md',
+        acceptance_status: acceptanceStatus,
+        is_new_vs_wave0: true,
+        cache_trail_refs: [trail],
+      };
+    return {
+      ...zeroClaimResult(trail),
+      output_files: [{ path: 'artifacts/wave1/topic-a/evidence-summary.md', role: 'evidence_summary' }],
+      source_claims: [claim],
+      accepted_source_urls: acceptedSourceUrls,
+    };
+  }
+
+  it('rejects an accepted claim whose url is absent from an empty accepted_source_urls[]', () => {
+    const { dir, trail, leafUrl } = claimBundle();
+    try {
+      assert.throws(
+        () => validateSourceClaims(dir, claimResult(trail, leafUrl), WAVE1_CONTRACT),
+        (error) => {
+          assert.match(error.message, /absent from accepted_source_urls\[\]/);
+          assert.equal(error.repair_contract.json_pointer, '/source_claims/0/url');
+          assert.deepEqual(error.repair_contract.details.claim_url, leafUrl);
+          assert.deepEqual(error.repair_contract.details.declared_accepted_source_urls, []);
+          return true;
+        },
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects only the uncovered claim when accepted_source_urls[] partially covers multiple claims', () => {
+    const dir = path.join(TMP, `dpt_rb_claim-index-partial-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+    const trailA = '_cache/wave1/primary/topic-a/deepening-a';
+    const trailB = '_cache/wave1/primary/topic-a/deepening-b';
+    const urlA = 'https://fixture.news-research.com/source-a';
+    const urlB = 'https://fixture.news-research.com/source-b';
+    try {
+      for (const [trail, url] of [[trailA, urlA], [trailB, urlB]]) {
+        mkdirSync(path.join(dir, trail), { recursive: true });
+        writeFileSync(path.join(dir, trail, 'page.md'), '# Captured Page\n\nReal fetched body text preserving the source content for the work unit.\n');
+        writeFileSync(path.join(dir, trail, 'meta.json'), `${JSON.stringify({ url })}\n`);
+      }
+      const result = {
+        ...zeroClaimResult(trailA),
+        cache_trails: [trailA, trailB],
+        output_files: [{ path: 'artifacts/wave1/topic-a/evidence-summary.md', role: 'evidence_summary' }],
+        source_claims: [
+          { url: urlA, source_ref: 'artifacts/wave1/topic-a/evidence-summary.md', acceptance_status: 'accepted', is_new_vs_wave0: true, cache_trail_refs: [trailA] },
+          { url: urlB, source_ref: 'artifacts/wave1/topic-a/evidence-summary.md', acceptance_status: 'accepted', is_new_vs_wave0: true, cache_trail_refs: [trailB] },
+        ],
+        accepted_source_urls: [urlA],
+      };
+      assert.throws(
+        () => validateSourceClaims(dir, result, WAVE1_CONTRACT),
+        (error) => {
+          assert.match(error.message, /absent from accepted_source_urls\[\]/);
+          assert.match(error.message, /source-b/);
+          assert.equal(error.repair_contract.json_pointer, '/source_claims/1/url');
+          assert.deepEqual(error.repair_contract.details.declared_accepted_source_urls, [urlA]);
+          return true;
+        },
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('passes when the claim url is present in accepted_source_urls[]', () => {
+    const { dir, trail, leafUrl } = claimBundle();
+    try {
+      assert.doesNotThrow(() => validateSourceClaims(dir, claimResult(trail, leafUrl, { acceptedSourceUrls: [leafUrl] }), WAVE1_CONTRACT));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('passes when claim and index carry the identical url including a fragment', () => {
+    const { dir, trail, leafUrl } = claimBundle();
+    try {
+      const result = claimResult(trail, leafUrl, { acceptedSourceUrls: [leafUrl] });
+      result.source_claims[0].url = `${leafUrl}#section`;
+      result.accepted_source_urls = [`${leafUrl}#section`];
+      assert.doesNotThrow(() => validateSourceClaims(dir, result, WAVE1_CONTRACT));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('passes for a literal semicolon inside the claim url path when the index carries the same url', () => {
+    const { dir, trail } = claimBundle({ leafUrl: 'https://fixture.news-research.com/article.php/Title;-Subtitle-' });
+    try {
+      const claimUrl = 'https://fixture.news-research.com/article.php/Title;-Subtitle-';
+      assert.doesNotThrow(() => validateSourceClaims(dir, claimResult(trail, claimUrl, { acceptedSourceUrls: [claimUrl] }), WAVE1_CONTRACT));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a degraded-capture accepted claim whose url is absent from the index', () => {
+    const { dir, trail, leafUrl } = claimBundle({ degraded: true });
+    try {
+      assert.throws(
+        () => validateSourceClaims(dir, claimResult(trail, leafUrl, { degraded: true }), WAVE1_CONTRACT),
+        (error) => {
+          assert.match(error.message, /absent from accepted_source_urls\[\]/);
+          assert.equal(error.repair_contract.details.claim_url, leafUrl);
+          return true;
+        },
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('does not fire for a non-accepted claim absent from the index', () => {
+    const { dir, trail, leafUrl } = claimBundle();
+    try {
+      assert.doesNotThrow(() => validateSourceClaims(dir, claimResult(trail, leafUrl, { acceptanceStatus: 'excluded' }), WAVE1_CONTRACT));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});

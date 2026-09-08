@@ -873,6 +873,30 @@ export function validateSourceClaims(bundleDir, result, outputContract, {
       });
     }
   }
+
+  // @impl WUP-007: an accepted source claim must be declared in the same row's
+  // accepted_source_urls[] index. This mirrors the reverse membership check
+  // above and fail-fasts the same inconsistency that Wave1 convergence would
+  // otherwise surface as submitted_backing_url_unaccepted only at gate time,
+  // after the row is hash-valid and no sanctioned repair path remains.
+  // Normalization reuses the existing source-cache URL normalization shared by
+  // claim/cache matching.
+  const declaredAcceptedIndexUrls = new Set(
+    acceptedUrls.map((url) => normalizeUrlForSourceCache(url)).filter(Boolean),
+  );
+  for (const [claimIndex, claim] of claims.entries()) {
+    if (!acceptedClaimStatus(claim.acceptance_status)) continue;
+    const normalizedClaimUrl = normalizeUrlForSourceCache(claim.url);
+    if (!normalizedClaimUrl || declaredAcceptedIndexUrls.has(normalizedClaimUrl)) continue;
+    throwRepeatedEnriched(`accepted source claim url is absent from accepted_source_urls[]: ${claim.url}; declared accepted_source_urls: ${acceptedUrls.join(' | ') || '<empty>'}`, {
+      repair_kind: 'agent_action',
+      json_pointer: `/source_claims/${claimIndex}/url`,
+      details: {
+        claim_url: claim.url,
+        declared_accepted_source_urls: [...acceptedUrls],
+      },
+    });
+  }
 }
 
 function readQueueForSubmit(bundleDir, { sideEffects = true } = {}) {

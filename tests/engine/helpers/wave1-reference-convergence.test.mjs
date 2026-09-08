@@ -223,6 +223,58 @@ describe('reviewed Wave1 submitted backing', () => {
     assert.equal(unbound.issue, 'canonical_projection_body_unbound');
   });
 
+  it('materializes a canonical projection for a semicolon-in-path submitted URL and rejects the percent-encoded form (REF-012)', () => {
+    const dir = tempWorkUnitBundle('wave1-convergence-semi-');
+    createdBundles.push(dir);
+    const topicA = topic('tp_123e4567-e89b-12d3-a456-426614174000', '01', 'topic-a');
+    writePlan(dir, [topicA]);
+    const claimUrl = 'https://fixture.news-research.com/article.php/First_dash_Quarter-2026-Net-Profit-Rises-At-DBS;-Wealth-Arm-Helps-Results-';
+    const record = submitWave1Candidate(dir, {
+      queueItemId: 'topic-a-semi',
+      topicUid: topicA.topic_uid,
+      topicSlug: topicA.slug,
+      sourceUrl: claimUrl,
+    });
+    writeDepthReview(dir, topicA.slug, [record.paths.work_unit_dir]);
+    const backing = resolveReviewedWave1SubmittedBacking(dir, { topic: topicA.slug, topicRegistryFact: topicRegistryFact(dir) });
+    assert.equal(backing.ok, true, JSON.stringify(backing));
+    const candidate = backing.candidates[0];
+    const locator = canonicalWave1ReferencePath({ topicSlug: topicA.slug, sourceUrl: candidate.normalized_url });
+    assert.equal(locator.ok, true, JSON.stringify(locator));
+    mkdirSync(join(dir, 'reference'), { recursive: true });
+    writeFileSync(join(dir, locator.path), referenceContent({
+      source_url: claimUrl,
+      related_topic_uid: topicA.topic_uid,
+      coreContent: `Projection backing: ${candidate.source_refs[0]} ${candidate.cache_trail_refs[0]} ${candidate.work_unit_refs[0]}.`,
+    }));
+
+    const closed = inspectWave1CandidateProjection(dir, { topicSlug: topicA.slug, candidate });
+    assert.equal(closed.path_class, 'canonical_current');
+    assert.equal(closed.candidate_binding, true);
+    assert.equal(closed.url_valid, true);
+    assert.equal(closed.countable, true);
+
+    const exactTopic = evaluateWave1ReferenceTopic(dir, {
+      topic: topicA.slug,
+      topicRegistryFact: topicRegistryFact(dir),
+      requiredFloor: 1,
+      index: { valid: true, stale: false },
+    });
+    assert.equal(exactTopic.numeric.count, 1);
+    assert.equal(exactTopic.result.outcome, 'satisfied');
+
+    // A percent-encoded path semicolon is a different URL identity: it parses
+    // but does not bind to the submitted claim URL.
+    writeFileSync(join(dir, locator.path), referenceContent({
+      source_url: claimUrl.replace(';', '%3B'),
+      related_topic_uid: topicA.topic_uid,
+      coreContent: `Projection backing: ${candidate.source_refs[0]} ${candidate.cache_trail_refs[0]} ${candidate.work_unit_refs[0]}.`,
+    }));
+    const unbound = inspectWave1CandidateProjection(dir, { topicSlug: topicA.slug, candidate });
+    assert.equal(unbound.url_valid, false);
+    assert.equal(unbound.issue, 'canonical_projection_url_unbound');
+  });
+
   it('fails closed when a reviewed submitted row is bound to another current Topic', () => {
     const dir = tempWorkUnitBundle('wave1-convergence-');
     createdBundles.push(dir);

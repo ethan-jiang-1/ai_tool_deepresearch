@@ -1,0 +1,50 @@
+schema_version: semantic-closure/v1
+change: fix-source-url-semicolon-deadlock
+status: affected
+catalog_additions: []
+affected:
+  - family: work-unit.source-claim-provenance
+    fact: >-
+      Accepted source claim URL 必须出现在同一提交行的 accepted_source_urls[] 中；
+      该一致性成为 dry-submit 的确定性拒绝条件，违规携带 claim URL 与已声明 index URL
+      的修复坐标。claim/accepted URL 的 provenance 判定边界（cache/degraded backing
+      mapping）不变。
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/work-unit-validation.mjs
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-validation.mjs
+    consumers:
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-submit.mjs
+      - DEEP_RESEARCH_HARNESS/engine/work-unit-timeout-preflight.mjs
+    overlap:
+      - coordinate: DEEP_RESEARCH_HARNESS/engine/work-unit-envelope.mjs
+        relation: derived
+        detail: Agent-facing 提交指引展示 dry-submit 契约措辞，仅派生呈现 provenance 结论，不判定它。
+    verification:
+      truth_table: tests/engine/work-unit-validation.test.mjs
+      cross_surface: tests/engine/work-unit-submit.test.mjs
+  - family: wave.submitted-reference-convergence
+    fact: >-
+      Wave1 submitted backing 与 canonical reference materialization 的 source_url
+      多 URL 切分收敛为单一确定性判定点：`;` 仅在后随（可选空白后）http(s)://
+      URL 前缀（大小写不敏感）时开启新 URL，path 内裸 `;` 不透明；URL 绑定身份
+      保持去 hash 逐字归一化，raw `;` 两侧一致即绑定。
+    authority:
+      resolver: DEEP_RESEARCH_HARNESS/engine/helpers/reference-url.mjs
+    established_by:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/reference-url.mjs
+      - DEEP_RESEARCH_HARNESS/engine/helpers/gate-helpers-checks.mjs
+      - DEEP_RESEARCH_HARNESS/engine/helpers/ref-count.mjs
+    consumers:
+      - DEEP_RESEARCH_HARNESS/engine/helpers/wave1-reference-convergence.mjs
+      - DEEP_RESEARCH_HARNESS/engine/helpers/wave-contract-evaluators.mjs
+      - DEEP_RESEARCH_HARNESS/engine/helpers/wave0-reference-convergence.mjs
+      - DEEP_RESEARCH_HARNESS/cli/check-reentry.mjs
+      - DEEP_RESEARCH_HARNESS/engine/helpers/wave-depth-contracts.mjs
+    overlap:
+      - coordinate: DEEP_RESEARCH_HARNESS/engine/helpers/wave1-source-claim-mapping.mjs
+        relation: derived
+        detail: 复用 normalizeWave1ReferenceUrl 的归一化结论做 mapping，仅消费同一 URL 身份事实，不另行判定切分。
+    verification:
+      truth_table: tests/engine/helpers/wave1-reference-convergence.test.mjs
+      cross_surface: tests/engine/helpers/gate-helpers-checks.test.mjs

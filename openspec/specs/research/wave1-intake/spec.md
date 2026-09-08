@@ -543,6 +543,8 @@ The claim floor SHALL be scoped by the work-unit output contract: it SHALL apply
 
 The submit-time claim check SHALL treat a result as having claims when either `source_claims[]` is non-empty or `accepted_source_urls[]` is non-empty. It SHALL treat a result as degraded when it records an explicit degraded-capture/fetch-failure for the topic. A result with neither SHALL NOT reach the ledger.
 
+For `wave1_topic_deepening` rows, the submit-time claim validation SHALL also reject an accepted `source_claims[]` entry whose URL is absent from the same row's `accepted_source_urls[]` (the deterministic check owned by the `agent/work-unit-preflight` contract, with its one-step repair coordinates). Without this fail-fast, the same inconsistency first surfaces at Wave1 gate time as `submitted_backing_url_unaccepted`, where the row is already hash-valid, `supersede` declines with `semantic_boundary`, and no sanctioned repair path remains.
+
 #### Scenario: Zero-claim Wave1 result is rejected at submit
 
 - **WHEN** a `wave1_topic_deepening` result declares `source_claims: []` and `accepted_source_urls: []` and no degraded-capture record
@@ -561,3 +563,10 @@ The submit-time claim check SHALL treat a result as having claims when either `s
 - **WHEN** a `wave1_topic_deepening` result declares an explicit degraded-capture/fetch-failure reason for the topic instead of source claims
 - **THEN** submit SHALL accept the degraded declaration as satisfying the non-empty claim requirement
 - **AND** the result SHALL NOT present that topic as fully fetched content
+
+#### Scenario: Accepted claim missing from accepted_source_urls is rejected at submit
+
+- **WHEN** a `wave1_topic_deepening` result declares an accepted `source_claims[]` entry whose URL is absent from its `accepted_source_urls[]`
+- **THEN** `operate-work-unit submit` SHALL reject the result before ledger append with the claim-membership root and repair coordinates owned by the work-unit-preflight contract
+- **AND** the ledger row SHALL NOT be appended
+- **AND** the same inconsistency SHALL NOT first surface as a gate-time `submitted_backing_url_unaccepted` deadlock

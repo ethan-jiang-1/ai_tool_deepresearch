@@ -11,7 +11,7 @@ Define the Engine-side evidence extraction capabilities for assessing reference 
 Engine SHALL 实现 `isCountable(ref)` 函数，返回 `{ countable: boolean, reason?: string }`。`isCountable()` SHALL answer only whether an already authority-selected reference is eligible for a numeric reference count. It SHALL require:
 
 1. `acceptance_status` resolves to the accepted state used by the current reference contract, where the accepted family comprises the exact `accepted` value and the template-documented inline-warning form `accepted :warning:` (committed as the quoted YAML value `"accepted :warning:"`); and
-2. `source_url` exists and contains at least one URL-parseable value.
+2. `source_url` exists and contains at least one URL-parseable value under the shared `source_url` multi-URL delimiter contract: a `;` opens a new URL only when the text after it (optionally with whitespace) begins with an `http://` or `https://` URL prefix (case-insensitive, mirroring URL scheme parsing); a literal `;` inside a URL path is an opaque path character and SHALL NOT split the value. This delimiter contract SHALL be the single deterministic `source_url` split authority shared by `isCountable()` and the `reference_source_url_parseable` metadata check, so one URL cannot be parseable under one surface and unparseable under another.
 
 `isCountable()` SHALL NOT score prose quality or duplicate checks owned by the reference-format judgment layer. In particular, it SHALL NOT require a minimum character count in `## Core Content Capture`, a minimum bullet count in `## Key Facts`, exact section order/case/spacing, homepage/path depth, duplicate-looking URL identity, Jaccard similarity, or self-referential prose. Required semantic section availability remains owned by the shared reference-format evaluator; optional fact-count or prose-richness feedback MAY remain advisory.
 
@@ -57,6 +57,18 @@ When the file cannot be read or its metadata cannot be parsed sufficiently to ev
 
 - **WHEN** the reference file cannot be read or its metadata cannot be evaluated
 - **THEN** `isCountable(ref)` SHALL return a non-countable result without throwing
+
+#### Scenario: Semicolon inside URL path stays one parseable URL
+
+- **WHEN** a reference metadata `source_url` contains a literal `;` inside the URL path (for example `https://www.example.com/article.php/Title;-Subtitle-`), with no `http(s)://` following the `;`
+- **THEN** the value SHALL be evaluated as one whole URL and SHALL be URL-parseable
+- **AND** `isCountable(ref)` SHALL NOT return a parseability failure for a second phantom segment, and the shared parseable check SHALL NOT emit a `reference_source_url_parseable` finding for that URL
+
+#### Scenario: Semicolon followed by a URL still splits multi-URL values
+
+- **WHEN** a reference metadata `source_url` contains `https://a.example/one; https://b.example/two` or `https://a.example/one;https://b.example/two`
+- **THEN** the shared delimiter contract SHALL split the value into two URLs
+- **AND** each segment SHALL be parsed and evaluated independently as before
 
 #### Scenario: Accepted reference with substantive content is countable
 

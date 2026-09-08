@@ -2993,3 +2993,125 @@ describe('submitWorkUnit', () => {
     }
   });
 });
+
+describe('dry-submit/submit reverse claim-index membership @impl WUP-007', () => {
+  function claimWave1(dir, queueItemId) {
+    writeCanonicalPlan(dir);
+    saveSeedQueue(dir, [delegatedWave1(queueItemId, 'topic-a', {
+      payload: { ...CURRENT_TOPIC, wave: 1, assignment_mode: 'primary' },
+      required_receipts: [
+        'file:artifacts/wave1/topic-a/evidence-summary.md',
+        'file:artifacts/wave1/topic-a/question-list.md',
+      ],
+    })]);
+    claimWorkUnits(dir, { phase: 'wave1', count: 1 });
+    return loadWorkUnitIndex(dir).work_units['wu-w1-b000-deep-i0001'];
+  }
+
+  it('dry-submit rejects an accepted claim whose url is absent from accepted_source_urls[] with one-step coordinates', () => {
+    const dir = tempBundle();
+    try {
+      const record = claimWave1(dir, 'wave1-wup007-missing');
+      const resultPath = writeValidWave1SubmitFiles(dir, record);
+      writeCurrentWave1DirectContent(dir);
+      const result = readResult(resultPath);
+      result.accepted_source_urls = [];
+      writeResult(resultPath, result);
+
+      const dry = drySubmitWorkUnit(dir, { work_id: record.work_id, resultPath });
+      assert.equal(dry.ok, false);
+      const sourceRoot = dry.violations.find((violation) => violation.phase === 'source_claims');
+      assert.ok(sourceRoot, JSON.stringify(dry.violations));
+      assert.match(sourceRoot.message, /absent from accepted_source_urls\[\]/);
+      assert.match(sourceRoot.message, /declared accepted_source_urls/);
+      assert.equal(loadWorkUnitIndex(dir).work_units[record.work_id].status, 'claimed');
+      assertNoLedger(dir);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('formal submit rejects with the same root before ledger append and keeps the attempt claimed', () => {
+    const dir = tempBundle();
+    try {
+      const record = claimWave1(dir, 'wave1-wup007-submit');
+      const resultPath = writeValidWave1SubmitFiles(dir, record);
+      writeCurrentWave1DirectContent(dir);
+      const result = readResult(resultPath);
+      result.accepted_source_urls = [];
+      writeResult(resultPath, result);
+
+      const formal = submitWorkUnit(dir, { work_id: record.work_id, resultPath });
+      assert.equal(formal.ok, false);
+      assert.ok(
+        (formal.violations || []).some((violation) => /absent from accepted_source_urls\[\]/.test(violation.message || '')),
+        JSON.stringify(formal.violations || formal),
+      );
+      assertNoLedger(dir);
+      assert.equal(loadWorkUnitIndex(dir).work_units[record.work_id].status, 'claimed');
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('keeps a compliant candidate passing and submits with the ledger row appended', () => {
+    const dir = tempBundle();
+    try {
+      const record = claimWave1(dir, 'wave1-wup007-pass');
+      const resultPath = writeValidWave1SubmitFiles(dir, record);
+      writeCurrentWave1DirectContent(dir);
+
+      const dry = drySubmitWorkUnit(dir, { work_id: record.work_id, resultPath });
+      assert.equal(dry.ok, true, JSON.stringify(dry.violations));
+      const formal = submitWorkUnit(dir, { work_id: record.work_id, resultPath });
+      assert.equal(formal.ok, true, JSON.stringify(formal.violations || formal));
+      assert.equal(loadWorkUnitIndex(dir).work_units[record.work_id].status, 'submitted');
+      assert.equal(ledgerRows(dir).length, 1);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it('rejects a semicolon-path claim missing from the index while a declared sibling claim keeps the raw check green', () => {
+    const dir = tempBundle();
+    try {
+      const record = claimWave1(dir, 'wave1-wup007-semi');
+      const defaultUrl = 'https://fixture.news-research.com/wave1-new-source';
+      const semicolonUrl = 'https://fixture.news-research.com/article.php/Title;-Subtitle-';
+      const resultPath = writeValidWave1SubmitFiles(dir, record);
+      writeCurrentWave1DirectContent(dir);
+
+      // Add a second accepted claim whose cache trail maps the semicolon-path url.
+      const referencePath = 'artifacts/wave1/topic-a/reference/00-new-source.md';
+      const secondTrail = `_cache/wave1/primary/${record.queue_item_id}/semicolon-source`;
+      mkdirSync(path.join(dir, secondTrail), { recursive: true });
+      writeFileSync(path.join(dir, secondTrail, 'websearch.json'), '[]\n');
+      writeFileSync(path.join(dir, secondTrail, 'page.md'), `# Captured Page\n\nFetched content capture for ${semicolonUrl}. This body preserves the source text used by the Wave1 work unit.\n`);
+      writeFileSync(path.join(dir, secondTrail, 'meta.json'), `${JSON.stringify({ url: semicolonUrl }, null, 2)}\n`);
+
+      const result = readResult(resultPath);
+      result.cache_trails.push(secondTrail);
+      result.source_claims.push({
+        url: semicolonUrl,
+        source_ref: referencePath,
+        acceptance_status: 'accepted',
+        is_new_vs_wave0: true,
+        cache_trail_refs: [secondTrail],
+      });
+      // The index declares only the sibling claim url: the existing raw
+      // index→claim check passes, and the WUP-007 reverse check fires for the
+      // semicolon-path claim.
+      result.accepted_source_urls = [defaultUrl];
+      writeResult(resultPath, result);
+
+      const dry = drySubmitWorkUnit(dir, { work_id: record.work_id, resultPath });
+      assert.equal(dry.ok, false);
+      const sourceRoot = dry.violations.find((violation) => violation.phase === 'source_claims');
+      assert.ok(sourceRoot, JSON.stringify(dry.violations));
+      assert.match(sourceRoot.message, /absent from accepted_source_urls\[\]/);
+      assert.match(sourceRoot.message, /Title;-Subtitle-/);
+    } finally {
+      cleanup(dir);
+    }
+  });
+});

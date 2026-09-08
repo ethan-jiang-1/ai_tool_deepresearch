@@ -98,7 +98,7 @@ test('no half-migration state: counts, headers, and mother slim shape', () => {
   // registry totals
   const w = (p) => REG.split('\n').filter((l) => l.startsWith(p)).length;
   assert.equal(w('WSU-'), 8);
-  assert.equal(w('WUP-'), 6);
+  assert.equal(w('WUP-'), 7);
   assert.equal(w('WUC-'), 9);
   assert.equal(REG.split('\n').filter((l) => /^DEW-\d{3}: .*\[DEPRECATED\]/.test(l)).length, 17);
 });

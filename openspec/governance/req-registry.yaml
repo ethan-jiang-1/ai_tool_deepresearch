@@ -384,6 +384,7 @@ REF-008: reference-flat-format — Phase-owned reference materializations preser
 REF-009: reference-flat-format — Wave0 Phase-owned shared references preserve exact submitted source backing
 REF-010: reference-flat-format — Reference metadata values are writable as valid YAML and frontmatter failures name the offending value
 REF-011: reference-flat-format — Canonical Wave1 locator derivation is visible to the Agent in guidance and inspect feedback
+REF-012: reference-flat-format — Reference metadata source_url multi-URL delimiter and binding identity
 
 # bundle/run-entry
 RUE-001: run-entry — RUN.md excludes an internal version projection
@@ -1038,6 +1039,7 @@ WUP-003: work-unit-preflight — Timeout preflight is a progress-aware read-only
 WUP-004: work-unit-preflight — Dry-submit cache-URL mismatch diagnostics carry the recorded leaf urls
 WUP-005: work-unit-preflight — Dry-submit runtime-receipt schema diagnostics carry the raw value, affected lines, and expected format
 WUP-006: work-unit-preflight — Dry-submit invalid-result reports duplicate accepted claim urls and their count
+WUP-007: work-unit-preflight — Dry-submit rejects accepted source claims absent from accepted_source_urls
 WUC-001: work-unit-correction — Timeout terminalization runs the same guard with explicit audit
 WUC-002: work-unit-correction — Submit integrity shares one read-only transaction fact
 WUC-003: work-unit-correction — Journal disposition is a closed enum with declared recovery boundaries

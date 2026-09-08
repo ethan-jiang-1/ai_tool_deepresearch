@@ -286,6 +286,16 @@ describe('isCountable', () => {
     const result = isCountable('reference/multi-url.md', dir);
     assert.strictEqual(result.countable, true, `Expected countable but got: ${JSON.stringify(result)}`);
   });
+
+  it('returns countable=true when a literal semicolon sits inside the URL path (REF-012)', () => {
+    const dir = setupBundle('rc-semicolon-path', {
+      'reference/semicolon-path.md': refContent({
+        source_url: 'https://fixture.news-research.com/article.php/Title;-Subtitle-',
+      }),
+    });
+    const result = isCountable('reference/semicolon-path.md', dir);
+    assert.strictEqual(result.countable, true, `Expected countable but got: ${JSON.stringify(result)}`);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════

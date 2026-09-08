@@ -98,7 +98,7 @@ test("AGQ drain requirement carries the criterion-partition scope note (retarget
   );
 });
 
-test("spec req header indexes match requirement counts (mother 16; new homes 8/6/9)", () => {
+test("spec req header indexes match requirement counts (mother 16; new homes 8/7/9)", () => {
   const check = (text, prefix, expected, label) => {
     const header = text.split("\n").find((l) => l.startsWith(`> req: ${prefix}-`));
     assert.ok(header, `${label} header req line must exist`);
@@ -109,7 +109,7 @@ test("spec req header indexes match requirement counts (mother 16; new homes 8/6
   };
   check(dew, "DEW", 16, "DEW(mother, post C2 split)");
   check(sub, "WSU", 8, "work-unit-submission");
-  check(pre, "WUP", 6, "work-unit-preflight");
+  check(pre, "WUP", 7, "work-unit-preflight");
   check(cor, "WUC", 9, "work-unit-correction");
 
   const agqHeader = agq.split("\n").find((l) => l.startsWith("> req: AGQ-"));
@@ -124,7 +124,7 @@ test("inline req lines are 1:1 with requirements in all four capability specs", 
   const specs = [
     [dew, "DEW", 16, "mother"],
     [sub, "WSU", 8, "work-unit-submission"],
-    [pre, "WUP", 6, "work-unit-preflight"],
+    [pre, "WUP", 7, "work-unit-preflight"],
     [cor, "WUC", 9, "work-unit-correction"],
   ];
   for (const [text, prefix, expected, label] of specs) {
