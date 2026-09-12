@@ -36,6 +36,11 @@ or report intent with `DEEP_RESEARCH_HARNESS/` selected uses
 not select a run. A verified selected bundle directory resolves to the
 operation's canonical absolute current run bundle root.
 
+(注：repo 根下的 `dpt_archive/` 是归档区（活区 = repo 根）。用户指名 `dpt_archive/`
+内的可达 bundle 续跑时，先把它平移回 repo 根活区（`mv`，basename 不改名），
+再按本节既有规则选择；归档身份由目录位置表达，本节判定、stop 与 intent
+family 均不因此新增。)
+
 Before the selected entry is read, do not invoke a built-in `research` /
 `deep-research` shortcut, perform request-specific WebSearch/WebFetch, or
 collect/synthesize evidence manually; the selected entry and its later phase

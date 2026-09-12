@@ -46,6 +46,7 @@ research；跑研究不必先读它们，也不改变随后 `continue-run-bundle
 - 同一套 `DEEP_RESEARCH_HARNESS/` 可以服务多个 `dpt_rb_*` production run bundle 或 `dpt_disp_*` disposable experiment bundle。
 - 当前 research run 的 runtime truth 只来自 current run bundle root，不来自 chat memory，也不写回 Harness。
 - “单主 workflow” 指 v1 只有一个 canonical Deep Research workflow package；不表示只能有一个 run bundle。
+- repo 根目录是 run bundle **活区**：活跃工作面的 `dpt_rb_*` bundle 直接位于 repo 根。不再处于活跃工作面的 bundle 归档进 repo 根下的 `dpt_archive/`（归档 = `mv` 平移，basename 不改名）；归档 bundle 要续跑时，先平移回 repo 根活区，再按既有 entry 规则选择。**归档 ≠ disposable**：`dpt_archive/` 内仍是完整、可复活的 runtime truth root，与 `dpt_disp_*` disposable experiment bundle（不修、直接重建）是两个概念，不要混用。
 
 ## 运行时边界
 

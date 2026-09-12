@@ -1,0 +1,9 @@
+schema: spec-driven
+created: 2026-09-12
+skip_specs: true
+skip_specs_reason: >-
+  纯指导文档 change：不改 Engine/JS 行为、不改任何已接受 spec 的 requirement。
+  Entry Selection (bundle/run-entry) 保持路径无关；instantiate sibling preflight
+  (bundle/cmd-bundle-instantiation) 只扫目标目录、行为未改；bundle identity 仍是
+  basename (bundle/bundle-data-isolation 等)。无 requirement 级行为变化，故不创建
+  delta spec。

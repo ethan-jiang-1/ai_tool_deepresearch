@@ -1,0 +1,11 @@
+schema_version: semantic-closure/v1
+change: run-bundle-archive-zone
+status: not_applicable
+reason: >-
+  本 change 只增补叙述性指导文档（DEEP_RESEARCH_HARNESS/README.md、两个 command playbook
+  的落点说明、根 AGENTS.md Do-Not-Read 一行），不改任何 Engine/JS 代码、schema、gate、
+  trace 或 projection。已对照 semantic-fact-families.yaml 检查最接近的两个 family：
+  bundle.current-entry-contract（同一 bundle root 内的 BUNDLE_ENTRY/BUNDLE_MAP 契约，
+  与 bundle 的父目录位置无关）与 bundle.creation-consent（sibling preflight 只扫描
+  instantiate 目标目录，行为未改）。归档平移不改 bundle basename identity，不产生新的
+  deterministic fact，也不改动任何既有 family 的结论归属。

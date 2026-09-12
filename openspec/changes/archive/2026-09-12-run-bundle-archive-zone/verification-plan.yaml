@@ -1,0 +1,30 @@
+schema_version: verification-routing/v1
+change: run-bundle-archive-zone
+test_classes:
+  unit:
+    status: not_applicable
+    rationale: 本 change 不新增任何可单测的 Engine/JS 逻辑，实现面只有指导文本与既有命令行为，无函数级断言对象。
+  integration:
+    status: selected
+    rationale: 指导文本一致性按仓库惯例用 tests/integration/md/ 下的静态 markdown contract 测试拥有：断言五个指导面（README 目录性质、两个创建入口 playbook 落点句、Entry Selection 复活路径说明、根 AGENTS.md 点名）与归档不变量的共存表述，且 canonical 条款未被改动。
+  deterministic_e2e:
+    status: not_applicable
+    rationale: 无任何 Harness runtime 行为变化（不改 Engine/CLI/gate/trace），不存在需要临时 bundle 全链路验证的可运行行为。
+  agent_flow_e2e:
+    status: not_applicable
+    rationale: 不主张任何真实 Agent 行为或语义产出；归档/复活的活区名单与执行是 user-directed 运行时状态操作，不属于 agent_flow_e2e 证明对象。
+claims:
+  - id: archive-zone-guidance-contract
+    statement: 五个指导面对 dpt_archive/ 归档区的表述彼此一致——README 增补段声明活区/归档区不变量、平移不改名与复活=移回根目录，且明确归档不等于 dpt_disp_* disposable；instantiate-run-bundle.md 与 start-research.md 增补"新 bundle 一律创建在 repo 根活区"落点句；continue-run-bundle.md 在 Entry Selection 附近增补复活路径说明但未修改既有 canonical 判定与 unsupported_current_entry_contract stop 定义；根 AGENTS.md Do-Not-Read 点名 dpt_archive/ 内 run-bundle 目录且保留 anywhere in the repository 措辞。
+    test_class: integration
+    proof_subject: deterministic_contract
+    asset:
+      kind: node_test
+      path: tests/integration/md/run-bundle-archive-zone-contract.test.mjs
+    execution_profile:
+      fixture: none
+      subject_execution: none
+      runtime: none
+      external_calls: none
+      verdict_judge: deterministic
+    verdict_authority: node_test_exit

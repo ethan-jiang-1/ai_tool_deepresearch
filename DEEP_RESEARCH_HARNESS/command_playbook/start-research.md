@@ -21,7 +21,7 @@ Agent 命令：从零开始一次完整的 Deep Research。
 - 全小写，最长 60 字符
 - 如无法生成有效名称，使用 `deep-research`
 
-目标目录：`dpt_rb_<name>/`。
+目标目录：`dpt_rb_<name>/`。新 bundle 一律创建在 repo 根活区（repo 根 = 活区，`dpt_archive/` = 归档区）；`dpt_archive/` 内的已归档 bundle 不参与 sibling 预检视野。
 
 如果名称已在 entry 前提供，可以直接使用该名称。不要把 bundle naming 变成 autonomous execution 中的 mid-pipeline dependency。
 
