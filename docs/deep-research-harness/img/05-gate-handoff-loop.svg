@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 620" width="1000" height="620" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',system-ui,sans-serif" role="img" aria-label="Gate 交接闭环：check.next、enter-phase、advance-status 三个动作的分工">
+  <defs>
+    <marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/>
+    </marker>
+    <marker id="agg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#059669"/>
+    </marker>
+    <marker id="agr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#dc2626"/>
+    </marker>
+  </defs>
+
+  <rect width="1000" height="620" fill="#ffffff"/>
+  <text x="500" y="34" text-anchor="middle" font-size="21" font-weight="700" fill="#0f172a">阶段交接：下一步去哪，由检查程序说，不是自己觉得</text>
+  <text x="500" y="58" text-anchor="middle" font-size="13" fill="#64748b">一个 phase 的生命周期只有三段：做事 → 过关 → 交接</text>
+
+  <!-- step row -->
+  <rect x="40" y="82" width="180" height="66" rx="10" fill="#eff6ff" stroke="#bfdbfe"/>
+  <text x="130" y="106" text-anchor="middle" font-size="13" font-weight="700" fill="#1d4ed8">① 我读到哪了</text>
+  <text x="130" y="127" text-anchor="middle" font-size="11" font-family="monospace" fill="#1e3a8a">进度牌上的"当前阶段"</text>
+  <text x="130" y="142" text-anchor="middle" font-size="11" fill="#3b82f6">= 现在该读哪份说明书</text>
+
+  <rect x="266" y="82" width="180" height="66" rx="10" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="356" y="106" text-anchor="middle" font-size="13" font-weight="700" fill="#334155">② 按说明书干活</text>
+  <text x="356" y="127" text-anchor="middle" font-size="11" fill="#475569">派活 / 抓页面 / 写产物</text>
+  <text x="356" y="142" text-anchor="middle" font-size="11" fill="#475569">队列排空后做自检</text>
+
+  <rect x="492" y="82" width="196" height="66" rx="10" fill="#ecfdf5" stroke="#a7f3d0"/>
+  <text x="590" y="106" text-anchor="middle" font-size="13" font-weight="700" fill="#047857">③ 跑检查程序</text>
+  <text x="590" y="127" text-anchor="middle" font-size="11" font-family="monospace" fill="#065f46">check-gate-&lt;name&gt;.mjs</text>
+  <text x="590" y="142" text-anchor="middle" font-size="11" fill="#10b981">输出判决结果，写进日志</text>
+
+  <rect x="734" y="82" width="226" height="66" rx="10" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="847" y="106" text-anchor="middle" font-size="13" font-weight="700" fill="#334155">④ 读"下一步"</text>
+  <text x="847" y="127" text-anchor="middle" font-size="11" font-family="monospace" fill="#475569">通过 / 带债 / 去哪 / 谁负责缺什么</text>
+  <text x="847" y="142" text-anchor="middle" font-size="11" fill="#475569">不猜、不从文档推断</text>
+
+  <g stroke="#475569" stroke-width="2" marker-end="url(#ag)">
+    <line x1="222" y1="115" x2="262" y2="115"/>
+    <line x1="448" y1="115" x2="488" y2="115"/>
+    <line x1="690" y1="115" x2="730" y2="115"/>
+  </g>
+
+  <!-- PASS branch -->
+  <rect x="40" y="196" width="470" height="252" rx="14" fill="#ecfdf5" stroke="#a7f3d0"/>
+  <text x="62" y="224" font-size="15" font-weight="700" fill="#047857">分支 A：通过</text>
+  <text x="62" y="246" font-size="12" fill="#065f46">允许放行。但放行 ≠ 可以自己翻页，必须走两步。</text>
+
+  <rect x="62" y="262" width="426" height="74" rx="10" fill="#ffffff" stroke="#6ee7b7"/>
+  <text x="78" y="286" font-size="13" font-weight="700" fill="#065f46">A1. 按它说的翻页 —— 唯一的翻页方式</text>
+  <text x="78" y="308" font-size="11.5" font-family="monospace" fill="#047857">enter-phase --bundle &lt;p&gt; --node &lt;check.next&gt;</text>
+  <text x="78" y="327" font-size="11" fill="#059669">记下"我读到哪了" + 一条可核对的交接记录</text>
+
+  <rect x="62" y="348" width="426" height="84" rx="10" fill="#ffffff" stroke="#6ee7b7"/>
+  <text x="78" y="372" font-size="13" font-weight="700" fill="#065f46">A2. 记下"上一关过了"</text>
+  <text x="78" y="394" font-size="11.5" font-family="monospace" fill="#047857">advance-status --bundle &lt;p&gt; --to &lt;source_gate&gt;</text>
+  <text x="78" y="414" font-size="11" fill="#059669">只记"上一关过了"，它<tspan font-weight="700">不是</tspan>它只是记账，不是翻页</text>
+
+  <line x1="275" y1="152" x2="275" y2="192" stroke="#059669" stroke-width="2" marker-end="url(#agg)"/>
+  <text x="286" y="176" font-size="11.5" fill="#059669" font-weight="700">passed</text>
+
+  <!-- FAIL branch -->
+  <rect x="524" y="196" width="436" height="252" rx="14" fill="#fef2f2" stroke="#fecaca"/>
+  <text x="546" y="224" font-size="15" font-weight="700" fill="#b91c1c">分支 B：没过</text>
+  <text x="546" y="246" font-size="12" fill="#991b1b">这是正常的检查结果，不是"出事"。先读它给的"下一步"，别自己猜。</text>
+
+  <rect x="546" y="262" width="392" height="126" rx="10" fill="#ffffff" stroke="#fca5a5"/>
+  <text x="562" y="286" font-size="13" font-weight="700" fill="#b91c1c">谁负责 —— 只分配责任，不决定要不要打扰人</text>
+  <text x="562" y="310" font-size="11.5" fill="#7f1d1d"><tspan font-family="monospace" font-weight="700">agent_action</tspan>　Agent 去改被指名的字段/文件</text>
+  <text x="562" y="332" font-size="11.5" fill="#7f1d1d"><tspan font-family="monospace" font-weight="700">engine_operation</tspan>　跑它给的那条合法 CLI</text>
+  <text x="562" y="354" font-size="11.5" fill="#7f1d1d"><tspan font-family="monospace" font-weight="700">user_decision</tspan>　缺一个真实的人的决定</text>
+  <text x="562" y="376" font-size="11.5" fill="#7f1d1d"><tspan font-family="monospace" font-weight="700">missing_contract</tspan>　能力边界，停下，不要造路</text>
+
+  <rect x="546" y="398" width="392" height="34" rx="10" fill="#ffffff" stroke="#fca5a5"/>
+  <text x="562" y="420" font-size="11.5" fill="#7f1d1d">修完<tspan font-weight="700">重跑同一个 Gate</tspan>（同一条命令、同一个检查点）</text>
+
+  <line x1="725" y1="152" x2="725" y2="192" stroke="#dc2626" stroke-width="2" marker-end="url(#agr)"/>
+  <text x="736" y="176" font-size="11.5" fill="#dc2626" font-weight="700">failed</text>
+
+  <!-- loop back arrow -->
+  <path d="M 740 452 L 740 486 L 356 486 L 356 456" fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#ag)"/>
+  <text x="548" y="504" text-anchor="middle" font-size="11.5" fill="#64748b">修好之后回到「② 干活」，再跑同一个检查 —— 不是换个检查点</text>
+
+  <!-- bottom notes -->
+  <rect x="40" y="518" width="920" height="72" rx="12" fill="#fffbeb" stroke="#fde68a"/>
+  <text x="58" y="543" font-size="13" font-weight="700" fill="#b45309">为什么把"翻页"和"记状态"拆成两条命令？</text>
+  <text x="58" y="566" font-size="12" fill="#78350f">因为"我读了下一份说明书"和"上一关确实过了"是两件事。混在一起就会出现"状态说过了、但其实没加载下一阶段"或反过来的漂移；拆开后每一步都能被审计。</text>
+</svg>

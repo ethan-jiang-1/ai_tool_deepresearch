@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" width="1000" height="600" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',system-ui,sans-serif" role="img" aria-label="机器判定与人类判断的分界">
+  <rect width="1000" height="600" fill="#ffffff"/>
+  <text x="500" y="32" text-anchor="middle" font-size="21" font-weight="700" fill="#0f172a">把"能机器判的"和"只能人判的"彻底分开</text>
+  <text x="500" y="56" text-anchor="middle" font-size="13" fill="#64748b">这是整份设计里最反直觉、也最关键的一条分工</text>
+
+  <!-- machine -->
+  <rect x="34" y="82" width="452" height="330" rx="14" fill="#ecfdf5" stroke="#a7f3d0"/>
+  <text x="260" y="112" text-anchor="middle" font-size="16" font-weight="700" fill="#047857">检查程序只判这些</text>
+  <text x="260" y="134" text-anchor="middle" font-size="11.5" fill="#059669">全部是"是/否"的确定性事实，没有品味问题</text>
+
+  <g font-size="12.5" fill="#064e3b">
+    <rect x="54" y="150" width="412" height="34" rx="8" fill="#ffffff" stroke="#6ee7b7"/>
+    <text x="70" y="172">东西在不在　<tspan font-size="11" fill="#10b981">文件和目录存在性</tspan></text>
+
+    <rect x="54" y="192" width="412" height="34" rx="8" fill="#ffffff" stroke="#6ee7b7"/>
+    <text x="70" y="214">格式对不对　<tspan font-size="11" fill="#10b981">能不能解析、格式校验过不过</tspan></text>
+
+    <rect x="54" y="234" width="412" height="34" rx="8" fill="#ffffff" stroke="#6ee7b7"/>
+    <text x="70" y="256">数量够不够　<tspan font-size="11" fill="#10b981">对照配置里的数量要求</tspan></text>
+
+    <rect x="54" y="276" width="412" height="34" rx="8" fill="#ffffff" stroke="#6ee7b7"/>
+    <text x="70" y="298">有没有记账　<tspan font-size="11" fill="#10b981">正式交过的记录 + 交叉核对</tspan></text>
+
+    <rect x="54" y="318" width="412" height="34" rx="8" fill="#ffffff" stroke="#6ee7b7"/>
+    <text x="70" y="340">状态和日志自洽　<tspan font-size="11" fill="#10b981">状态值、日志事件、校验和</tspan></text>
+
+    <rect x="54" y="360" width="412" height="34" rx="8" fill="#ffffff" stroke="#6ee7b7"/>
+    <text x="70" y="382">前面每关都过了　<tspan font-size="11" fill="#10b981">按顺序推出该过哪几关，逐个核对</tspan></text>
+  </g>
+
+  <!-- human -->
+  <rect x="514" y="82" width="452" height="330" rx="14" fill="#fffbeb" stroke="#fde68a"/>
+  <text x="740" y="112" text-anchor="middle" font-size="16" font-weight="700" fill="#b45309">只有人，能判这些</text>
+  <text x="740" y="134" text-anchor="middle" font-size="11.5" fill="#d97706">语义、价值、适用性 —— 代码没有立场也不该有</text>
+
+  <g font-size="12.5" fill="#78350f">
+    <rect x="534" y="150" width="412" height="34" rx="8" fill="#ffffff" stroke="#fcd34d"/>
+    <text x="550" y="172">这份报告有没有回答我真正的问题？</text>
+
+    <rect x="534" y="192" width="412" height="34" rx="8" fill="#ffffff" stroke="#fcd34d"/>
+    <text x="550" y="214">这些结论我信不信？证据够不够硬？</text>
+
+    <rect x="534" y="234" width="412" height="34" rx="8" fill="#ffffff" stroke="#fcd34d"/>
+    <text x="550" y="256">表述方式、篇幅、重点是不是我要的？</text>
+
+    <rect x="534" y="276" width="412" height="34" rx="8" fill="#ffffff" stroke="#fcd34d"/>
+    <text x="550" y="298">"按当前取源范围继续"我能不能接受？</text>
+
+    <rect x="534" y="318" width="412" height="34" rx="8" fill="#ffffff" stroke="#fcd34d"/>
+    <text x="550" y="340">这个话题要不要拆 / 合 / 删？</text>
+
+    <rect x="534" y="360" width="412" height="34" rx="8" fill="#ffffff" stroke="#fcd34d"/>
+    <text x="550" y="382">现在交付，还是再补一轮？</text>
+  </g>
+
+  <!-- why it matters -->
+  <rect x="34" y="432" width="932" height="72" rx="12" fill="#fef2f2" stroke="#fecaca"/>
+  <text x="52" y="458" font-size="13.5" font-weight="700" fill="#b91c1c">明令禁止：交付前那道检查不许判断质量</text>
+  <text x="52" y="480" font-size="12" fill="#991b1b">它能查的只有这么几件事：东西在不在、格式对不对、数量够不够、有没有记账、状态自不自洽。不能因为"综合写得不够好"就拦下交付——</text>
+  <text x="52" y="498" font-size="12" fill="#991b1b">那是人的审查范围。反过来，也不能因为"人觉得不错"就让机器判它结构合格。</text>
+
+  <rect x="34" y="516" width="932" height="72" rx="12" fill="#eff6ff" stroke="#bfdbfe"/>
+  <text x="52" y="542" font-size="13.5" font-weight="700" fill="#1d4ed8">这条分工带来的直接好处</text>
+  <text x="52" y="564" font-size="12" fill="#1e3a8a">AI 想"通融一下"时没有开关可按（判定在代码里）；人也不会被低级的结构错误浪费时间（结构问题在到达人之前就被机器挡住了）。</text>
+  <text x="52" y="582" font-size="12" fill="#1e3a8a">每一层只处理自己擅长的那类不确定性。</text>
+</svg>

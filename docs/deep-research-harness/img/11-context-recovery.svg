@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 570" width="1000" height="570" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',system-ui,sans-serif" role="img" aria-label="上下文丢失后的恢复坐标">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/>
+    </marker>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#dc2626"/>
+    </marker>
+  </defs>
+
+  <rect width="1000" height="570" fill="#ffffff"/>
+  <text x="500" y="32" text-anchor="middle" font-size="21" font-weight="700" fill="#0f172a">跑几十小时不崩：上下文会丢，但状态不会</text>
+  <text x="500" y="56" text-anchor="middle" font-size="13" fill="#64748b">把"长程"从模型能力问题，改造成"读文件 + 走合法下一步"的工程问题</text>
+
+  <!-- problem -->
+  <rect x="34" y="82" width="290" height="180" rx="14" fill="#fef2f2" stroke="#fecaca"/>
+  <text x="54" y="110" font-size="14.5" font-weight="700" fill="#b91c1c">长程任务的三个必然</text>
+  <g font-size="12.5" fill="#7f1d1d">
+    <text x="54" y="140">· 上下文窗口一定会满</text>
+    <text x="54" y="166">· 会话一定会断 / 进程一定会被杀</text>
+    <text x="54" y="192">· 中途一定会有人来问别的</text>
+  </g>
+  <text x="54" y="224" font-size="12.5" fill="#991b1b" font-weight="700">如果状态只存在"脑子里"，以上任意一条</text>
+  <text x="54" y="244" font-size="12.5" fill="#991b1b" font-weight="700">都等于任务失败。</text>
+
+  <!-- solution -->
+  <rect x="352" y="82" width="614" height="180" rx="14" fill="#ecfdf5" stroke="#a7f3d0"/>
+  <text x="372" y="110" font-size="14.5" font-weight="700" fill="#047857">Harness 的做法：把每一步的事实钉在磁盘上</text>
+
+  <g font-size="12">
+    <rect x="372" y="126" width="188" height="60" rx="8" fill="#ffffff" stroke="#6ee7b7"/>
+    <text x="466" y="148" text-anchor="middle" font-size="12" font-weight="700" fill="#065f46">我干到哪了</text>
+    <text x="466" y="168" text-anchor="middle" font-size="10.5" font-family="monospace" fill="#047857">进度牌上的"当前阶段"</text>
+
+    <rect x="572" y="126" width="188" height="60" rx="8" fill="#ffffff" stroke="#6ee7b7"/>
+    <text x="666" y="148" text-anchor="middle" font-size="12" font-weight="700" fill="#065f46">还剩什么没做完</text>
+    <text x="666" y="168" text-anchor="middle" font-size="10.5" font-family="monospace" fill="#047857">rb_queue.json</text>
+
+    <rect x="772" y="126" width="176" height="60" rx="8" fill="#ffffff" stroke="#6ee7b7"/>
+    <text x="860" y="148" text-anchor="middle" font-size="12" font-weight="700" fill="#065f46">发生过什么</text>
+    <text x="860" y="168" text-anchor="middle" font-size="10.5" font-family="monospace" fill="#047857">rb_trace.jsonl</text>
+
+    <rect x="372" y="194" width="188" height="52" rx="8" fill="#ffffff" stroke="#6ee7b7"/>
+    <text x="466" y="214" text-anchor="middle" font-size="12" font-weight="700" fill="#065f46">你要什么</text>
+    <text x="466" y="233" text-anchor="middle" font-size="10.5" font-family="monospace" fill="#047857">rb_profile.yaml</text>
+
+    <rect x="572" y="194" width="188" height="52" rx="8" fill="#ffffff" stroke="#6ee7b7"/>
+    <text x="666" y="214" text-anchor="middle" font-size="12" font-weight="700" fill="#065f46">派出去的活怎么样了</text>
+    <text x="666" y="233" text-anchor="middle" font-size="10.5" font-family="monospace" fill="#047857">_work_units/**/_status.json</text>
+
+    <rect x="772" y="194" width="176" height="52" rx="8" fill="#ffffff" stroke="#6ee7b7"/>
+    <text x="860" y="214" text-anchor="middle" font-size="12" font-weight="700" fill="#065f46">验收记账了没有</text>
+    <text x="860" y="233" text-anchor="middle" font-size="10.5" font-family="monospace" fill="#047857">rb_output_declarations.jsonl</text>
+  </g>
+
+  <!-- recovery procedure -->
+  <rect x="34" y="280" width="932" height="130" rx="14" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="54" y="308" font-size="14.5" font-weight="700" fill="#0f172a">恢复办法：重新读硬盘，不许回忆</text>
+
+  <g font-size="12">
+    <rect x="54" y="322" width="200" height="72" rx="10" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="154" y="346" text-anchor="middle" font-size="12.5" font-weight="700" fill="#334155">1. 看"我干到哪了"</text>
+    <text x="154" y="368" text-anchor="middle" font-size="11" fill="#64748b">决定该读哪份说明书</text>
+    <text x="154" y="386" text-anchor="middle" font-size="11" fill="#64748b">不要只看 current_gate 猜</text>
+
+    <rect x="272" y="322" width="200" height="72" rx="10" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="372" y="346" text-anchor="middle" font-size="12.5" font-weight="700" fill="#334155">2. 查一下派出去的活</text>
+    <text x="372" y="368" text-anchor="middle" font-size="11" font-family="monospace" fill="#64748b">operate-work-unit inspect</text>
+    <text x="372" y="386" text-anchor="middle" font-size="11" fill="#64748b">队列 + 派工文件夹 + 账本</text>
+
+    <rect x="490" y="322" width="200" height="72" rx="10" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="590" y="346" text-anchor="middle" font-size="12.5" font-weight="700" fill="#334155">3. 查有没有跑偏</text>
+    <text x="590" y="368" text-anchor="middle" font-size="11" font-family="monospace" fill="#64748b">audit-phase-status</text>
+    <text x="590" y="386" text-anchor="middle" font-size="11" fill="#64748b">只报告，不代修</text>
+
+    <rect x="708" y="322" width="240" height="72" rx="10" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="828" y="346" text-anchor="middle" font-size="12.5" font-weight="700" fill="#334155">4. 查能不能接着走</text>
+    <text x="828" y="368" text-anchor="middle" font-size="11" font-family="monospace" fill="#64748b">check-reentry --at &lt;target&gt;</text>
+    <text x="828" y="386" text-anchor="middle" font-size="11" fill="#64748b">最多给一个被许可的下一步</text>
+  </g>
+
+  <!-- reentry findings -->
+  <rect x="34" y="426" width="932" height="112" rx="14" fill="#eff6ff" stroke="#bfdbfe"/>
+  <text x="54" y="452" font-size="14" font-weight="700" fill="#1d4ed8">这个检查只会给三种答案</text>
+
+  <g font-size="12">
+    <rect x="54" y="466" width="288" height="58" rx="8" fill="#ffffff" stroke="#93c5fd"/>
+    <text x="70" y="488" font-size="12.5" font-weight="700" font-family="monospace" fill="#047857">reachable</text>
+    <text x="70" y="510" font-size="11.5" fill="#1e3a8a">路是通的：最多给你一个被允许的下一步</text>
+
+    <rect x="354" y="466" width="288" height="58" rx="8" fill="#ffffff" stroke="#93c5fd"/>
+    <text x="370" y="488" font-size="12.5" font-weight="700" font-family="monospace" fill="#b91c1c">missing_contract</text>
+    <text x="370" y="510" font-size="11.5" fill="#1e3a8a">死路：停下。不是"再试试老路"的许可</text>
+
+    <rect x="654" y="466" width="294" height="58" rx="8" fill="#ffffff" stroke="#93c5fd"/>
+    <text x="670" y="488" font-size="12.5" font-weight="700" font-family="monospace" fill="#b45309">not_applicable</text>
+    <text x="670" y="510" font-size="11.5" fill="#1e3a8a">不适用：自己对齐，但没有写入权限</text>
+  </g>
+
+  <path d="M 154 408 L 154 422" stroke="#475569" stroke-width="1.6" marker-end="url(#ar)"/>
+  <path d="M 590 408 L 590 422" stroke="#475569" stroke-width="1.6" marker-end="url(#ar)"/>
+  <path d="M 828 408 L 828 422" stroke="#475569" stroke-width="1.6" marker-end="url(#ar)"/>
+
+  <!-- never -->
+  <rect x="34" y="552" width="932" height="1" fill="none"/>
+  <text x="500" y="562" text-anchor="middle" font-size="12" fill="#dc2626" font-weight="700">永远不要手工改状态、日志、账本、索引、待办、锁或校验和 —— 恢复只能走已有的合法命令</text>
+</svg>

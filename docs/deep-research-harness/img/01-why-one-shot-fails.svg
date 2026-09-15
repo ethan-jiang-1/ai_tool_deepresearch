@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 580" width="980" height="580" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',system-ui,sans-serif" role="img" aria-label="一次性问答的四种失效与 Harness 的四种对策对照图">
+  <defs>
+    <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <rect width="980" height="580" fill="#ffffff"/>
+  <text x="490" y="34" text-anchor="middle" font-size="21" font-weight="700" fill="#0f172a">同一句「帮我做个深度研究」，两种做法的差别</text>
+  <text x="490" y="58" text-anchor="middle" font-size="13" fill="#64748b">左边是通用 one-shot 捷径；右边是 Deep Research Harness 的结构化答案</text>
+
+  <!-- left column -->
+  <rect x="30" y="82" width="400" height="470" rx="14" fill="#fef2f2" stroke="#fecaca"/>
+  <text x="230" y="110" text-anchor="middle" font-size="15" font-weight="700" fill="#b91c1c">一次性捷径：一次超长回答</text>
+
+  <g font-size="13" fill="#7f1d1d">
+    <rect x="50" y="126" width="360" height="94" rx="10" fill="#ffffff" stroke="#fca5a5"/>
+    <text x="66" y="152" font-weight="700">① 上下文越滚越长</text>
+    <text x="66" y="174">早期读到的证据被挤出上下文，</text>
+    <text x="66" y="193">后半程越来越靠"印象"而不是原文</text>
+
+    <rect x="50" y="232" width="360" height="94" rx="10" fill="#ffffff" stroke="#fca5a5"/>
+    <text x="66" y="258" font-weight="700">② 没有任何下游校验</text>
+    <text x="66" y="280">引用可能不存在，摘要可能没读过正文，</text>
+    <text x="66" y="299">而没有人（也没有程序）会去核对</text>
+
+    <rect x="50" y="338" width="360" height="94" rx="10" fill="#ffffff" stroke="#fca5a5"/>
+    <text x="66" y="364" font-weight="700">③ 没有持久状态</text>
+    <text x="66" y="386">中断即重来；也说不清某个结论</text>
+    <text x="66" y="405">到底是从哪一页、哪一句得来的</text>
+
+    <rect x="50" y="444" width="360" height="94" rx="10" fill="#ffffff" stroke="#fca5a5"/>
+    <text x="66" y="470" font-weight="700">④ 人只有一个介入点</text>
+    <text x="66" y="492">要么全程盯着聊天窗口，</text>
+    <text x="66" y="511">要么彻底放手、事后无法追责</text>
+  </g>
+
+  <!-- arrows -->
+  <g stroke="#94a3b8" stroke-width="2" marker-end="url(#a1)">
+    <line x1="436" y1="173" x2="536" y2="173"/>
+    <line x1="436" y1="279" x2="536" y2="279"/>
+    <line x1="436" y1="385" x2="536" y2="385"/>
+    <line x1="436" y1="491" x2="536" y2="491"/>
+  </g>
+
+  <!-- right column -->
+  <rect x="550" y="82" width="400" height="470" rx="14" fill="#ecfdf5" stroke="#a7f3d0"/>
+  <text x="750" y="110" text-anchor="middle" font-size="15" font-weight="700" fill="#047857">Harness：证据 → 判断 的可审计流水线</text>
+
+  <g font-size="13" fill="#065f46">
+    <rect x="570" y="126" width="360" height="94" rx="10" fill="#ffffff" stroke="#6ee7b7"/>
+    <text x="586" y="152" font-weight="700">① 状态落在磁盘上</text>
+    <text x="586" y="174">run bundle 里的控制文件就是真相，</text>
+    <text x="586" y="193">不依赖聊天记忆，随时可重新加载</text>
+
+    <rect x="570" y="232" width="360" height="94" rx="10" fill="#ffffff" stroke="#6ee7b7"/>
+    <text x="586" y="258" font-weight="700">② 每条结论都要挂上证据</text>
+    <text x="586" y="280">Gate（判定程序）机械核对文件、</text>
+    <text x="586" y="299">证据和记账；不合格不放行</text>
+
+    <rect x="570" y="338" width="360" height="94" rx="10" fill="#ffffff" stroke="#6ee7b7"/>
+    <text x="586" y="364" font-weight="700">③ 断点续跑是常态</text>
+    <text x="586" y="386">控制文件 + trace 记录构成恢复坐标，</text>
+    <text x="586" y="405">上下文丢了也能从当前节点接着走</text>
+
+    <rect x="570" y="444" width="360" height="94" rx="10" fill="#ffffff" stroke="#6ee7b7"/>
+    <text x="586" y="470" font-weight="700">④ 只有两个交互点</text>
+    <text x="586" y="492">HITL1 定方向，HITL2 审定稿；</text>
+    <text x="586" y="511">中间大段静默自主，不打扰人</text>
+  </g>
+</svg>

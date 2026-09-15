@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1010 620" width="1010" height="620" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',system-ui,sans-serif" role="img" aria-label="静默自主循环与禁止浮出水面清单">
+  <rect width="1010" height="620" fill="#ffffff"/>
+  <text x="505" y="32" text-anchor="middle" font-size="21" font-weight="700" fill="#0f172a">长程静默：没有任何人看着的时候，循环靠什么转下去</text>
+  <text x="505" y="56" text-anchor="middle" font-size="13" fill="#64748b">答案不是"让模型更自觉"，而是把"下一步"变成可以从文件里读出来的东西</text>
+
+  <!-- loop -->
+  <circle cx="290" cy="330" r="160" fill="#faf5ff" stroke="#c4b5fd" stroke-width="2"/>
+  <circle cx="290" cy="330" r="98" fill="#ffffff" stroke="#ddd6fe"/>
+  <text x="290" y="318" text-anchor="middle" font-size="14" font-weight="700" fill="#5b21b6">自主工作循环</text>
+  <text x="290" y="340" text-anchor="middle" font-size="11.5" fill="#7c3aed">读直接事实 →</text>
+  <text x="290" y="358" text-anchor="middle" font-size="11.5" fill="#7c3aed">走最短合法路径</text>
+
+  <!-- 4 steps around -->
+  <g font-size="12">
+    <rect x="200" y="176" width="180" height="52" rx="10" fill="#ffffff" stroke="#a78bfa"/>
+    <text x="290" y="197" text-anchor="middle" font-size="12.5" font-weight="700" fill="#5b21b6">① 修被指名的根因</text>
+    <text x="290" y="216" text-anchor="middle" font-size="11" fill="#6d28d9">然后重跑同一个 Gate</text>
+
+    <rect x="392" y="304" width="180" height="52" rx="10" fill="#ffffff" stroke="#a78bfa"/>
+    <text x="482" y="325" text-anchor="middle" font-size="12.5" font-weight="700" fill="#5b21b6">② 不收敛就换策略</text>
+    <text x="482" y="344" text-anchor="middle" font-size="11" fill="#6d28d9">不是把同一招再试一遍</text>
+
+    <rect x="200" y="432" width="180" height="52" rx="10" fill="#ffffff" stroke="#a78bfa"/>
+    <text x="290" y="453" text-anchor="middle" font-size="12.5" font-weight="700" fill="#5b21b6">③ 消费合法的交接</text>
+    <text x="290" y="472" text-anchor="middle" font-size="11" fill="#6d28d9">干净的，或带债降级的</text>
+
+    <rect x="8" y="304" width="180" height="52" rx="10" fill="#ffffff" stroke="#a78bfa"/>
+    <text x="98" y="325" text-anchor="middle" font-size="12.5" font-weight="700" fill="#5b21b6">④ 无路可走 → 静默等待</text>
+    <text x="98" y="344" text-anchor="middle" font-size="11" fill="#6d28d9">记下诊断，留在原地</text>
+  </g>
+
+  <!-- prohibited -->
+  <rect x="592" y="92" width="386" height="278" rx="14" fill="#fef2f2" stroke="#fecaca"/>
+  <text x="612" y="120" font-size="15" font-weight="700" fill="#b91c1c">stop: no 阶段禁止主动发起</text>
+  <text x="612" y="142" font-size="11.5" fill="#991b1b">失败、空队列、疲劳、外部通知 —— 都不构成例外</text>
+
+  <g font-size="12.5" fill="#7f1d1d">
+    <text x="612" y="170">✗ 提问 / 请求澄清</text>
+    <text x="612" y="194">✗ 请求确认 / 请求批准</text>
+    <text x="612" y="218">✗ 汇报进度 / 汇报空闲</text>
+    <text x="612" y="242">✗ 交付半成品</text>
+    <text x="612" y="266">✗ 给 A/B 选项让用户选</text>
+    <text x="612" y="290">✗ 请求"要不要继续"</text>
+  </g>
+  <rect x="612" y="306" width="348" height="50" rx="8" fill="#ffffff" stroke="#fca5a5"/>
+  <text x="628" y="327" font-size="11.5" fill="#7f1d1d">如果发现自己正要这么做：中止，并用</text>
+  <text x="628" y="346" font-size="11" font-family="monospace" fill="#b91c1c">log-event --surfacing-intent</text>
+
+  <!-- user message -->
+  <rect x="592" y="386" width="386" height="118" rx="14" fill="#eff6ff" stroke="#bfdbfe"/>
+  <text x="612" y="412" font-size="14" font-weight="700" fill="#1d4ed8">那用户中途插话怎么办？</text>
+  <text x="612" y="436" font-size="12" fill="#1e3a8a">直接回答当前事实，或说明最小缺失边界。</text>
+  <text x="612" y="458" font-size="12" fill="#1e3a8a">但这次回答<tspan font-weight="700">不创建</tspan>：检查点、权限、路由、</text>
+  <text x="612" y="478" font-size="12" fill="#1e3a8a">写入授权、暂停状态或"记住的中途意图"。</text>
+  <text x="612" y="496" font-size="11.5" fill="#3b82f6">回答完，原有的自主下一步继续是义务。</text>
+
+  <!-- fatigue -->
+  <rect x="592" y="520" width="386" height="76" rx="14" fill="#fffbeb" stroke="#fde68a"/>
+  <text x="612" y="546" font-size="14" font-weight="700" fill="#b45309">疲劳机制：同一个问题连挂 3 次</text>
+  <text x="612" y="568" font-size="12" fill="#78350f">停下来 → 重读当前阶段与 Gate 的 inspect/advice →</text>
+  <text x="612" y="586" font-size="12" fill="#78350f">换策略 → 重跑同一个 Gate（保留真实判决）</text>
+
+  <!-- bottom -->
+  <rect x="34" y="520" width="530" height="76" rx="14" fill="#ecfdf5" stroke="#a7f3d0"/>
+  <text x="54" y="546" font-size="14" font-weight="700" fill="#047857">"降级通过"也要说清楚</text>
+  <text x="54" y="568" font-size="12" fill="#065f46">Gate 可以返回 <tspan font-family="monospace">passed: true</tspan> + <tspan font-family="monospace">degraded: true</tspan>，</text>
+  <text x="54" y="586" font-size="12" fill="#065f46">表示"带着已知的质量债放行"。它<tspan font-weight="700">不是</tspan>一次干净的质量通过。</text>
+</svg>

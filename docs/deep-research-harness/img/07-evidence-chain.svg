@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 700" width="1040" height="700" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',system-ui,sans-serif" role="img" aria-label="证据链：从人要什么到报告里的一条结论">
+  <defs>
+    <marker id="ae" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7c3aed"/>
+    </marker>
+  </defs>
+
+  <rect width="1040" height="700" fill="#ffffff"/>
+  <text x="520" y="32" text-anchor="middle" font-size="21" font-weight="700" fill="#0f172a">证据链：报告里的每一条结论，都能一路倒推回某一页正文</text>
+  <text x="520" y="56" text-anchor="middle" font-size="13" fill="#64748b">这是"深度"之所以可靠的全部秘密 —— 不是模型更聪明，而是每一环都留了痕</text>
+
+  <!-- steps -->
+  <g>
+    <!-- 1 -->
+    <rect x="60" y="80" width="620" height="52" rx="10" fill="#fffbeb" stroke="#fde68a"/>
+    <text x="80" y="102" font-size="13" font-weight="700" fill="#92400e">① 人的决定变成可计算的指标</text>
+    <text x="80" y="122" font-size="11.5" fill="#b45309">HITL1 选定研究风格（快速事实 / 探索全景 / 主张对抗验证）→ 换算成后面所有"至少几个来源"的数量要求</text>
+
+    <!-- 2 -->
+    <rect x="60" y="146" width="620" height="52" rx="10" fill="#fffbeb" stroke="#fde68a"/>
+    <text x="80" y="168" font-size="13" font-weight="700" fill="#92400e">② 需求单：还剩什么没做</text>
+    <text x="80" y="188" font-size="11.5" fill="#b45309">"给话题 X 收基础来源"——只说要什么，不说谁做、也不产生证据</text>
+
+    <!-- 3 -->
+    <rect x="60" y="212" width="620" height="52" rx="10" fill="#fef3c7" stroke="#fcd34d"/>
+    <text x="80" y="234" font-size="13" font-weight="700" fill="#92400e">③ 派活：给这次任务编个号</text>
+    <text x="80" y="254" font-size="11.5" fill="#b45309">同时建一个任务文件夹：任务书、结果格式、身份证明（身份证明不可改）</text>
+
+    <!-- 4 -->
+    <rect x="60" y="278" width="620" height="52" rx="10" fill="#f5f3ff" stroke="#ddd6fe"/>
+    <text x="80" y="300" font-size="13" font-weight="700" fill="#5b21b6">④ 外包工真的去搜、真的去抓</text>
+    <text x="80" y="320" font-size="11.5" fill="#6d28d9">搜索摘要不算证据；必须落到页面正文。被挡时按既定顺序降级，最多一次有界 curl</text>
+
+    <!-- 5 -->
+    <rect x="60" y="344" width="620" height="66" rx="10" fill="#f5f3ff" stroke="#ddd6fe"/>
+    <text x="80" y="366" font-size="13" font-weight="700" fill="#5b21b6">⑤ 每个来源留一个"小票夹"</text>
+    <text x="80" y="386" font-size="11.5" font-family="monospace" fill="#6d28d9">_cache/waveN/primary/&lt;topic&gt;/&lt;source-slug&gt;/</text>
+    <text x="80" y="404" font-size="11.5" fill="#6d28d9">必含三件：websearch.json（怎么找到的）· page.md（抓到什么）· meta.json（这页是谁）</text>
+
+    <!-- 6 -->
+    <rect x="60" y="424" width="620" height="52" rx="10" fill="#f5f3ff" stroke="#ddd6fe"/>
+    <text x="80" y="446" font-size="13" font-weight="700" fill="#5b21b6">⑥ 结果文件 + 边干边写的回执</text>
+    <text x="80" y="466" font-size="11.5" fill="#6d28d9">申报"我产出了什么、留了哪些痕"；漏申报会被直接拒绝</text>
+
+    <!-- 7 -->
+    <rect x="60" y="490" width="620" height="52" rx="10" fill="#eff6ff" stroke="#bfdbfe"/>
+    <text x="80" y="512" font-size="13" font-weight="700" fill="#1d4ed8">⑦ 演练：只看不改</text>
+    <text x="80" y="532" font-size="11.5" fill="#1e40af">把所有违规一次说清，允许在原位改同一份候选再试；此时还没有任何"成功"记录</text>
+
+    <!-- 8 -->
+    <rect x="60" y="556" width="620" height="52" rx="10" fill="#ecfdf5" stroke="#a7f3d0"/>
+    <text x="80" y="578" font-size="13" font-weight="700" fill="#047857">⑧ 正式交：唯一的成功边界</text>
+    <text x="80" y="598" font-size="11.5" fill="#065f46">校验结果、回执、产出、留痕、绑定、校验和 → 在账本上记一笔</text>
+
+    <!-- 9 -->
+    <rect x="60" y="622" width="620" height="52" rx="10" fill="#ecfdf5" stroke="#a7f3d0"/>
+    <text x="80" y="644" font-size="13" font-weight="700" fill="#047857">⑨ 检查只看账本，不看文件夹</text>
+    <text x="80" y="664" font-size="11.5" fill="#065f46">"文件存在"永远不等于"证据成立"——这是整个设计里最容易被忽略的一条</text>
+  </g>
+
+  <!-- arrow spine -->
+  <path d="M 44 106 L 44 648" stroke="#7c3aed" stroke-width="2.5" stroke-dasharray="1 0"/>
+  <g stroke="#7c3aed" stroke-width="1.6" marker-end="url(#ae)">
+    <line x1="44" y1="132" x2="44" y2="142"/>
+    <line x1="44" y1="198" x2="44" y2="208"/>
+    <line x1="44" y1="264" x2="44" y2="274"/>
+    <line x1="44" y1="330" x2="44" y2="340"/>
+    <line x1="44" y1="410" x2="44" y2="420"/>
+    <line x1="44" y1="476" x2="44" y2="486"/>
+    <line x1="44" y1="542" x2="44" y2="552"/>
+    <line x1="44" y1="608" x2="44" y2="618"/>
+  </g>
+
+  <!-- side callouts -->
+  <rect x="704" y="80" width="296" height="120" rx="12" fill="#fef2f2" stroke="#fecaca"/>
+  <text x="722" y="106" font-size="13.5" font-weight="700" fill="#b91c1c">✗ 常见捷径（都被禁止）</text>
+  <text x="722" y="130" font-size="11.5" fill="#7f1d1d">· 拿搜索摘要当证据</text>
+  <text x="722" y="150" font-size="11.5" fill="#7f1d1d">· 直接批量生成来源文件</text>
+  <text x="722" y="170" font-size="11.5" fill="#7f1d1d">· 手写账本冒充完成</text>
+  <text x="722" y="190" font-size="11.5" fill="#7f1d1d">· 主 AI 自己搜了就算数</text>
+
+  <rect x="704" y="216" width="296" height="140" rx="12" fill="#ecfdf5" stroke="#a7f3d0"/>
+  <text x="722" y="242" font-size="13.5" font-weight="700" fill="#047857">✓ 每个环节的"唯一作者"</text>
+  <text x="722" y="266" font-size="11.5" fill="#065f46">需求单 …… 程序分配编号</text>
+  <text x="722" y="286" font-size="11.5" fill="#065f46">证据内容 …… 外包工（唯一）</text>
+  <text x="722" y="306" font-size="11.5" fill="#065f46">验收记账 …… 程序（唯一）</text>
+  <text x="722" y="326" font-size="11.5" fill="#065f46">方向与取舍 …… 主 AI 判断</text>
+  <text x="722" y="346" font-size="11.5" fill="#065f46">最终满意 …… 人（HITL2 / Final）</text>
+
+  <rect x="704" y="372" width="296" height="152" rx="12" fill="#eff6ff" stroke="#bfdbfe"/>
+  <text x="722" y="398" font-size="13.5" font-weight="700" fill="#1d4ed8">断链会怎样</text>
+  <text x="722" y="422" font-size="11.5" fill="#1e3a8a">缺留痕 → 交不上去</text>
+  <text x="722" y="442" font-size="11.5" fill="#1e3a8a">缺账 → 检查判"没做够"</text>
+  <text x="722" y="462" font-size="11.5" fill="#1e3a8a">引用没出处 → 报告的出处表过不了</text>
+  <text x="736" y="482" font-size="11.5" fill="#1e3a8a">校验失败，发布被拒</text>
+  <text x="722" y="506" font-size="11.5" fill="#1d4ed8" font-weight="700">总之：断在哪一环，就在哪一环停住。</text>
+
+  <rect x="704" y="540" width="296" height="134" rx="12" fill="#f5f3ff" stroke="#ddd6fe"/>
+  <text x="722" y="566" font-size="13.5" font-weight="700" fill="#5b21b6">最后一步：报告里的出处表</text>
+  <text x="722" y="590" font-size="11.5" fill="#4c1d95">最终报告的每条关键发现列三列：</text>
+  <text x="722" y="612" font-size="11.5" font-family="monospace" fill="#5b21b6">Finding ID</text>
+  <text x="722" y="632" font-size="11.5" font-family="monospace" fill="#5b21b6">Declared Key Finding</text>
+  <text x="722" y="652" font-size="11.5" font-family="monospace" fill="#5b21b6">出处（可点开的证据）</text>
+</svg>

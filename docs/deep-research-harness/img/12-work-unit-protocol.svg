@@ -1,0 +1,139 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 640" width="1080" height="640" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',system-ui,sans-serif" role="img" aria-label="work unit 委派协议全流程">
+  <defs>
+    <marker id="au" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/>
+    </marker>
+    <marker id="aug" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#059669"/>
+    </marker>
+    <marker id="aur" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#dc2626"/>
+    </marker>
+  </defs>
+
+  <rect width="1080" height="640" fill="#ffffff"/>
+  <text x="540" y="32" text-anchor="middle" font-size="21" font-weight="700" fill="#0f172a">派工协议：从"要什么"到"账上记了一笔"</text>
+  <text x="540" y="56" text-anchor="middle" font-size="13" fill="#64748b">主 AI 不上工地，只管派活和验收；干活的是可计数的外包工</text>
+
+  <!-- main flow -->
+  <g font-size="12">
+    <rect x="30" y="90" width="150" height="76" rx="12" fill="#fffbeb" stroke="#fde68a"/>
+    <text x="105" y="116" text-anchor="middle" font-size="13" font-weight="700" fill="#92400e">需求单</text>
+    <text x="105" y="136" text-anchor="middle" font-size="10.5" fill="#b45309">要什么</text>
+    <text x="105" y="154" text-anchor="middle" font-size="10.5" font-family="monospace" fill="#b45309">queue_item_id</text>
+
+    <rect x="206" y="90" width="150" height="76" rx="12" fill="#fef3c7" stroke="#fcd34d"/>
+    <text x="281" y="116" text-anchor="middle" font-size="13" font-weight="700" fill="#92400e">派活</text>
+    <text x="281" y="136" text-anchor="middle" font-size="10.5" fill="#b45309">谁在做这一票</text>
+    <text x="281" y="154" text-anchor="middle" font-size="10.5" font-family="monospace" fill="#b45309">work_id</text>
+
+    <rect x="382" y="90" width="176" height="76" rx="12" fill="#f5f3ff" stroke="#ddd6fe"/>
+    <text x="470" y="114" text-anchor="middle" font-size="13" font-weight="700" fill="#5b21b6">任务文件夹</text>
+    <text x="470" y="134" text-anchor="middle" font-size="10" font-family="monospace" fill="#6d28d9">任务书 · 结果格式</text>
+    <text x="470" y="150" text-anchor="middle" font-size="10" font-family="monospace" fill="#6d28d9">身份证明（不可改）</text>
+
+    <rect x="584" y="90" width="160" height="76" rx="12" fill="#f5f3ff" stroke="#ddd6fe"/>
+    <text x="664" y="116" text-anchor="middle" font-size="13" font-weight="700" fill="#5b21b6">外包工干活</text>
+    <text x="664" y="136" text-anchor="middle" font-size="10.5" fill="#6d28d9">真搜、真抓页、留小票</text>
+    <text x="664" y="154" text-anchor="middle" font-size="10.5" fill="#6d28d9">写结果 + 边干边写回执</text>
+
+    <rect x="770" y="90" width="140" height="76" rx="12" fill="#eff6ff" stroke="#bfdbfe"/>
+    <text x="840" y="116" text-anchor="middle" font-size="13" font-weight="700" fill="#1d4ed8">主动盯进度</text>
+    <text x="840" y="136" text-anchor="middle" font-size="10.5" fill="#1e40af">不等通知，主动去查</text>
+    <text x="840" y="154" text-anchor="middle" font-size="10.5" fill="#1e40af">活干完就验收</text>
+
+    <rect x="936" y="90" width="118" height="76" rx="12" fill="#ecfdf5" stroke="#a7f3d0"/>
+    <text x="995" y="112" text-anchor="middle" font-size="13" font-weight="700" fill="#047857">演练</text>
+    <text x="995" y="132" text-anchor="middle" font-size="10.5" fill="#065f46">只看不改</text>
+    <text x="995" y="152" text-anchor="middle" font-size="10.5" fill="#065f46">不产生任何后果</text>
+  </g>
+
+  <g stroke="#475569" stroke-width="1.8" marker-end="url(#au)">
+    <line x1="182" y1="128" x2="202" y2="128"/>
+    <line x1="358" y1="128" x2="378" y2="128"/>
+    <line x1="560" y1="128" x2="580" y2="128"/>
+    <line x1="746" y1="128" x2="766" y2="128"/>
+    <line x1="912" y1="128" x2="932" y2="128"/>
+  </g>
+
+  <!-- dry submit loop -->
+  <path d="M 995 170 L 995 200 L 470 200 L 470 170" fill="none" stroke="#dc2626" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#aur)"/>
+  <text x="732" y="218" text-anchor="middle" font-size="11.5" fill="#dc2626">演练报错 → 只改被授权的那一处，改同一份结果，重跑同一个演练（不换身份）</text>
+
+  <!-- submit -->
+  <rect x="382" y="238" width="536" height="86" rx="12" fill="#ecfdf5" stroke="#6ee7b7" stroke-width="1.6"/>
+  <text x="650" y="266" text-anchor="middle" font-size="14.5" font-weight="700" fill="#047857">正式交 —— 唯一的成功边界</text>
+  <text x="650" y="290" text-anchor="middle" font-size="11.5" fill="#065f46">校验：结果、回执、产出、留痕、绑定、校验和 → 在账本上记一笔</text>
+  <text x="650" y="312" text-anchor="middle" font-size="11.5" fill="#047857" font-weight="700">再交一次、内容一样 = 当重复直接成功；内容不同 = 拒绝</text>
+
+  <path d="M 664 170 L 664 234" fill="none" stroke="#059669" stroke-width="2" marker-end="url(#aug)"/>
+  <text x="678" y="206" font-size="11" fill="#059669" font-weight="700">演练通过</text>
+
+  <rect x="936" y="238" width="118" height="86" rx="12" fill="#ecfdf5" stroke="#a7f3d0"/>
+  <text x="995" y="266" text-anchor="middle" font-size="11.5" font-weight="700" fill="#065f46">账本</text>
+  <text x="995" y="288" text-anchor="middle" font-size="9.5" font-family="monospace" fill="#047857">rb_output_</text>
+  <text x="995" y="302" text-anchor="middle" font-size="9.5" font-family="monospace" fill="#047857">declarations</text>
+  <text x="995" y="316" text-anchor="middle" font-size="9.5" font-family="monospace" fill="#047857">.jsonl</text>
+
+  <path d="M 920 281 L 932 281" stroke="#059669" stroke-width="1.8" marker-end="url(#aug)"/>
+
+  <!-- gate -->
+  <rect x="382" y="344" width="672" height="60" rx="12" fill="#eff6ff" stroke="#bfdbfe"/>
+  <text x="718" y="370" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1d4ed8">检查读的是账本，不是文件夹</text>
+  <text x="718" y="392" text-anchor="middle" font-size="11.5" fill="#1e3a8a">一句话：这个产物有没有经过正式交、被记进账，而且交叉核对得上</text>
+
+  <path d="M 650 324 L 650 340" stroke="#475569" stroke-width="1.8" marker-end="url(#au)"/>
+
+  <!-- side: lifecycle states -->
+  <rect x="30" y="238" width="330" height="166" rx="12" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="50" y="264" font-size="13.5" font-weight="700" fill="#0f172a">一次尝试的生命周期</text>
+  <g font-size="11.5" fill="#475569">
+    <text x="50" y="290">已派活 → 在飞，占一个并发名额</text>
+    <text x="50" y="312">已交 → 唯一的正常成功结局</text>
+    <text x="50" y="334">失败 / 放弃 → 明确关闭，可以重派</text>
+    <text x="50" y="356">超时 → 有个例外的补救口（见右）</text>
+    <text x="50" y="378">被取代 → 交完发现事实变了，派个新活</text>
+    <text x="50" y="396" font-size="11" fill="#64748b">并发上限默认 12，写死在配置里，是自律不是强制</text>
+  </g>
+
+  <!-- side: recovery verbs -->
+  <rect x="30" y="420" width="1024" height="196" rx="12" fill="#fef2f2" stroke="#fecaca"/>
+  <text x="50" y="446" font-size="13.5" font-weight="700" fill="#b91c1c">出错了怎么办：反馈永远给一个"下一步"，从不让人干瞪眼</text>
+
+  <g font-size="11">
+    <rect x="50" y="460" width="240" height="66" rx="8" fill="#ffffff" stroke="#fca5a5"/>
+    <text x="64" y="482" font-size="12" font-weight="700" font-family="monospace" fill="#b91c1c">busy</text>
+    <text x="64" y="500" fill="#7f1d1d">有别人正持锁：等，然后重跑</text>
+    <text x="64" y="518" fill="#7f1d1d">原来那条完全相同的命令</text>
+
+    <rect x="302" y="460" width="240" height="66" rx="8" fill="#ffffff" stroke="#fca5a5"/>
+    <text x="316" y="482" font-size="12" font-weight="700" font-family="monospace" fill="#b91c1c">suspect_transaction</text>
+    <text x="316" y="500" fill="#7f1d1d">日志残缺：仅在证据完整且</text>
+    <text x="316" y="518" fill="#7f1d1d">未上锁时 recover-transaction</text>
+
+    <rect x="554" y="460" width="240" height="66" rx="8" fill="#ffffff" stroke="#fca5a5"/>
+    <text x="568" y="482" font-size="12" font-weight="700" font-family="monospace" fill="#b91c1c">recover-declaration</text>
+    <text x="568" y="500" fill="#7f1d1d">已 submit 但账行缺失：让原始</text>
+    <text x="568" y="518" fill="#7f1d1d">负责人按校验和精确重建那一行</text>
+
+    <rect x="806" y="460" width="248" height="66" rx="8" fill="#ffffff" stroke="#fca5a5"/>
+    <text x="820" y="482" font-size="12" font-weight="700" font-family="monospace" fill="#b91c1c">supersede</text>
+    <text x="820" y="500" fill="#7f1d1d">提交后事实漂移：保留旧账，</text>
+    <text x="820" y="518" fill="#7f1d1d">派生一个全新的后继需求</text>
+
+    <rect x="50" y="536" width="240" height="66" rx="8" fill="#ffffff" stroke="#fca5a5"/>
+    <text x="64" y="558" font-size="12" font-weight="700" font-family="monospace" fill="#b91c1c">late-submit</text>
+    <text x="64" y="576" fill="#7f1d1d">唯一允许的终态恢复：超时后</text>
+    <text x="64" y="594" fill="#7f1d1d">有有效候选、且无人替补</text>
+
+    <rect x="302" y="536" width="240" height="66" rx="8" fill="#ffffff" stroke="#fca5a5"/>
+    <text x="316" y="558" font-size="12" font-weight="700" font-family="monospace" fill="#b91c1c">timeout-preflight</text>
+    <text x="316" y="576" fill="#7f1d1d">只读预检，给六种建议之一：</text>
+    <text x="316" y="594" fill="#7f1d1d">交 / 修 / 等 / 查 / 卡住 / 超时</text>
+
+    <rect x="554" y="536" width="500" height="66" rx="8" fill="#ffffff" stroke="#fca5a5"/>
+    <text x="568" y="558" font-size="12" font-weight="700" font-family="monospace" fill="#b91c1c">missing_contract</text>
+    <text x="568" y="576" fill="#7f1d1d">没有合法恢复路径：直接停在边界。不许手工改任何权威文件，不许"先凑一个成功状态"。</text>
+    <text x="568" y="594" fill="#7f1d1d">其余每个恢复结果都携带同一个"重跑坐标"，所以恢复后的动作永远是确定的。</text>
+  </g>
+</svg>

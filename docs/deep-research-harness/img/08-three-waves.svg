@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 640" width="1000" height="640" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',system-ui,sans-serif" role="img" aria-label="三波研究的分工：铺底、深挖、综合">
+  <defs>
+    <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <rect width="1000" height="640" fill="#ffffff"/>
+  <text x="500" y="32" text-anchor="middle" font-size="21" font-weight="700" fill="#0f172a">为什么是三波，而不是一遍查到底？</text>
+  <text x="500" y="56" text-anchor="middle" font-size="13" fill="#64748b">每一波解决一类不确定性；每波结束都有 Gate，不合格就补做</text>
+
+  <!-- wave 0 -->
+  <rect x="40" y="82" width="920" height="150" rx="14" fill="#f5f3ff" stroke="#c4b5fd"/>
+  <circle cx="82" cy="117" r="20" fill="#7c3aed"/>
+  <text x="82" y="123" text-anchor="middle" font-size="16" font-weight="700" fill="#ffffff">0</text>
+  <text x="118" y="112" font-size="16" font-weight="700" fill="#5b21b6">铺底：先知道"每个话题有哪些来源存在"</text>
+  <text x="118" y="134" font-size="12" fill="#6d28d9">这一波不追求结论，只追求"地图完整"</text>
+
+  <g font-size="12" fill="#4c1d95">
+    <text x="118" y="164">· 每个话题产出一份 <tspan font-family="monospace">source.yaml</tspan>：来源的元数据（谁、哪个 URL、什么时候、属于哪个话题）</text>
+    <text x="118" y="186">· 维护 <tspan font-family="monospace">reference/_INDEX.md</tspan> 作为总的来源目录</text>
+    <text x="118" y="208">· 数量下限来自研究风格参数（<tspan font-family="monospace">wave0_per_topic_source_floor</tspan>）—— 不是拍脑袋的固定值</text>
+  </g>
+  <text x="118" y="228" font-size="11" fill="#7c3aed" font-family="monospace">检查 wave0-complete：文件在不在、格式对不对、数量够不够、有没有记账</text>
+
+  <!-- wave 1 -->
+  <rect x="40" y="244" width="920" height="176" rx="14" fill="#ede9fe" stroke="#a78bfa"/>
+  <circle cx="82" cy="279" r="20" fill="#6d28d9"/>
+  <text x="82" y="285" text-anchor="middle" font-size="16" font-weight="700" fill="#ffffff">1</text>
+  <text x="118" y="274" font-size="16" font-weight="700" fill="#4c1d95">深挖：把"来源"变成"可判定的结论"</text>
+  <text x="118" y="296" font-size="12" fill="#5b21b6">这一波是深度真正发生的地方：读原文、追开放问题、把结论钉到具体句子</text>
+
+  <g font-size="12" fill="#3b0764">
+    <text x="118" y="326">· 每个话题产出 <tspan font-family="monospace">evidence-summary.md</tspan>（结论）+ <tspan font-family="monospace">question-list.md</tspan>（还没答上的问题）</text>
+    <text x="118" y="348">· <tspan font-family="monospace">depth-review.yaml</tspan>：本话题的深度决策是否闭合（够不够、停不停）</text>
+    <text x="118" y="370">· 关键机制：<tspan font-weight="700">source → claim 映射</tspan> —— 哪条结论由哪个来源的哪一句支撑，逐条可查</text>
+    <text x="118" y="392">· <tspan font-family="monospace">question-list.md</tspan> 由四个固定区块构成：调查目标 / 问题对账 / 涌现问题协议 / 探索-利用决策</text>
+  </g>
+  <text x="118" y="412" font-size="11" fill="#6d28d9" font-family="monospace">检查 wave1-complete：深度决策闭没闭合、结论能不能对上来源、数量够不够</text>
+
+  <!-- wave 2 -->
+  <rect x="40" y="432" width="920" height="150" rx="14" fill="#f5f3ff" stroke="#c4b5fd"/>
+  <circle cx="82" cy="467" r="20" fill="#7c3aed"/>
+  <text x="82" y="473" text-anchor="middle" font-size="16" font-weight="700" fill="#ffffff">2</text>
+  <text x="118" y="462" font-size="16" font-weight="700" fill="#5b21b6">综合：话题之间对上，并诚实标出缺口</text>
+  <text x="118" y="484" font-size="12" fill="#6d28d9">这一波只做跨话题综合；如果还需要新证据，必须再走一次受控的取证</text>
+
+  <g font-size="12" fill="#4c1d95">
+    <text x="118" y="514">· <tspan font-family="monospace">synthesis.md</tspan>（跨话题综合）+ <tspan font-family="monospace">cross-topic-ledger.md</tspan>（结论清单）</text>
+    <text x="118" y="536">· <tspan font-family="monospace">finding-index.yaml</tspan>：每条发现的 <tspan font-family="monospace">gap_status</tspan> 与 <tspan font-family="monospace">synthesis_eligibility</tspan></text>
+    <text x="118" y="558">· 关键约束：只要还有"需要继续搜"的缺口没解决，就不允许声称"纯综合已完成"</text>
+  </g>
+  <text x="118" y="576" font-size="11" fill="#7c3aed" font-family="monospace">检查 wave2-complete：结构、必填项、缺口状态、新证据有没有出处</text>
+
+  <!-- convergence -->
+  <rect x="40" y="596" width="920" height="34" rx="10" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="500" y="618" text-anchor="middle" font-size="12" fill="#475569">三波的共同点：都不相信"AI 说做完了"，都要求把完成翻译成<tspan font-weight="700" fill="#0f172a">机器能核对的产物和账</tspan></text>
+</svg>

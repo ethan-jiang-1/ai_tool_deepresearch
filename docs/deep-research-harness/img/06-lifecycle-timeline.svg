@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 600" width="1140" height="600" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',system-ui,sans-serif" role="img" aria-label="一次研究的完整生命周期与静默区">
+  <defs>
+    <marker id="al" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#dc2626"/>
+    </marker>
+    <marker id="al2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <rect width="1140" height="600" fill="#ffffff"/>
+  <text x="570" y="32" text-anchor="middle" font-size="21" font-weight="700" fill="#0f172a">一次完整研究：11 个节点，2 个人工关口，中间一大段静默</text>
+  <text x="570" y="56" text-anchor="middle" font-size="13" fill="#64748b">黄 = 需要人；蓝 = 结构性准备；紫 = 研究主体；粉 = 交付</text>
+
+  <!-- silent band -->
+  <rect x="243" y="96" width="628" height="246" rx="14" fill="#faf5ff" stroke="#e9d5ff" stroke-dasharray="6 5"/>
+  <text x="557" y="120" text-anchor="middle" font-size="14" font-weight="700" fill="#7c3aed">静默自主区（全部 stop: no）</text>
+  <text x="557" y="140" text-anchor="middle" font-size="11.5" fill="#8b5cf6">不提问 · 不报进度 · 不请求确认 · 不等人 — 你可以直接关掉终端</text>
+
+  <!-- nodes -->
+  <g font-size="12">
+    <!-- HITL1 -->
+    <rect x="34" y="180" width="180" height="112" rx="12" fill="#fffbeb" stroke="#f59e0b" stroke-width="1.6"/>
+    <text x="124" y="206" text-anchor="middle" font-size="13.5" font-weight="700" fill="#92400e">HITL1 研究对齐</text>
+    <text x="124" y="228" text-anchor="middle" font-size="11" fill="#b45309">决定方向、深度、话题地图</text>
+    <text x="124" y="248" text-anchor="middle" font-size="11" fill="#b45309">写 rb_profile.yaml</text>
+    <text x="124" y="270" text-anchor="middle" font-size="11" fill="#b45309">顺带探一次"网络能不能取到"</text>
+    <text x="124" y="286" text-anchor="middle" font-size="10.5" font-family="monospace" fill="#d97706">gate: hitl1-recorded</text>
+
+    <!-- instantiation note -->
+    <rect x="34" y="118" width="180" height="46" rx="10" fill="#f1f5f9" stroke="#cbd5e1"/>
+    <text x="124" y="139" text-anchor="middle" font-size="12" font-weight="700" fill="#334155">instantiation</text>
+    <text x="124" y="156" text-anchor="middle" font-size="10.5" fill="#64748b">建目录 + 写控制文件</text>
+
+    <!-- setup -->
+    <rect x="259" y="180" width="94" height="112" rx="12" fill="#eff6ff" stroke="#93c5fd"/>
+    <text x="306" y="212" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1d4ed8">Setup</text>
+    <text x="306" y="234" text-anchor="middle" font-size="10.5" fill="#1e40af">结构一致性</text>
+    <text x="306" y="252" text-anchor="middle" font-size="10.5" fill="#1e40af">校验</text>
+    <text x="306" y="286" text-anchor="middle" font-size="10" font-family="monospace" fill="#3b82f6">setup-ready</text>
+
+    <!-- seed -->
+    <rect x="363" y="180" width="94" height="112" rx="12" fill="#eff6ff" stroke="#93c5fd"/>
+    <text x="410" y="208" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1d4ed8">Seed</text>
+    <text x="410" y="224" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1d4ed8">Topics</text>
+    <text x="410" y="248" text-anchor="middle" font-size="10.5" fill="#1e40af">话题卡片</text>
+    <text x="410" y="266" text-anchor="middle" font-size="10.5" fill="#1e40af">物化</text>
+    <text x="410" y="286" text-anchor="middle" font-size="10" font-family="monospace" fill="#3b82f6">seed-topics-ready</text>
+
+    <!-- wave0 -->
+    <rect x="467" y="180" width="98" height="112" rx="12" fill="#f5f3ff" stroke="#c4b5fd"/>
+    <text x="516" y="208" text-anchor="middle" font-size="13" font-weight="700" fill="#5b21b6">Wave 0</text>
+    <text x="516" y="230" text-anchor="middle" font-size="10.5" fill="#6d28d9">基础来源登记</text>
+    <text x="516" y="248" text-anchor="middle" font-size="10.5" fill="#6d28d9">每话题铺底</text>
+    <text x="516" y="266" text-anchor="middle" font-size="10.5" fill="#6d28d9">来源metadata</text>
+    <text x="516" y="286" text-anchor="middle" font-size="10" font-family="monospace" fill="#7c3aed">wave0-complete</text>
+
+    <!-- wave1 -->
+    <rect x="575" y="180" width="98" height="112" rx="12" fill="#f5f3ff" stroke="#c4b5fd"/>
+    <text x="624" y="208" text-anchor="middle" font-size="13" font-weight="700" fill="#5b21b6">Wave 1</text>
+    <text x="624" y="230" text-anchor="middle" font-size="10.5" fill="#6d28d9">逐话题深挖</text>
+    <text x="624" y="248" text-anchor="middle" font-size="10.5" fill="#6d28d9">结论 + 待答问题</text>
+    <text x="624" y="266" text-anchor="middle" font-size="10.5" fill="#6d28d9">claim 映射</text>
+    <text x="624" y="286" text-anchor="middle" font-size="10" font-family="monospace" fill="#7c3aed">wave1-complete</text>
+
+    <!-- wave2 -->
+    <rect x="683" y="180" width="98" height="112" rx="12" fill="#f5f3ff" stroke="#c4b5fd"/>
+    <text x="732" y="208" text-anchor="middle" font-size="13" font-weight="700" fill="#5b21b6">Wave 2</text>
+    <text x="732" y="230" text-anchor="middle" font-size="10.5" fill="#6d28d9">跨话题综合</text>
+    <text x="732" y="248" text-anchor="middle" font-size="10.5" fill="#6d28d9">综合 + 缺口清单</text>
+    <text x="732" y="266" text-anchor="middle" font-size="10.5" fill="#6d28d9">发现索引</text>
+    <text x="732" y="286" text-anchor="middle" font-size="10" font-family="monospace" fill="#7c3aed">wave2-complete</text>
+
+    <!-- rerun -->
+    <rect x="791" y="180" width="70" height="112" rx="12" fill="#fff7ed" stroke="#fdba74"/>
+    <text x="826" y="212" text-anchor="middle" font-size="12.5" font-weight="700" fill="#9a3412">Rerun</text>
+    <text x="826" y="234" text-anchor="middle" font-size="10.5" fill="#c2410c">增量重跑</text>
+    <text x="826" y="252" text-anchor="middle" font-size="10.5" fill="#c2410c">预备</text>
+    <text x="826" y="286" text-anchor="middle" font-size="10" font-family="monospace" fill="#ea580c">rerun-ready</text>
+
+    <!-- HITL2 -->
+    <rect x="877" y="180" width="113" height="112" rx="12" fill="#fffbeb" stroke="#f59e0b" stroke-width="1.6"/>
+    <text x="933" y="206" text-anchor="middle" font-size="13.5" font-weight="700" fill="#92400e">HITL2 终审</text>
+    <text x="933" y="228" text-anchor="middle" font-size="10.5" fill="#b45309">看结论 + 交付建议</text>
+    <text x="933" y="248" text-anchor="middle" font-size="10.5" fill="#b45309">5 选 1 决定</text>
+    <text x="933" y="270" text-anchor="middle" font-size="10" font-family="monospace" fill="#d97706">hitl2-recorded</text>
+
+    <!-- readiness -->
+    <rect x="1006" y="180" width="100" height="112" rx="12" fill="#eff6ff" stroke="#93c5fd"/>
+    <text x="1056" y="208" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1d4ed8">Readiness</text>
+    <text x="1056" y="230" text-anchor="middle" font-size="10.5" fill="#1e40af">交付前确定性</text>
+    <text x="1056" y="248" text-anchor="middle" font-size="10.5" fill="#1e40af">precheck</text>
+    <text x="1056" y="286" text-anchor="middle" font-size="10" font-family="monospace" fill="#3b82f6">readiness-passed</text>
+  </g>
+
+  <!-- arrows between nodes -->
+  <g stroke="#94a3b8" stroke-width="1.6" marker-end="url(#al2)">
+    <line x1="214" y1="236" x2="255" y2="236"/>
+    <line x1="353" y1="236" x2="359" y2="236"/>
+    <line x1="457" y1="236" x2="463" y2="236"/>
+    <line x1="565" y1="236" x2="571" y2="236"/>
+    <line x1="673" y1="236" x2="679" y2="236"/>
+    <line x1="781" y1="236" x2="787" y2="236"/>
+    <line x1="861" y1="236" x2="873" y2="236"/>
+  </g>
+
+  <!-- final box -->
+  <rect x="1006" y="330" width="100" height="92" rx="12" fill="#fdf2f8" stroke="#f9a8d4"/>
+  <text x="1056" y="358" text-anchor="middle" font-size="13" font-weight="700" fill="#9d174d">Final</text>
+  <text x="1056" y="380" text-anchor="middle" font-size="10.5" fill="#be185d">先交付</text>
+  <text x="1056" y="398" text-anchor="middle" font-size="10.5" fill="#be185d">再接受反馈</text>
+  <text x="1056" y="414" text-anchor="middle" font-size="10" fill="#db2777">gate: null</text>
+
+  <path d="M 1056 292 L 1056 326" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#al2)"/>
+
+  <!-- rerun loop -->
+  <path d="M 933 296 L 933 358 L 624 358 L 624 296" fill="none" stroke="#dc2626" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#al)"/>
+  <text x="778" y="378" text-anchor="middle" font-size="11.5" fill="#dc2626" font-weight="700">rerun：只补方向/内容，不推倒重来（可选，有轮次上限）</text>
+
+  <!-- bottom summary -->
+  <rect x="34" y="410" width="1072" height="76" rx="12" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="52" y="436" font-size="13" font-weight="700" fill="#0f172a">人真正被"叫醒"的位置只有三处（而且第三处是交付，不是检查点）</text>
+  <g font-size="12" fill="#475569">
+    <text x="52" y="460">1) HITL1：定方向 —— 推荐优先，你可以一句话接受或直接改</text>
+    <text x="52" y="478">2) HITL2：审结论 —— proceed / 改视图 / 修复 / 重跑 / 停</text>
+    <text x="560" y="460">3) Final：先给报告，再在同一个节点上接受"表达层面"的修改</text>
+    <text x="560" y="478">期间任何时候你主动插话，Agent 回答事实，但不会把它变成新的检查点或放行依据</text>
+  </g>
+
+  <!-- gate list -->
+  <rect x="34" y="500" width="1072" height="76" rx="12" fill="#ecfdf5" stroke="#a7f3d0"/>
+  <text x="52" y="524" font-size="13" font-weight="700" fill="#047857">每个紫色/蓝色节点出来都要过一道机器 Gate；Gate 的名字和节点一一对应</text>
+  <text x="52" y="548" font-size="11.5" font-family="monospace" fill="#065f46">instantiation-complete → hitl1-recorded → setup-ready → seed-topics-ready → wave0-complete</text>
+  <text x="52" y="568" font-size="11.5" font-family="monospace" fill="#065f46">→ wave1-complete → wave2-complete → hitl2-recorded → readiness-passed　（rerun-ready 是可选的旁路）</text>
+</svg>

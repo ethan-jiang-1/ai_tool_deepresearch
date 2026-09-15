@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 660" width="1080" height="660" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',system-ui,sans-serif" role="img" aria-label="失败处置到 CLI 动词的决策映射表">
+  <rect width="1080" height="660" fill="#ffffff"/>
+  <text x="540" y="32" text-anchor="middle" font-size="21" font-weight="700" fill="#0f172a">出错时的唯一一张决策表：情形 → 恢复动作 → 具体命令</text>
+  <text x="540" y="56" text-anchor="middle" font-size="13" fill="#64748b">这张表是从代码里导出、还有测试锁着的；AI 不许临场自己发明恢复路径</text>
+
+  <!-- header -->
+  <rect x="30" y="76" width="1020" height="38" rx="8" fill="#0f172a"/>
+  <text x="48" y="101" font-size="12.5" font-weight="700" fill="#e2e8f0">出了什么状况（系统告诉你）</text>
+  <text x="470" y="101" font-size="12.5" font-weight="700" fill="#e2e8f0">recovery_action</text>
+  <text x="660" y="101" font-size="12.5" font-weight="700" fill="#e2e8f0">你该做的那一个动作</text>
+
+  <!-- rows -->
+  <g font-size="11.5">
+    <!-- 1 -->
+    <rect x="30" y="118" width="1020" height="48" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+    <text x="48" y="138" font-weight="700" fill="#334155">别人正拿着笔 / 撞车了</text>
+    <text x="48" y="156" fill="#64748b" font-size="11">busy</text>
+    <text x="470" y="147" font-family="monospace" fill="#b45309">wait</text>
+    <text x="660" y="140" fill="#334155">等，然后重跑你<tspan font-weight="700">原来那条完全相同的命令</tspan></text>
+    <text x="660" y="158" fill="#64748b" font-size="11">不要从拿笔的人那里猜进度或死活</text>
+
+    <!-- 2 -->
+    <rect x="30" y="170" width="1020" height="48" rx="6" fill="#ffffff" stroke="#e2e8f0"/>
+    <text x="48" y="190" font-weight="700" fill="#334155">流水账残缺 / 疑似中断</text>
+    <text x="48" y="208" fill="#64748b" font-size="11">suspect_transaction</text>
+    <text x="470" y="199" font-family="monospace" fill="#b45309">recover-transaction</text>
+    <text x="660" y="192" fill="#334155" font-family="monospace" font-size="11">operate-work-unit recover-transaction \</text>
+    <text x="660" y="209" fill="#334155" font-family="monospace" font-size="11">　&lt;bundle&gt; --tx-id &lt;id&gt;</text>
+
+    <!-- 3 -->
+    <rect x="30" y="222" width="1020" height="48" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+    <text x="48" y="242" font-weight="700" fill="#334155">正式交过了，但账记丢了（能精确重建）</text>
+    <text x="48" y="260" fill="#64748b" font-size="11">declaration_recovery_required</text>
+    <text x="470" y="251" font-family="monospace" fill="#b45309">recover-declaration</text>
+    <text x="660" y="244" fill="#334155" font-family="monospace" font-size="11">operate-work-unit recover-declaration \</text>
+    <text x="660" y="261" fill="#334155" font-family="monospace" font-size="11">　&lt;bundle&gt; --work-id &lt;submitted_id&gt;</text>
+
+    <!-- 4 -->
+    <rect x="30" y="274" width="1020" height="48" rx="6" fill="#ffffff" stroke="#e2e8f0"/>
+    <text x="48" y="294" font-weight="700" fill="#334155">交完之后事实变了，而且没法精确重建</text>
+    <text x="48" y="312" fill="#64748b" font-size="11">supersede</text>
+    <text x="470" y="303" font-family="monospace" fill="#b45309">supersede</text>
+    <text x="660" y="296" fill="#334155" font-family="monospace" font-size="11">operate-work-unit supersede &lt;bundle&gt; \</text>
+    <text x="660" y="313" fill="#334155" font-family="monospace" font-size="11">　--work-id &lt;id&gt; --reason &lt;audit-reason&gt;</text>
+
+    <!-- 5 -->
+    <rect x="30" y="326" width="1020" height="48" rx="6" fill="#fffbeb" stroke="#fde68a"/>
+    <text x="48" y="346" font-weight="700" fill="#78350f">已派活，等外包工自己产出</text>
+    <text x="48" y="364" fill="#a16207" font-size="11">wait_for_delegated_candidate</text>
+    <text x="470" y="355" font-family="monospace" fill="#b45309">（无命令）</text>
+    <text x="660" y="348" fill="#78350f">继续盯着那一票；不要替它写内容</text>
+    <text x="660" y="365" fill="#a16207" font-size="11">只有它自己能产出这一票的证据</text>
+
+    <!-- 6 -->
+    <rect x="30" y="378" width="1020" height="48" rx="6" fill="#fffbeb" stroke="#fde68a"/>
+    <text x="48" y="398" font-weight="700" fill="#78350f">已派活，但走的是主 AI 兜底</text>
+    <text x="48" y="416" fill="#a16207" font-size="11">author_exact_fallback_attempt</text>
+    <text x="470" y="407" font-family="monospace" fill="#b45309">（无命令）</text>
+    <text x="660" y="400" fill="#78350f">按 <tspan font-family="monospace">next.write_to</tspan> 指定的路径自己写完，再正式交</text>
+
+    <!-- 7 -->
+    <rect x="30" y="430" width="1020" height="48" rx="6" fill="#ffffff" stroke="#e2e8f0"/>
+    <text x="48" y="450" font-weight="700" fill="#334155">历史叶子在活动窗口 / 补给池</text>
+    <text x="48" y="468" fill="#64748b" font-size="11">claim_successor</text>
+    <text x="470" y="459" font-family="monospace" fill="#b45309">claim</text>
+    <text x="660" y="452" fill="#334155">从它返回的后继 <tspan font-family="monospace">queue_item_id</tspan>走正常的派活 / 盯着 / 交</text>
+
+    <!-- 8 -->
+    <rect x="30" y="482" width="1020" height="48" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
+    <text x="48" y="502" font-weight="700" fill="#334155">历史叶子在别处</text>
+    <text x="48" y="520" fill="#64748b" font-size="11">inspect_current_lineage_leaf</text>
+    <text x="470" y="511" font-family="monospace" fill="#b45309">inspect</text>
+    <text x="660" y="504" fill="#334155">读返回的坐标再决定；不要从目录结构猜</text>
+
+    <!-- 9 -->
+    <rect x="30" y="534" width="1020" height="48" rx="6" fill="#fef2f2" stroke="#fecaca"/>
+    <text x="48" y="554" font-weight="700" fill="#b91c1c">正式交过了，而且就是当前版本</text>
+    <text x="48" y="572" fill="#dc2626" font-size="11">semantic_boundary</text>
+    <text x="470" y="563" font-family="monospace" fill="#b91c1c">（无命令）</text>
+    <text x="660" y="556" fill="#b91c1c">停下：晚到的更丰富内容<tspan font-weight="700">不构成</tspan>替换旧账的授权</text>
+
+    <!-- 10 -->
+    <rect x="30" y="586" width="1020" height="48" rx="6" fill="#fef2f2" stroke="#fecaca"/>
+    <text x="48" y="606" font-weight="700" fill="#b91c1c">没有任何合法恢复路径</text>
+    <text x="48" y="624" fill="#dc2626" font-size="11">missing_contract</text>
+    <text x="470" y="615" font-family="monospace" fill="#b91c1c">（无命令）</text>
+    <text x="660" y="608" fill="#b91c1c">直接停在边界。不许手工改账本、索引、状态、</text>
+    <text x="660" y="625" fill="#b91c1c">待办、锁、流水账、校验和；也不许搞平行成功路径</text>
+  </g>
+
+  <text x="540" y="652" text-anchor="middle" font-size="11.5" fill="#475569">除了"死路"那两行，每个恢复结果都带着同一个"重跑坐标"——所以下一步永远是确定的</text>
+</svg>

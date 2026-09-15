@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1020 660" width="1020" height="660" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',system-ui,sans-serif" role="img" aria-label="run bundle 目录解剖">
+  <rect width="1020" height="660" fill="#ffffff"/>
+  <text x="510" y="36" text-anchor="middle" font-size="21" font-weight="700" fill="#0f172a">项目文件夹：一次研究在硬盘上的全部资料</text>
+  <text x="510" y="60" text-anchor="middle" font-size="13" fill="#64748b">名字形如 dpt_rb_&lt;name&gt;，放在仓库根；它本身就是状态机，不需要额外的数据库</text>
+
+  <!-- tree box -->
+  <rect x="28" y="82" width="556" height="556" rx="14" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="48" y="108" font-size="13" font-weight="700" fill="#0f172a">dpt_rb_&lt;name&gt;/</text>
+
+  <g font-family="'SFMono-Regular',Menlo,Consolas,monospace" font-size="12.5">
+    <!-- control plane -->
+    <rect x="40" y="120" width="6" height="112" rx="3" fill="#2563eb"/>
+    <text x="58" y="138" fill="#1e293b">BUNDLE_ENTRY.md</text>
+    <text x="330" y="138" fill="#64748b" font-family="'PingFang SC',sans-serif">我是谁 / Harness 在哪</text>
+    <text x="58" y="160" fill="#1e293b">BUNDLE_MAP.md</text>
+    <text x="330" y="160" fill="#64748b" font-family="'PingFang SC',sans-serif">完整户型图</text>
+    <text x="58" y="182" fill="#1e293b">rb_plan.md</text>
+    <text x="330" y="182" fill="#64748b" font-family="'PingFang SC',sans-serif">目标 / 约束 / 决策历史</text>
+    <text x="58" y="204" fill="#1e293b">rb_profile.yaml</text>
+    <text x="330" y="204" fill="#64748b" font-family="'PingFang SC',sans-serif">人的决定（HITL1/2）</text>
+    <text x="58" y="226" fill="#1e293b">rb_status.json</text>
+    <text x="330" y="226" fill="#64748b" font-family="'PingFang SC',sans-serif">我现在在哪一格</text>
+
+    <!-- authority plane -->
+    <rect x="40" y="240" width="6" height="68" rx="3" fill="#059669"/>
+    <text x="58" y="258" fill="#1e293b">rb_trace.jsonl</text>
+    <text x="330" y="258" fill="#64748b" font-family="'PingFang SC',sans-serif">追加写：发生过什么</text>
+    <text x="58" y="280" fill="#1e293b">rb_output_declarations.jsonl</text>
+    <text x="330" y="280" fill="#64748b" font-family="'PingFang SC',sans-serif">账本（权威）</text>
+    <text x="58" y="302" fill="#1e293b">_work_units/_transactions/</text>
+    <text x="330" y="302" fill="#64748b" font-family="'PingFang SC',sans-serif">事务日志</text>
+
+    <!-- work plane -->
+    <rect x="40" y="316" width="6" height="112" rx="3" fill="#d97706"/>
+    <text x="58" y="334" fill="#1e293b">rb_queue.json</text>
+    <text x="330" y="334" fill="#64748b" font-family="'PingFang SC',sans-serif">还有什么没做完</text>
+    <text x="58" y="356" fill="#1e293b">_work_units/waveN/&lt;work_id&gt;/</text>
+    <text x="330" y="356" fill="#64748b" font-family="'PingFang SC',sans-serif">派工文件夹 + 结果</text>
+    <text x="58" y="378" fill="#1e293b">_cache/waveN/primary/&lt;topic&gt;/</text>
+    <text x="330" y="378" fill="#64748b" font-family="'PingFang SC',sans-serif">每页的抓取小票</text>
+    <text x="58" y="400" fill="#1e293b">_logs/ · _scripts/ · _tmp/</text>
+    <text x="330" y="400" fill="#64748b" font-family="'PingFang SC',sans-serif">日志 / 临时区</text>
+
+    <!-- artifact plane -->
+    <rect x="40" y="436" width="6" height="134" rx="3" fill="#7c3aed"/>
+    <text x="58" y="454" fill="#1e293b">seed_topics/</text>
+    <text x="330" y="454" fill="#64748b" font-family="'PingFang SC',sans-serif">话题卡片</text>
+    <text x="58" y="476" fill="#1e293b">artifacts/wave0/</text>
+    <text x="330" y="476" fill="#64748b" font-family="'PingFang SC',sans-serif">基础来源登记</text>
+    <text x="58" y="498" fill="#1e293b">artifacts/wave1/</text>
+    <text x="330" y="498" fill="#64748b" font-family="'PingFang SC',sans-serif">逐话题深挖结论</text>
+    <text x="58" y="520" fill="#1e293b">artifacts/wave2/</text>
+    <text x="330" y="520" fill="#64748b" font-family="'PingFang SC',sans-serif">跨话题综合</text>
+    <text x="58" y="542" fill="#1e293b">reference/</text>
+    <text x="330" y="542" fill="#64748b" font-family="'PingFang SC',sans-serif">引用与来源导航</text>
+    <text x="58" y="564" fill="#1e293b">artifacts/hitl2/decision-brief.md</text>
+    <text x="330" y="564" fill="#64748b" font-family="'PingFang SC',sans-serif">交付建议书</text>
+
+    <!-- delivery plane -->
+    <rect x="40" y="578" width="6" height="46" rx="3" fill="#db2777"/>
+    <text x="58" y="596" fill="#1e293b">final/final.md</text>
+    <text x="330" y="596" fill="#64748b" font-family="'PingFang SC',sans-serif">最终报告（第一版）</text>
+    <text x="58" y="618" fill="#1e293b">final/final_v&lt;N&gt;.md</text>
+    <text x="330" y="618" fill="#64748b" font-family="'PingFang SC',sans-serif">后续版本（不可变）</text>
+  </g>
+
+  <!-- legend -->
+  <text x="612" y="106" font-size="14" font-weight="700" fill="#0f172a">按职责分五种"面"</text>
+
+  <g>
+    <rect x="612" y="120" width="380" height="94" rx="12" fill="#eff6ff" stroke="#bfdbfe"/>
+    <text x="630" y="144" font-size="13.5" font-weight="700" fill="#1d4ed8">① 控制区 —— 位置和意图</text>
+    <text x="630" y="167" font-size="12" fill="#1e3a8a">rb_status / rb_plan / rb_profile</text>
+    <text x="630" y="188" font-size="12" fill="#1e3a8a">回答"干到哪了、要干什么、你要什么"</text>
+    <text x="630" y="207" font-size="11.5" fill="#3b82f6">每次操作前都重新读，不靠记性</text>
+
+    <rect x="612" y="226" width="380" height="94" rx="12" fill="#ecfdf5" stroke="#a7f3d0"/>
+    <text x="630" y="250" font-size="13.5" font-weight="700" fill="#047857">② 权威区 —— 只有程序能写</text>
+    <text x="630" y="273" font-size="12" fill="#064e3b">操作日志 / 账本 / 事务流水</text>
+    <text x="630" y="294" font-size="12" fill="#064e3b">AI 手写就是作弊</text>
+    <text x="630" y="313" font-size="11.5" fill="#10b981">过没过，从日志判，不从屏幕输出判</text>
+
+    <rect x="612" y="332" width="380" height="94" rx="12" fill="#fffbeb" stroke="#fde68a"/>
+    <text x="630" y="356" font-size="13.5" font-weight="700" fill="#b45309">③ 工作区 —— 待办和执行</text>
+    <text x="630" y="379" font-size="12" fill="#78350f">需求单（要什么）/ 派工单（谁在做）</text>
+    <text x="630" y="400" font-size="12" fill="#78350f">抓取小票（读过的每页都留痕）</text>
+    <text x="630" y="419" font-size="11.5" fill="#d97706">文件在 ≠ 证据成立，必须正式交过</text>
+
+    <rect x="612" y="438" width="380" height="94" rx="12" fill="#f5f3ff" stroke="#ddd6fe"/>
+    <text x="630" y="462" font-size="13.5" font-weight="700" fill="#6d28d9">④ 产物区 —— 研究结果</text>
+    <text x="630" y="485" font-size="12" fill="#4c1d95">三波成果 + 来源导航</text>
+    <text x="630" y="506" font-size="12" fill="#4c1d95">按话题、按波次组织，可逐条回溯</text>
+    <text x="630" y="525" font-size="11.5" fill="#7c3aed">结论必须能指回具体来源和小票</text>
+
+    <rect x="612" y="544" width="380" height="94" rx="12" fill="#fdf2f8" stroke="#fbcfe8"/>
+    <text x="630" y="568" font-size="13.5" font-weight="700" fill="#be185d">⑤ 交付区 —— 最终报告</text>
+    <text x="630" y="591" font-size="12" fill="#831843">final/final.md 及后续版本系列</text>
+    <text x="630" y="612" font-size="12" fill="#831843">旧版本永不覆盖，历史可复查</text>
+    <text x="630" y="631" font-size="11.5" fill="#db2777">含出处表：每条结论 → 可点开的证据</text>
+  </g>
+</svg>

@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 560" width="940" height="560" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',system-ui,sans-serif" role="img" aria-label="三个角色各管一摊：AI 负责理解判断，程序负责判定记账，说明书负责告诉它每一步干嘛">
+  <rect width="940" height="560" fill="#ffffff"/>
+  <text x="470" y="36" text-anchor="middle" font-size="21" font-weight="700" fill="#0f172a">三个角色，各管一摊，谁也不能替谁</text>
+  <text x="470" y="60" text-anchor="middle" font-size="13" fill="#64748b">这是整套东西最根本的一条分工</text>
+
+  <!-- AI -->
+  <rect x="34" y="86" width="278" height="272" rx="14" fill="#eff6ff" stroke="#bfdbfe"/>
+  <text x="173" y="116" text-anchor="middle" font-size="16" font-weight="700" fill="#1d4ed8">AI</text>
+  <text x="173" y="138" text-anchor="middle" font-size="12" fill="#3b82f6">负责「理解」和「判断」</text>
+  <g font-size="12.5" fill="#1e3a8a">
+    <text x="54" y="172">· 弄明白你到底想要什么</text>
+    <text x="54" y="196">· 决定怎么查、怎么取舍</text>
+    <text x="54" y="220">· 决定话怎么说、报告怎么组织</text>
+    <text x="54" y="244">· 按提示去修具体的毛病</text>
+  </g>
+  <rect x="54" y="272" width="238" height="70" rx="8" fill="#ffffff" stroke="#bfdbfe"/>
+  <text x="66" y="294" font-size="12" fill="#1e40af" font-weight="700">它不能：</text>
+  <text x="66" y="314" font-size="11.5" fill="#1e40af">不能自己说"我做完了"</text>
+  <text x="66" y="333" font-size="11.5" fill="#1e40af">不能自己去改状态、造证据</text>
+
+  <!-- Program -->
+  <rect x="331" y="86" width="278" height="272" rx="14" fill="#ecfdf5" stroke="#a7f3d0"/>
+  <text x="470" y="116" text-anchor="middle" font-size="16" font-weight="700" fill="#047857">程序</text>
+  <text x="470" y="138" text-anchor="middle" font-size="12" fill="#10b981">负责「判定」和「记账」</text>
+  <g font-size="12.5" fill="#064e3b">
+    <text x="351" y="172">· 判定这一步能不能过</text>
+    <text x="351" y="196">· 核对交上来的东西齐不齐</text>
+    <text x="351" y="220">· 记账，留一份改不掉的工作日志</text>
+    <text x="351" y="244">· 防止两个活同时改同一个文件</text>
+  </g>
+  <rect x="351" y="272" width="238" height="70" rx="8" fill="#ffffff" stroke="#a7f3d0"/>
+  <text x="363" y="294" font-size="12" fill="#065f46" font-weight="700">它不能：</text>
+  <text x="363" y="314" font-size="11.5" fill="#065f46">不评价"写得好不好"</text>
+  <text x="363" y="333" font-size="11.5" fill="#065f46">那是人的事，它不该有品味</text>
+
+  <!-- Markdown -->
+  <rect x="628" y="86" width="278" height="272" rx="14" fill="#fefce8" stroke="#fde68a"/>
+  <text x="767" y="116" text-anchor="middle" font-size="16" font-weight="700" fill="#a16207">说明书</text>
+  <text x="767" y="138" text-anchor="middle" font-size="12" fill="#eab308">负责「告诉它每一步干嘛」</text>
+  <g font-size="12.5" fill="#713f12">
+    <text x="648" y="172">· 什么时候该做什么</text>
+    <text x="648" y="196">· 要守什么规矩</text>
+    <text x="648" y="220">· 该对用户说什么话</text>
+    <text x="648" y="244">· 它是写给 AI 读的，不是程序</text>
+  </g>
+  <rect x="648" y="272" width="238" height="70" rx="8" fill="#ffffff" stroke="#fde68a"/>
+  <text x="660" y="294" font-size="12" fill="#854d0e" font-weight="700">它不能：</text>
+  <text x="660" y="314" font-size="11.5" fill="#854d0e">说明书里写"已经通过了"</text>
+  <text x="660" y="333" font-size="11.5" fill="#854d0e">一点都不算数</text>
+
+  <!-- bottom -->
+  <rect x="34" y="382" width="872" height="66" rx="12" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="470" y="410" text-anchor="middle" font-size="14.5" font-weight="700" fill="#0f172a">唯一说了算的，是硬盘上那个项目文件夹</text>
+  <text x="470" y="433" text-anchor="middle" font-size="12.5" fill="#475569">干到哪了 · 你要什么 · 还剩什么没做 · 发生过什么 —— 都记在里面，不靠它记着</text>
+
+  <rect x="34" y="470" width="430" height="62" rx="12" fill="#fef2f2" stroke="#fecaca"/>
+  <text x="52" y="497" font-size="13.5" font-weight="700" fill="#b91c1c">✗ 聊天记录</text>
+  <text x="52" y="518" font-size="12" fill="#991b1b">"上次对话里说过的"不算数，重启就没了</text>
+
+  <rect x="476" y="470" width="430" height="62" rx="12" fill="#f0f9ff" stroke="#bae6fd"/>
+  <text x="494" y="497" font-size="13.5" font-weight="700" fill="#0369a1">✓ 硬盘上的项目文件夹</text>
+  <text x="494" y="518" font-size="12" fill="#075985">随时能重新读一遍，接着往下干</text>
+</svg>

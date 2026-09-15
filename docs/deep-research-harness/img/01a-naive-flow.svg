@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 200" width="940" height="200" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',system-ui,sans-serif" role="img" aria-label="一次性问答的朴素流程">
+  <defs>
+    <marker id="n1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#f87171"/>
+    </marker>
+  </defs>
+  <rect width="940" height="200" fill="#ffffff"/>
+  <text x="470" y="30" text-anchor="middle" font-size="14" font-weight="700" fill="#0f172a">朴素做法：过程全部藏在一个黑盒里</text>
+
+  <rect x="26" y="66" width="150" height="66" rx="12" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="101" y="96" text-anchor="middle" font-size="13" font-weight="700" fill="#334155">一句话请求</text>
+  <text x="101" y="116" text-anchor="middle" font-size="11" fill="#64748b">"研究一下 XX"</text>
+
+  <rect x="222" y="56" width="330" height="86" rx="12" fill="#fef2f2" stroke="#fca5a5" stroke-dasharray="6 4"/>
+  <text x="387" y="84" text-anchor="middle" font-size="13" font-weight="700" fill="#b91c1c">Agent 自由发挥（不可见）</text>
+  <text x="387" y="106" text-anchor="middle" font-size="11.5" fill="#991b1b">搜索 · 读页面 · 判断 · 写作 —— 全混在一起</text>
+  <text x="387" y="126" text-anchor="middle" font-size="11.5" fill="#dc2626">没有任何一步留下可核对的痕迹</text>
+
+  <rect x="598" y="66" width="140" height="66" rx="12" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="668" y="96" text-anchor="middle" font-size="13" font-weight="700" fill="#334155">一份长报告</text>
+  <text x="668" y="116" text-anchor="middle" font-size="11" fill="#64748b">看起来很像样</text>
+
+  <rect x="784" y="66" width="132" height="66" rx="12" fill="#fef2f2" stroke="#fecaca"/>
+  <text x="850" y="92" text-anchor="middle" font-size="12.5" font-weight="700" fill="#b91c1c">你只能读结论</text>
+  <text x="850" y="114" text-anchor="middle" font-size="11" fill="#dc2626">无法验证过程</text>
+
+  <g stroke="#f87171" stroke-width="1.8" marker-end="url(#n1)">
+    <line x1="178" y1="99" x2="218" y2="99"/>
+    <line x1="554" y1="99" x2="594" y2="99"/>
+    <line x1="740" y1="99" x2="780" y2="99"/>
+  </g>
+
+  <text x="470" y="176" text-anchor="middle" font-size="12" fill="#64748b">问题不在"模型不够强"，而在这个形态本身：<tspan font-weight="700" fill="#b91c1c">没有中间产物，就没有可检查、可恢复、可追责的对象</tspan>。</text>
+</svg>
